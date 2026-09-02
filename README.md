@@ -8,6 +8,15 @@
 
 **Няма връзка към реални средства.** Не е финансов съвет.
 
+## Публично демо (живо)
+
+- Табло: https://ai-trading-test.netlify.app
+- API: https://ai-trader-demo-backend.onrender.com (`/docs` за пълния API)
+
+И двете са deploy-нати директно от branch-а `claude/ai-autonomous-trader-crypto-etf-anstj4`
+чрез безплатните планове на Netlify и Render — вижте `docs/DEPLOY.md`
+за настройката и известните ограничения на free tier (cold start, непостоянни данни).
+
 ## Структура на проекта
 
 ```
