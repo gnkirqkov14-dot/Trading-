@@ -1,0 +1,17 @@
+# Netlify build config for the frontend — deploys directly from this branch.
+# VITE_API_BASE (the backend's public Render URL) must be set as a Netlify
+# site environment variable — see docs/DEPLOY.md.
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# React Router uses client-side routing (BrowserRouter) — without this,
+# refreshing /decisions or /settings directly would 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,32 @@
+# Render Blueprint — deploys the FastAPI backend as a free Web Service
+# directly from this branch. In the Render dashboard: New + -> Blueprint,
+# pick this repo, Render auto-detects this file. See docs/DEPLOY.md for the
+# full click-by-click walkthrough.
+services:
+  - type: web
+    name: ai-trader-demo-backend
+    env: python
+    plan: free
+    branch: claude/ai-autonomous-trader-crypto-etf-anstj4
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ANALYSIS_INTERVAL_MINUTES
+        value: "240"
+      - key: AUTONOMOUS_MODE
+        value: "true"
+      # Optional — leave unset to run fully on free mock/fallback data.
+      # "sync: false" means Render will prompt for a value in the dashboard
+      # instead of storing it in this file / the repo.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: COINGECKO_API_KEY
+        sync: false
+      - key: NEWS_API_KEY
+        sync: false
+      - key: STATEMENTS_API_KEY
+        sync: false

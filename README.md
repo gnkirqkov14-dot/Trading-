@@ -71,9 +71,17 @@ npm run dev
 | `COINGECKO_API_KEY` | По-висок rate limit за крипто цените (демо tier работи и без ключ) |
 | `NEWS_API_KEY` / `STATEMENTS_API_KEY` | Реални новини/изказвания вместо mock данни (изисква и имплементация на `_fetch_real_*` в съответния модул — вижте `docs/MVP_PLAN.md`, Фаза 1) |
 
+## Публичен deploy (Render + Netlify, безплатни планове)
+
+Repo-то съдържа готови `render.yaml` и `netlify.toml` за deploy директно
+от текущия branch, без да се чака merge. Пълните стъпка-по-стъпка
+инструкции (вкл. свързване на нов Render/Netlify акаунт с GitHub) са в
+[`docs/DEPLOY.md`](docs/DEPLOY.md).
+
 ## Документация
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — компоненти, поток на данните, approval-mode дизайн
 - [`docs/MVP_PLAN.md`](docs/MVP_PLAN.md) — какво е built сега и следващите фази
 - [`docs/DECISION_SCHEMA.md`](docs/DECISION_SCHEMA.md) — пълен JSON формат на едно решение
 - [`docs/REGULATORY_NOTES.md`](docs/REGULATORY_NOTES.md) — бележки за България/ЕС при преход към реална търговия
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — deploy в Render (бекенд) + Netlify (фронтенд)
