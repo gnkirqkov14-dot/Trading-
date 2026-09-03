@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   PLAN_ACTIVE_LISTING_LIMITS,
   PLAN_LABELS,
-  PLAN_PRICES_BGN,
+  PLAN_PRICES_EUR,
 } from "@/lib/listing-labels";
 import type { SubscriptionPlan } from "@/lib/types/database";
 
@@ -35,11 +35,11 @@ export default function PricingPage() {
           >
             <h2 className="text-lg font-semibold">{PLAN_LABELS[plan]}</h2>
             <p className="mt-2 text-3xl font-bold">
-              {PLAN_PRICES_BGN[plan] === 0 ? (
+              {PLAN_PRICES_EUR[plan] === 0 ? (
                 "Безплатно"
               ) : (
                 <>
-                  {PLAN_PRICES_BGN[plan]} лв.
+                  {PLAN_PRICES_EUR[plan]} €
                   <span className="text-sm font-normal text-slate-500">
                     /мес.
                   </span>
@@ -47,7 +47,7 @@ export default function PricingPage() {
               )}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {PLAN_PRICES_BGN[plan] > 0 && "примерна цена — предстои потвърждение"}
+              {PLAN_PRICES_EUR[plan] > 0 && "примерна цена — предстои потвърждение"}
             </p>
 
             <ul className="mt-6 flex flex-col gap-2 text-sm text-slate-700">

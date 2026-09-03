@@ -236,7 +236,7 @@ export function NewListingForm({
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="flex flex-col gap-1">
-          <label className={labelClass}>Цена (лв.)</label>
+          <label className={labelClass}>Цена (€)</label>
           <input
             type="number"
             min="0"
