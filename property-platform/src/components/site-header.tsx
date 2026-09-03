@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
+import { Logo } from "@/components/logo";
 
 export async function SiteHeader() {
   const supabase = await createClient();
@@ -11,11 +12,11 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-10 h-16 border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-bold">
-          Имоти без посредници
+        <Link href="/" className="flex shrink-0 items-center">
+          <Logo wordmarkClassName="hidden sm:inline" />
         </Link>
 
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-3 text-sm sm:gap-4">
           <Link href="/listings" className="text-slate-700 hover:text-slate-900">
             Обяви
           </Link>
