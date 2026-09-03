@@ -1,16 +1,28 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { BulgariaMap, type MapCity } from "@/components/bulgaria-map";
+import {
+  BulgariaMap,
+  type MapCity,
+  type MapNeighborhood,
+} from "@/components/bulgaria-map";
 
 export default async function Home() {
   const supabase = await createClient();
-  const { data: cities } = await supabase
-    .from("cities")
-    .select("id, name, region, lat, lng")
-    .not("lat", "is", null)
-    .not("lng", "is", null);
+  const [{ data: cities }, { data: neighborhoods }] = await Promise.all([
+    supabase
+      .from("cities")
+      .select("id, name, region, lat, lng")
+      .not("lat", "is", null)
+      .not("lng", "is", null),
+    supabase
+      .from("neighborhoods")
+      .select("id, city_id, name, lat, lng")
+      .not("lat", "is", null)
+      .not("lng", "is", null),
+  ]);
 
   const mapCities = (cities ?? []) as MapCity[];
+  const mapNeighborhoods = (neighborhoods ?? []) as MapNeighborhood[];
 
   return (
     <div className="flex flex-1 flex-col bg-slate-50">
@@ -39,7 +51,7 @@ export default async function Home() {
         </div>
 
         <div className="mt-10 w-full max-w-3xl">
-          <BulgariaMap cities={mapCities} />
+          <BulgariaMap cities={mapCities} neighborhoods={mapNeighborhoods} />
         </div>
       </section>
     </div>
