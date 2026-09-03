@@ -30,3 +30,13 @@ export const getProfile = cache(async () => {
 
   return profile;
 });
+
+export const requireAdmin = cache(async () => {
+  const profile = await getProfile();
+
+  if (!profile?.is_admin) {
+    redirect("/dashboard");
+  }
+
+  return profile;
+});

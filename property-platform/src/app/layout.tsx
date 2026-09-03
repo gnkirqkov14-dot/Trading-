@@ -13,9 +13,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://property-platform-five.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Имоти без посредници",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Имоти без посредници",
+    template: "%s | Имоти без посредници",
+  },
   description: "Обяви за имоти директно от собственик — без агенции.",
+  openGraph: {
+    title: "Имоти без посредници",
+    description: "Обяви за имоти директно от собственик — без агенции.",
+    type: "website",
+    locale: "bg_BG",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

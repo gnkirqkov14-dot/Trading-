@@ -25,6 +25,7 @@ export interface Database {
           phone: string | null;
           subscription_plan: SubscriptionPlan;
           subscription_expires_at: string | null;
+          is_admin: boolean;
           created_at: string;
         },
         {
@@ -33,6 +34,7 @@ export interface Database {
           phone?: string | null;
           subscription_plan?: SubscriptionPlan;
           subscription_expires_at?: string | null;
+          is_admin?: boolean;
           created_at?: string;
         }
       >;
@@ -171,7 +173,12 @@ export interface Database {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      expire_stale_listings: {
+        Args: Record<PropertyKey, never>;
+        Returns: void;
+      };
+    };
     Enums: {
       subscription_plan: SubscriptionPlan;
       listing_deal_type: ListingDealType;

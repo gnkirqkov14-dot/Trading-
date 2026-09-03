@@ -19,10 +19,19 @@ export async function SiteHeader() {
           <Link href="/listings" className="text-slate-700 hover:text-slate-900">
             Обяви
           </Link>
+          <Link href="/pricing" className="text-slate-700 hover:text-slate-900">
+            Планове
+          </Link>
           {user ? (
             <>
               <Link href="/dashboard" className="text-slate-700 hover:text-slate-900">
                 Моят профил
+              </Link>
+              <Link
+                href="/dashboard/messages"
+                className="text-slate-700 hover:text-slate-900"
+              >
+                Съобщения
               </Link>
               <form action={signOut}>
                 <button

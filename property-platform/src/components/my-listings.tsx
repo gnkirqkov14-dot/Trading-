@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { deleteListing, setListingStatus } from "@/lib/actions/listings";
+import {
+  confirmListingActive,
+  deleteListing,
+  setListingStatus,
+} from "@/lib/actions/listings";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -21,7 +25,15 @@ export type MyListing = {
   property_type: PropertyType;
   price: number;
   status: ListingStatus;
+  last_confirmed_at: string;
 };
+
+const CONFIRM_WINDOW_DAYS = 7;
+
+function daysSince(dateString: string) {
+  const ms = Date.now() - new Date(dateString).getTime();
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
 
 export function MyListings({ listings }: { listings: MyListing[] }) {
   if (listings.length === 0) {
@@ -44,7 +56,12 @@ export function MyListings({ listings }: { listings: MyListing[] }) {
 function MyListingRow({ listing }: { listing: MyListing }) {
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState(listing.status);
+  const [lastConfirmedAt, setLastConfirmedAt] = useState(
+    listing.last_confirmed_at,
+  );
   const [error, setError] = useState<string | null>(null);
+
+  const daysLeft = CONFIRM_WINDOW_DAYS - daysSince(lastConfirmedAt);
 
   function toggleStatus() {
     const next = status === "active" ? "inactive" : "active";
@@ -53,6 +70,20 @@ function MyListingRow({ listing }: { listing: MyListing }) {
       try {
         await setListingStatus(listing.id, next);
         setStatus(next);
+        setLastConfirmedAt(new Date().toISOString());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Грешка.");
+      }
+    });
+  }
+
+  function handleConfirm() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await confirmListingActive(listing.id);
+        setStatus("active");
+        setLastConfirmedAt(new Date().toISOString());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Грешка.");
       }
@@ -92,14 +123,31 @@ function MyListingRow({ listing }: { listing: MyListing }) {
             {STATUS_LABELS[status]}
           </span>
         </p>
+        {status === "active" && (
+          <p className="text-xs text-slate-400">
+            {daysLeft > 0
+              ? `Потвърди до ${daysLeft} ${daysLeft === 1 ? "ден" : "дни"}, за да не изтече.`
+              : "Изтича скоро — потвърди, че е още активна."}
+          </p>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        {(status === "active" || status === "expired") && (
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={isPending}
+            className="rounded-lg border border-emerald-300 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+          >
+            Обявата е още активна
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleStatus}
-          disabled={isPending || status === "expired"}
+          disabled={isPending}
           className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
           {status === "active" ? "Деактивирай" : "Активирай"}
