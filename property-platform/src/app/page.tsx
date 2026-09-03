@@ -1,6 +1,17 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { BulgariaMap, type MapCity } from "@/components/bulgaria-map";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: cities } = await supabase
+    .from("cities")
+    .select("id, name, region, lat, lng")
+    .not("lat", "is", null)
+    .not("lng", "is", null);
+
+  const mapCities = (cities ?? []) as MapCity[];
+
   return (
     <div className="flex flex-1 flex-col bg-slate-50">
       <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center">
@@ -27,9 +38,8 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="mt-10 flex aspect-video w-full max-w-3xl items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white text-slate-400">
-          Интерактивна карта на България (област → град → квартал) — идва във
-          Фаза 3
+        <div className="mt-10 w-full max-w-3xl">
+          <BulgariaMap cities={mapCities} />
         </div>
       </section>
     </div>
