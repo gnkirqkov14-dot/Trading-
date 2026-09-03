@@ -126,6 +126,7 @@ src/
     api/cron/expire-listings/        — Vercel Cron endpoint (виж по-долу)
     dashboard/                       — защитен route: моите обяви, профил
     dashboard/listings/new/          — форма за нова обява (безплатна, без лимит)
+    dashboard/listings/[id]/edit/    — редакция на съществуваща обява (само собственик)
     dashboard/messages/              — inbox + thread view
     listings/                        — публичен списък + филтри
     listings/[id]/                   — детайлна страница + paywall за нeабонирани
@@ -135,6 +136,7 @@ src/
   components/
     bulgaria-map.tsx                 — интерактивната Leaflet карта (виж по-долу)
     new-listing-form.tsx             — форма + upload на снимки към Storage
+    edit-listing-form.tsx            — редакция: пази/маха стари снимки, добавя нови
     listing-filters.tsx              — пълния филтър панел
     message-thread-form.tsx, admin-listings-table.tsx
     my-listings.tsx, listing-card.tsx, site-header.tsx
@@ -210,7 +212,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - ✅ **Фаза 1** — Скелет, auth (регистрация/логин/изход), базов data model.
 - ✅ **Фаза 2** — Публикуване на обява (снимки в Supabase Storage, 5–30 бр.,
   видео линк), публичен списък, детайлна страница, dashboard с
-  деактивиране/изтриване.
+  редакция/деактивиране/изтриване (`updateListing` в `lib/actions/
+  listings.ts`, `/dashboard/listings/[id]/edit` — пази/маха стари
+  снимки и добавя нови, RLS вече позволяваше owner update, без нова
+  миграция).
 - ✅ **Фаза 3** — Интерактивна карта (виж по-горе), пълен филтър панел
   (тип сделка, тип имот, град, квартал, цена диапазон, кв.м диапазон,
   стаи, етаж, паркинг/асансьор/тераса/обзавеждане, сортиране).
@@ -253,7 +258,6 @@ production **задай го**.
 
 ## Съзнателно извън обхват (не са бъгове)
 
-- Пълна редакция на обява (само create/deactivate/delete за момента).
 - Реално плащане/billing (Stripe или myPOS/Borica) — изисква акаунт,
   който само собственикът на проекта може да създаде; UI-то за планове
   вече съществува и чака интеграцията.
