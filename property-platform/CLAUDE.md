@@ -137,6 +137,8 @@ src/
     bulgaria-map.tsx                 — интерактивната Leaflet карта (виж по-долу)
     new-listing-form.tsx             — форма + upload на снимки към Storage
     edit-listing-form.tsx            — редакция: пази/маха стари снимки, добавя нови
+    logo.tsx                         — икона на къща + wordmark (хедър/футър)
+    site-footer.tsx                  — футър (мини лого, навигация, copyright)
     listing-filters.tsx              — пълния филтър панел
     message-thread-form.tsx, admin-listings-table.tsx
     my-listings.tsx, listing-card.tsx, site-header.tsx
@@ -203,7 +205,12 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-Виж `.env.local.example`. Ключът е Supabase's нов "publishable key" формат
+Виж `.env.local.example`. Логото/favicon-ът (`components/logo.tsx`, `app/icon.svg`) показва само
+иконата на екрани под `sm` breakpoint (`wordmarkClassName="hidden
+sm:inline"` в `site-header.tsx`) — с пълния текст навигацията в хедъра
+преливаше на телефон (390px viewport), проверено визуално преди фикса.
+
+Ключът е Supabase's нов "publishable key" формат
 (`sb_publishable_...`) — безопасен за публично споделяне, drop-in заместител
 на старите JWT-based anon keys.
 
