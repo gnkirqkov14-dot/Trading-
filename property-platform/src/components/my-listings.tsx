@@ -135,6 +135,12 @@ function MyListingRow({ listing }: { listing: MyListing }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <Link
+          href={`/dashboard/listings/${listing.id}/edit`}
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Редактирай
+        </Link>
         {(status === "active" || status === "expired") && (
           <button
             type="button"
