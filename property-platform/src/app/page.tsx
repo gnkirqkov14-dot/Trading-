@@ -19,9 +19,12 @@ export default function Home() {
           >
             Публикувай обява
           </Link>
-          <span className="rounded-lg border border-slate-300 px-5 py-3 font-medium text-slate-400">
-            Разгледай обяви (Фаза 2)
-          </span>
+          <Link
+            href="/listings"
+            className="rounded-lg border border-slate-300 px-5 py-3 font-medium text-slate-700 hover:bg-white"
+          >
+            Разгледай обяви
+          </Link>
         </div>
 
         <div className="mt-10 flex aspect-video w-full max-w-3xl items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white text-slate-400">
