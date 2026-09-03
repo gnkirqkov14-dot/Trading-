@@ -27,6 +27,8 @@ type EditableListing = {
   is_furnished: boolean;
   title: string;
   description: string | null;
+  address: string;
+  phone: string;
   listing_photos: { url: string; position: number }[];
   listing_videos: { url: string }[];
 };
@@ -91,6 +93,8 @@ export default async function EditListingPage({
           isFurnished: listing.is_furnished,
           title: listing.title,
           description: listing.description,
+          address: listing.address,
+          phone: listing.phone,
           videoUrl: listing.listing_videos[0]?.url ?? null,
           photoUrls,
         }}
