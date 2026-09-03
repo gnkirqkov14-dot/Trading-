@@ -36,15 +36,9 @@ export const MIN_LISTING_PHOTOS = 5;
 export const MAX_LISTING_PHOTOS = 30;
 
 export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
-  basic: "Basic",
+  basic: "Free",
   pro: "Pro",
   unlimited: "Unlimited",
-};
-
-export const PLAN_ACTIVE_LISTING_LIMITS: Record<SubscriptionPlan, number> = {
-  basic: 3,
-  pro: 15,
-  unlimited: Infinity,
 };
 
 // Примерни (непотвърдени) цени в евро — България премина към еврото.
@@ -53,6 +47,14 @@ export const PLAN_PRICES_EUR: Record<SubscriptionPlan, number> = {
   pro: 10,
   unlimited: 20,
 };
+
+// Публикуването на обяви е безплатно и неограничено за всички. Абонаментът
+// (Pro/Unlimited) отключва пълния достъп при ТЪРСЕНЕ на обяви — всички
+// снимки, описание, точен квартал и възможност за писане на собственика.
+// "basic" (Free) вижда само ограничена версия на чужди обяви.
+export function hasFullSearchAccess(plan: SubscriptionPlan) {
+  return plan !== "basic";
+}
 
 export function formatPrice(price: number) {
   return `${price.toLocaleString("bg-BG")} €`;

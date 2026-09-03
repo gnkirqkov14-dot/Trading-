@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
-import {
-  PLAN_ACTIVE_LISTING_LIMITS,
-  PLAN_LABELS,
-  PLAN_PRICES_EUR,
-} from "@/lib/listing-labels";
+import { PLAN_LABELS, PLAN_PRICES_EUR } from "@/lib/listing-labels";
 import type { SubscriptionPlan } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Планове" };
@@ -11,19 +7,32 @@ export const metadata: Metadata = { title: "Планове" };
 const PLAN_ORDER: SubscriptionPlan[] = ["basic", "pro", "unlimited"];
 
 const PLAN_FEATURES: Record<SubscriptionPlan, string[]> = {
-  basic: ["До 3 активни обяви", "Съобщения от заинтересовани", "Статистика на прегледи"],
-  pro: ["До 15 активни обяви", "Всичко от Basic", "Приоритет в резултатите"],
-  unlimited: ["Неограничен брой обяви", "Всичко от Pro", "За агенции с много имоти"],
+  basic: [
+    "Публикувай неограничен брой обяви — напълно безплатно",
+    "Разглеждай прегледи на всички обяви (снимка, цена, град)",
+  ],
+  pro: [
+    "Всичко от Free",
+    "Пълни детайли на всяка обява — всички снимки, описание, точен квартал",
+    "Пиши директно на собствениците",
+  ],
+  unlimited: [
+    "Всичко от Pro",
+    "Приоритетно класиране на твоите обяви в резултатите от търсене",
+  ],
 };
 
 export default function PricingPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <h1 className="text-center text-3xl font-bold text-slate-900">
-        Планове за публикуване
+        Планове
       </h1>
       <p className="mx-auto mt-3 max-w-xl text-center text-slate-600">
-        Търсенето на имот е винаги безплатно. Плащаш само ако публикуваш
+        Публикуването на обяви е винаги безплатно и неограничено. Месечен
+        абонамент трябва само ако търсиш имот и искаш пълен достъп — всички
+        снимки, описание, точен квартал и възможност да пишеш на
+        собствениците. Без абонамент виждаш само малка част от чуждите
         обяви.
       </p>
 
@@ -47,7 +56,8 @@ export default function PricingPage() {
               )}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {PLAN_PRICES_EUR[plan] > 0 && "примерна цена — предстои потвърждение"}
+              {PLAN_PRICES_EUR[plan] > 0 &&
+                "примерна цена — предстои потвърждение"}
             </p>
 
             <ul className="mt-6 flex flex-col gap-2 text-sm text-slate-700">
@@ -80,10 +90,8 @@ export default function PricingPage() {
       </div>
 
       <p className="mx-auto mt-10 max-w-xl text-center text-sm text-slate-400">
-        Лимитът е за брой{" "}
-        <strong>активни</strong> обяви едновременно (Basic:{" "}
-        {PLAN_ACTIVE_LISTING_LIMITS.basic}, Pro: {PLAN_ACTIVE_LISTING_LIMITS.pro}
-        ) — деактивирана или изтекла обява не се брои.
+        Собственик на обява винаги вижда своята обява в цялост, независимо
+        от плана си за търсене.
       </p>
     </div>
   );
