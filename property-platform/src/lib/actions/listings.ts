@@ -4,12 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/supabase/dal";
-import {
-  MIN_LISTING_PHOTOS,
-  MAX_LISTING_PHOTOS,
-  PLAN_ACTIVE_LISTING_LIMITS,
-  PLAN_LABELS,
-} from "@/lib/listing-labels";
+import { MIN_LISTING_PHOTOS, MAX_LISTING_PHOTOS } from "@/lib/listing-labels";
 import type {
   ListingDealType,
   PropertyType,
@@ -59,29 +54,6 @@ export async function createListing(input: CreateListingInput) {
   }
 
   const supabase = await createClient();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("subscription_plan")
-    .eq("id", user.id)
-    .single();
-
-  const plan = profile?.subscription_plan ?? "basic";
-  const limit = PLAN_ACTIVE_LISTING_LIMITS[plan];
-
-  if (Number.isFinite(limit)) {
-    const { count } = await supabase
-      .from("listings")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "active");
-
-    if ((count ?? 0) >= limit) {
-      throw new Error(
-        `Достигна лимита от ${limit} активни обяви за план ${PLAN_LABELS[plan]}. Обнови плана си от /pricing, за да публикуваш повече.`,
-      );
-    }
-  }
 
   const { error: listingError } = await supabase.from("listings").insert({
     id: input.id,

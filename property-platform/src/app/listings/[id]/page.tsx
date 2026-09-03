@@ -7,6 +7,7 @@ import {
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
   formatPrice,
+  hasFullSearchAccess,
 } from "@/lib/listing-labels";
 import type {
   ListingDealType,
@@ -97,12 +98,29 @@ export default async function ListingDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const isOwner = user?.id === listing.user_id;
+  let viewerHasSubscription = false;
+  if (user && !isOwner) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_plan")
+      .eq("id", user.id)
+      .single();
+    viewerHasSubscription = hasFullSearchAccess(
+      profile?.subscription_plan ?? "basic",
+    );
+  }
+  const hasFullAccess = isOwner || viewerHasSubscription;
+
   const photos = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
   );
-  const location = [listing.neighborhoods?.name, listing.cities?.name]
-    .filter(Boolean)
-    .join(", ");
+  const visiblePhotos = hasFullAccess ? photos : photos.slice(0, 1);
+  const location = hasFullAccess
+    ? [listing.neighborhoods?.name, listing.cities?.name]
+        .filter(Boolean)
+        .join(", ")
+    : listing.cities?.name ?? null;
   const video = listing.listing_videos[0];
 
   const facts: [string, string][] = [
@@ -111,14 +129,20 @@ export default async function ListingDetailPage({
     ["Кв.м", `${listing.area_sqm} м²`],
   ];
   if (listing.rooms) facts.push(["Стаи", String(listing.rooms)]);
-  if (listing.floor !== null) facts.push(["Етаж", String(listing.floor)]);
-  if (listing.year_built)
-    facts.push(["Година на строеж", String(listing.year_built)]);
-  if (listing.heating) facts.push(["Отопление", listing.heating]);
-  facts.push(["Паркинг", listing.has_parking ? "Да" : "Не"]);
-  facts.push(["Асансьор", listing.has_elevator ? "Да" : "Не"]);
-  facts.push(["Тераса", listing.has_terrace ? "Да" : "Не"]);
-  facts.push(["Обзавеждане", listing.is_furnished ? "Обзаведен" : "Необзаведен"]);
+
+  if (hasFullAccess) {
+    if (listing.floor !== null) facts.push(["Етаж", String(listing.floor)]);
+    if (listing.year_built)
+      facts.push(["Година на строеж", String(listing.year_built)]);
+    if (listing.heating) facts.push(["Отопление", listing.heating]);
+    facts.push(["Паркинг", listing.has_parking ? "Да" : "Не"]);
+    facts.push(["Асансьор", listing.has_elevator ? "Да" : "Не"]);
+    facts.push(["Тераса", listing.has_terrace ? "Да" : "Не"]);
+    facts.push([
+      "Обзавеждане",
+      listing.is_furnished ? "Обзаведен" : "Необзаведен",
+    ]);
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -140,9 +164,9 @@ export default async function ListingDetailPage({
         )}
       </p>
 
-      {photos.length > 0 && (
+      {visiblePhotos.length > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {photos.map((photo) => (
+          {visiblePhotos.map((photo) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={photo.url}
@@ -154,7 +178,7 @@ export default async function ListingDetailPage({
         </div>
       )}
 
-      {video && (
+      {hasFullAccess && video && (
         <div className="mt-6">
           <a
             href={video.url}
@@ -178,7 +202,7 @@ export default async function ListingDetailPage({
         ))}
       </dl>
 
-      {listing.description && (
+      {hasFullAccess && listing.description && (
         <div className="mt-8">
           <h2 className="mb-2 text-lg font-semibold">Описание</h2>
           <p className="whitespace-pre-wrap text-slate-700">
@@ -187,23 +211,49 @@ export default async function ListingDetailPage({
         </div>
       )}
 
+      {!hasFullAccess && (
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+          <p className="font-medium text-slate-900">
+            Абонирай се, за да видиш всички снимки, описанието, точния
+            квартал и данните за връзка.
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Публикуването на обяви е безплатно — абонаментът е само за
+            търсещите пълен достъп.
+          </p>
+          <Link
+            href="/pricing"
+            className="mt-4 inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
+          >
+            Разгледай плановете
+          </Link>
+        </div>
+      )}
+
       <div className="mt-8 rounded-2xl border border-slate-200 p-6 text-center">
-        {!user ? (
+        {isOwner ? (
+          <p className="text-slate-500">Това е твоя обява.</p>
+        ) : !user ? (
           <p className="text-slate-500">
             <Link href="/login" className="font-medium text-slate-900 underline">
               Влез
             </Link>{" "}
-            за да пишеш на {listing.profiles?.name ?? "собственика"}.
+            и се абонирай, за да пишеш на {listing.profiles?.name ?? "собственика"}.
           </p>
-        ) : user.id === listing.user_id ? (
-          <p className="text-slate-500">Това е твоя обява.</p>
-        ) : (
+        ) : hasFullAccess ? (
           <Link
             href={`/dashboard/messages/${listing.id}/${listing.user_id}`}
             className="inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
           >
             Пиши на {listing.profiles?.name ?? "собственика"}
           </Link>
+        ) : (
+          <p className="text-slate-500">
+            Само с абонамент можеш да пишеш на {listing.profiles?.name ?? "собственика"}.{" "}
+            <Link href="/pricing" className="font-medium text-slate-900 underline">
+              Разгледай плановете
+            </Link>
+          </p>
         )}
       </div>
     </div>
