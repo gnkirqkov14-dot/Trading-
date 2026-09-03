@@ -3,6 +3,7 @@ import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
+  formatPrice,
 } from "@/lib/listing-labels";
 import type {
   ListingDealType,
@@ -56,7 +57,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       <div className="flex flex-1 flex-col gap-1 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-lg font-bold text-slate-900">
-            {listing.price.toLocaleString("bg-BG")} лв.
+            {formatPrice(listing.price)}
             {listing.type === "rent" && (
               <span className="text-sm font-normal text-slate-500">
                 /мес.

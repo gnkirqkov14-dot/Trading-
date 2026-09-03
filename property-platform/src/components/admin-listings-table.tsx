@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { adminDeleteListing, adminSetListingStatus } from "@/lib/actions/admin";
-import { STATUS_LABELS } from "@/lib/listing-labels";
+import { STATUS_LABELS, formatPrice } from "@/lib/listing-labels";
 import type { ListingStatus } from "@/lib/types/database";
 
 export type AdminListing = {
@@ -73,7 +73,7 @@ function AdminListingRow({ listing }: { listing: AdminListing }) {
         </Link>
         <p className="text-sm text-slate-500">
           {listing.profiles?.name ?? "Непознат собственик"} ·{" "}
-          {listing.price.toLocaleString("bg-BG")} лв. · {STATUS_LABELS[status]}
+          {formatPrice(listing.price)} · {STATUS_LABELS[status]}
         </p>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>

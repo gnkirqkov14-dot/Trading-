@@ -47,8 +47,13 @@ export const PLAN_ACTIVE_LISTING_LIMITS: Record<SubscriptionPlan, number> = {
   unlimited: Infinity,
 };
 
-export const PLAN_PRICES_BGN: Record<SubscriptionPlan, number> = {
+// Примерни (непотвърдени) цени в евро — България премина към еврото.
+export const PLAN_PRICES_EUR: Record<SubscriptionPlan, number> = {
   basic: 0,
-  pro: 19,
-  unlimited: 39,
+  pro: 10,
+  unlimited: 20,
 };
+
+export function formatPrice(price: number) {
+  return `${price.toLocaleString("bg-BG")} €`;
+}

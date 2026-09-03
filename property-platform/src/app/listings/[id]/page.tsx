@@ -6,6 +6,7 @@ import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
+  formatPrice,
 } from "@/lib/listing-labels";
 import type {
   ListingDealType,
@@ -63,7 +64,7 @@ export async function generateMetadata({
   const location = [listing.neighborhoods?.name, listing.cities?.name]
     .filter(Boolean)
     .join(", ");
-  const description = `${listing.price.toLocaleString("bg-BG")} лв. · ${listing.area_sqm} м²${location ? ` · ${location}` : ""}`;
+  const description = `${formatPrice(listing.price)} · ${listing.area_sqm} м²${location ? ` · ${location}` : ""}`;
   const coverPhoto = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
   )[0];
@@ -133,7 +134,7 @@ export default async function ListingDetailPage({
       {location && <p className="mt-1 text-slate-500">{location}</p>}
 
       <p className="mt-4 text-3xl font-bold text-slate-900">
-        {listing.price.toLocaleString("bg-BG")} лв.
+        {formatPrice(listing.price)}
         {listing.type === "rent" && (
           <span className="text-lg font-normal text-slate-500">/мес.</span>
         )}

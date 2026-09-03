@@ -11,6 +11,7 @@ import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
+  formatPrice,
 } from "@/lib/listing-labels";
 import type {
   ListingDealType,
@@ -114,7 +115,7 @@ function MyListingRow({ listing }: { listing: MyListing }) {
         <p className="text-sm text-slate-500">
           {PROPERTY_TYPE_LABELS[listing.property_type]} ·{" "}
           {DEAL_TYPE_LABELS[listing.type]} ·{" "}
-          {listing.price.toLocaleString("bg-BG")} лв. ·{" "}
+          {formatPrice(listing.price)} ·{" "}
           <span
             className={
               status === "active" ? "text-emerald-600" : "text-amber-600"
