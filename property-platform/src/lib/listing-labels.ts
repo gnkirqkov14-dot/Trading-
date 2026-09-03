@@ -32,7 +32,8 @@ export const HEATING_OPTIONS = [
   "Без отопление",
 ];
 
-export const MIN_LISTING_PHOTOS = 5;
+// Снимките не са задължителни — това е само препоръка, показвана в UI-то.
+export const MIN_LISTING_PHOTOS_HINT = 5;
 export const MAX_LISTING_PHOTOS = 30;
 
 export const PLAN_LABELS: Record<SubscriptionPlan, string> = {

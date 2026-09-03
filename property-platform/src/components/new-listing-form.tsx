@@ -8,7 +8,7 @@ import {
   DEAL_TYPE_LABELS,
   HEATING_OPTIONS,
   MAX_LISTING_PHOTOS,
-  MIN_LISTING_PHOTOS,
+  MIN_LISTING_PHOTOS_HINT,
   PROPERTY_TYPE_LABELS,
 } from "@/lib/listing-labels";
 import type {
@@ -47,6 +47,8 @@ export function NewListingForm({
   const [isFurnished, setIsFurnished] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
 
@@ -82,14 +84,18 @@ export function NewListingForm({
     e.preventDefault();
     setError(null);
 
-    if (photos.length < MIN_LISTING_PHOTOS) {
-      setError(`Качете поне ${MIN_LISTING_PHOTOS} снимки.`);
-      return;
-    }
     const priceNum = Number(price);
     const areaNum = Number(areaSqm);
     if (!title.trim()) {
       setError("Въведете заглавие на обявата.");
+      return;
+    }
+    if (!address.trim()) {
+      setError("Въведете адрес на имота.");
+      return;
+    }
+    if (!phone.trim()) {
+      setError("Въведете телефон за връзка.");
       return;
     }
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
@@ -147,6 +153,8 @@ export function NewListingForm({
         isFurnished,
         title,
         description: description || null,
+        address,
+        phone,
         photoUrls,
         videoUrl: videoUrl.trim() || null,
       });
@@ -231,6 +239,18 @@ export function NewListingForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <label className={labelClass}>Адрес</label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Напр. ул. Иван Вазов 15"
+            className={inputClass}
+            required
+          />
         </div>
       </section>
 
@@ -339,6 +359,17 @@ export function NewListingForm({
           />
         </div>
         <div className="flex flex-col gap-1">
+          <label className={labelClass}>Телефон за връзка</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="08xx xxx xxx"
+            className={inputClass}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1">
           <label className={labelClass}>Описание</label>
           <textarea
             value={description}
@@ -361,8 +392,7 @@ export function NewListingForm({
 
       <section className="flex flex-col gap-3">
         <label className={labelClass}>
-          Снимки ({photos.length}/{MAX_LISTING_PHOTOS}, минимум{" "}
-          {MIN_LISTING_PHOTOS})
+          Снимки ({photos.length}/{MAX_LISTING_PHOTOS}, незадължително)
         </label>
         <input
           ref={fileInputRef}
@@ -372,6 +402,10 @@ export function NewListingForm({
           onChange={(e) => handleFilesSelected(e.target.files)}
           className="text-sm"
         />
+        <p className="text-xs text-slate-400">
+          Препоръчваме поне {MIN_LISTING_PHOTOS_HINT} снимки — обявите със
+          снимки получават повече интерес.
+        </p>
         {previews.length > 0 && (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {previews.map((p, i) => (

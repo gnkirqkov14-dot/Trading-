@@ -92,6 +92,8 @@ export interface Database {
           is_furnished: boolean;
           title: string;
           description: string | null;
+          address: string;
+          phone: string;
           status: ListingStatus;
           last_confirmed_at: string;
           created_at: string;
@@ -117,6 +119,8 @@ export interface Database {
           is_furnished?: boolean;
           title: string;
           description?: string | null;
+          address: string;
+          phone: string;
           status?: ListingStatus;
           last_confirmed_at?: string;
           created_at?: string;

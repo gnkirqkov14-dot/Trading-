@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/supabase/dal";
-import { MIN_LISTING_PHOTOS, MAX_LISTING_PHOTOS } from "@/lib/listing-labels";
+import { MAX_LISTING_PHOTOS } from "@/lib/listing-labels";
 import type {
   ListingDealType,
   PropertyType,
@@ -28,6 +28,8 @@ export type CreateListingInput = {
   isFurnished: boolean;
   title: string;
   description: string | null;
+  address: string;
+  phone: string;
   photoUrls: string[];
   videoUrl: string | null;
 };
@@ -38,19 +40,20 @@ export async function createListing(input: CreateListingInput) {
   if (!input.title.trim()) {
     throw new Error("Заглавието е задължително.");
   }
+  if (!input.address.trim()) {
+    throw new Error("Адресът е задължителен.");
+  }
+  if (!input.phone.trim()) {
+    throw new Error("Телефонът за връзка е задължителен.");
+  }
   if (!Number.isFinite(input.price) || input.price <= 0) {
     throw new Error("Въведете валидна цена.");
   }
   if (!Number.isFinite(input.areaSqm) || input.areaSqm <= 0) {
     throw new Error("Въведете валидна квадратура.");
   }
-  if (
-    input.photoUrls.length < MIN_LISTING_PHOTOS ||
-    input.photoUrls.length > MAX_LISTING_PHOTOS
-  ) {
-    throw new Error(
-      `Обявата трябва да съдържа между ${MIN_LISTING_PHOTOS} и ${MAX_LISTING_PHOTOS} снимки.`,
-    );
+  if (input.photoUrls.length > MAX_LISTING_PHOTOS) {
+    throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
   }
 
   const supabase = await createClient();
@@ -74,6 +77,8 @@ export async function createListing(input: CreateListingInput) {
     is_furnished: input.isFurnished,
     title: input.title.trim(),
     description: input.description?.trim() || null,
+    address: input.address.trim(),
+    phone: input.phone.trim(),
   });
 
   if (listingError) {
@@ -121,6 +126,8 @@ export type UpdateListingInput = {
   isFurnished: boolean;
   title: string;
   description: string | null;
+  address: string;
+  phone: string;
   videoUrl: string | null;
   keepPhotoUrls: string[];
   newPhotoUrls: string[];
@@ -138,6 +145,12 @@ export async function updateListing(input: UpdateListingInput) {
   if (!input.title.trim()) {
     throw new Error("Заглавието е задължително.");
   }
+  if (!input.address.trim()) {
+    throw new Error("Адресът е задължителен.");
+  }
+  if (!input.phone.trim()) {
+    throw new Error("Телефонът за връзка е задължителен.");
+  }
   if (!Number.isFinite(input.price) || input.price <= 0) {
     throw new Error("Въведете валидна цена.");
   }
@@ -145,10 +158,8 @@ export async function updateListing(input: UpdateListingInput) {
     throw new Error("Въведете валидна квадратура.");
   }
   const totalPhotos = input.keepPhotoUrls.length + input.newPhotoUrls.length;
-  if (totalPhotos < MIN_LISTING_PHOTOS || totalPhotos > MAX_LISTING_PHOTOS) {
-    throw new Error(
-      `Обявата трябва да съдържа между ${MIN_LISTING_PHOTOS} и ${MAX_LISTING_PHOTOS} снимки.`,
-    );
+  if (totalPhotos > MAX_LISTING_PHOTOS) {
+    throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
   }
 
   const supabase = await createClient();
@@ -183,6 +194,8 @@ export async function updateListing(input: UpdateListingInput) {
       is_furnished: input.isFurnished,
       title: input.title.trim(),
       description: input.description?.trim() || null,
+      address: input.address.trim(),
+      phone: input.phone.trim(),
     })
     .eq("id", input.id)
     .eq("user_id", user.id);

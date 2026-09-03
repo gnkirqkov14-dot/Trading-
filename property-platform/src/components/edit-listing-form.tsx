@@ -8,7 +8,7 @@ import {
   DEAL_TYPE_LABELS,
   HEATING_OPTIONS,
   MAX_LISTING_PHOTOS,
-  MIN_LISTING_PHOTOS,
+  MIN_LISTING_PHOTOS_HINT,
   PROPERTY_TYPE_LABELS,
 } from "@/lib/listing-labels";
 import type {
@@ -47,6 +47,8 @@ export function EditListingForm({
     isFurnished: boolean;
     title: string;
     description: string | null;
+    address: string;
+    phone: string;
     videoUrl: string | null;
     photoUrls: string[];
   };
@@ -78,6 +80,8 @@ export function EditListingForm({
   const [isFurnished, setIsFurnished] = useState(initial.isFurnished);
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description ?? "");
+  const [address, setAddress] = useState(initial.address);
+  const [phone, setPhone] = useState(initial.phone);
   const [videoUrl, setVideoUrl] = useState(initial.videoUrl ?? "");
 
   const [keptPhotoUrls, setKeptPhotoUrls] = useState<string[]>(
@@ -128,14 +132,18 @@ export function EditListingForm({
     e.preventDefault();
     setError(null);
 
-    if (totalPhotoCount < MIN_LISTING_PHOTOS) {
-      setError(`Качете поне ${MIN_LISTING_PHOTOS} снимки.`);
-      return;
-    }
     const priceNum = Number(price);
     const areaNum = Number(areaSqm);
     if (!title.trim()) {
       setError("Въведете заглавие на обявата.");
+      return;
+    }
+    if (!address.trim()) {
+      setError("Въведете адрес на имота.");
+      return;
+    }
+    if (!phone.trim()) {
+      setError("Въведете телефон за връзка.");
       return;
     }
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
@@ -192,6 +200,8 @@ export function EditListingForm({
         isFurnished,
         title,
         description: description || null,
+        address,
+        phone,
         videoUrl: videoUrl.trim() || null,
         keepPhotoUrls: keptPhotoUrls,
         newPhotoUrls,
@@ -277,6 +287,18 @@ export function EditListingForm({
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <label className={labelClass}>Адрес</label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Напр. ул. Иван Вазов 15"
+            className={inputClass}
+            required
+          />
         </div>
       </section>
 
@@ -385,6 +407,17 @@ export function EditListingForm({
           />
         </div>
         <div className="flex flex-col gap-1">
+          <label className={labelClass}>Телефон за връзка</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="08xx xxx xxx"
+            className={inputClass}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1">
           <label className={labelClass}>Описание</label>
           <textarea
             value={description}
@@ -407,8 +440,7 @@ export function EditListingForm({
 
       <section className="flex flex-col gap-3">
         <label className={labelClass}>
-          Снимки ({totalPhotoCount}/{MAX_LISTING_PHOTOS}, минимум{" "}
-          {MIN_LISTING_PHOTOS})
+          Снимки ({totalPhotoCount}/{MAX_LISTING_PHOTOS}, незадължително)
         </label>
         <input
           ref={fileInputRef}
@@ -418,6 +450,10 @@ export function EditListingForm({
           onChange={(e) => handleFilesSelected(e.target.files)}
           className="text-sm"
         />
+        <p className="text-xs text-slate-400">
+          Препоръчваме поне {MIN_LISTING_PHOTOS_HINT} снимки — обявите със
+          снимки получават повече интерес.
+        </p>
         {(keptPhotoUrls.length > 0 || newPreviews.length > 0) && (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {keptPhotoUrls.map((url) => (

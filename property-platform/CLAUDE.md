@@ -158,6 +158,7 @@ supabase/migrations/
   0006_expire_stale_listings.sql     — auto-expire SQL функция (за Cron)
   0007_admin.sql                     — profiles.is_admin + admin RLS policies
   0008_search_subscription_paywall.sql — RLS: само абонати/собственик пращат съобщения
+  0009_listing_contact_fields.sql    — listings.address + listings.phone (задължителни)
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 ```
@@ -217,12 +218,17 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
 ## Статус по фази (виж docs/PLAN.md за пълния план)
 
 - ✅ **Фаза 1** — Скелет, auth (регистрация/логин/изход), базов data model.
-- ✅ **Фаза 2** — Публикуване на обява (снимки в Supabase Storage, 5–30 бр.,
-  видео линк), публичен списък, детайлна страница, dashboard с
-  редакция/деактивиране/изтриване (`updateListing` в `lib/actions/
-  listings.ts`, `/dashboard/listings/[id]/edit` — пази/маха стари
-  снимки и добавя нови, RLS вече позволяваше owner update, без нова
-  миграция).
+- ✅ **Фаза 2** — Публикуване на обява (снимки в Supabase Storage, до 30
+  бр., **незадължителни** — само мек hint за препоръчителен минимум,
+  виж `MIN_LISTING_PHOTOS_HINT`; видео линк), публичен списък, детайлна
+  страница, dashboard с редакция/деактивиране/изтриване (`updateListing`
+  в `lib/actions/listings.ts`, `/dashboard/listings/[id]/edit` — пази/
+  маха стари снимки и добавя нови, RLS вече позволяваше owner update,
+  без нова миграция). **Адрес и телефон за връзка са задължителни**
+  полета при публикуване (`listings.address`, `listings.phone` —
+  `0009_listing_contact_fields.sql`) и се показват на детайлната
+  страница само зад paywall-а от Фаза 4 (виж по-долу) — без абонамент
+  не се виждат.
 - ✅ **Фаза 3** — Интерактивна карта (виж по-горе), пълен филтър панел
   (тип сделка, тип имот, град, квартал, цена диапазон, кв.м диапазон,
   стаи, етаж, паркинг/асансьор/тераса/обзавеждане, сортиране).

@@ -32,6 +32,8 @@ type ListingDetail = {
   is_furnished: boolean;
   title: string;
   description: string | null;
+  address: string;
+  phone: string;
   status: ListingStatus;
   cities: { name: string } | null;
   neighborhoods: { name: string } | null;
@@ -208,6 +210,30 @@ export default async function ListingDetailPage({
           <p className="whitespace-pre-wrap text-slate-700">
             {listing.description}
           </p>
+        </div>
+      )}
+
+      {hasFullAccess && (
+        <div className="mt-8 rounded-2xl border border-slate-200 p-6">
+          <h2 className="mb-3 text-lg font-semibold">Контакти</h2>
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">
+                Адрес
+              </dt>
+              <dd className="font-medium text-slate-900">{listing.address}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">
+                Телефон
+              </dt>
+              <dd className="font-medium text-slate-900">
+                <a href={`tel:${listing.phone}`} className="hover:underline">
+                  {listing.phone}
+                </a>
+              </dd>
+            </div>
+          </dl>
         </div>
       )}
 
