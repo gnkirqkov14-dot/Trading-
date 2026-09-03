@@ -1,3 +1,7 @@
+> **Забележка**: това repo съдържа два несвързани проекта. Този документ
+> описва crypto/ETF trading demo-то по-долу. За платформата за обяви на
+> имоти без посредници виж [`property-platform/README.md`](property-platform/README.md).
+
 # Autonomous Crypto + ETF Trading Agent — Demo
 
 Демо приложение за автономен AI трейдър-анализатор, който търгува с
