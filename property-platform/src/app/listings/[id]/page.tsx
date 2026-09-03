@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -14,6 +15,7 @@ import type {
 
 type ListingDetail = {
   id: string;
+  user_id: string;
   type: ListingDealType;
   property_type: PropertyType;
   price: number;
@@ -56,7 +58,25 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const listing = await getListing(id);
-  return { title: listing?.title ?? "Обява" };
+  if (!listing) return { title: "Обява" };
+
+  const location = [listing.neighborhoods?.name, listing.cities?.name]
+    .filter(Boolean)
+    .join(", ");
+  const description = `${listing.price.toLocaleString("bg-BG")} лв. · ${listing.area_sqm} м²${location ? ` · ${location}` : ""}`;
+  const coverPhoto = [...listing.listing_photos].sort(
+    (a, b) => a.position - b.position,
+  )[0];
+
+  return {
+    title: listing.title,
+    description,
+    openGraph: {
+      title: listing.title,
+      description,
+      images: coverPhoto ? [coverPhoto.url] : undefined,
+    },
+  };
 }
 
 export default async function ListingDetailPage({
@@ -70,6 +90,11 @@ export default async function ListingDetailPage({
   if (!listing) {
     notFound();
   }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const photos = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
@@ -161,9 +186,24 @@ export default async function ListingDetailPage({
         </div>
       )}
 
-      <div className="mt-8 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-slate-500">
-        Съобщения до {listing.profiles?.name ?? "собственика"} — идва във
-        Фаза 5.
+      <div className="mt-8 rounded-2xl border border-slate-200 p-6 text-center">
+        {!user ? (
+          <p className="text-slate-500">
+            <Link href="/login" className="font-medium text-slate-900 underline">
+              Влез
+            </Link>{" "}
+            за да пишеш на {listing.profiles?.name ?? "собственика"}.
+          </p>
+        ) : user.id === listing.user_id ? (
+          <p className="text-slate-500">Това е твоя обява.</p>
+        ) : (
+          <Link
+            href={`/dashboard/messages/${listing.id}/${listing.user_id}`}
+            className="inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
+          >
+            Пиши на {listing.profiles?.name ?? "собственика"}
+          </Link>
+        )}
       </div>
     </div>
   );

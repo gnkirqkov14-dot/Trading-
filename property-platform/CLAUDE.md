@@ -64,24 +64,38 @@ following навсякъде другаде в кода — виж `getListing()
 по-безопасен избор, освен ако не added много embed-и на едно и също
 място.
 
+**Два FK-та към една и съща таблица** (напр. `messages.from_user_id` и
+`messages.to_user_id` — и двата сочат към `profiles`): Postgrest не може
+сам да познае кой имаш предвид при `profiles(name)` — трябва изрична
+hint синтаксис с името на FK constraint-а:
+`from_profile:profiles!messages_from_user_id_fkey(name)`. Constraint
+имената следват Postgres конвенцията `<table>_<column>_fkey` (не сме ги
+именували изрично в SQL-а). Виж `app/dashboard/messages/page.tsx`.
+
 ## Структура
 
 ```
 src/
   app/
     (auth)/login, (auth)/register    — auth страници
-    dashboard/                       — защитен route: моите обяви, профил
-    dashboard/listings/new/          — форма за нова обява
+    admin/                           — минимален admin панел (изисква is_admin)
+    api/cron/expire-listings/        — Vercel Cron endpoint (виж по-долу)
+    dashboard/                       — защитен route: моите обяви, профил, лимит
+    dashboard/listings/new/          — форма за нова обява (блокира при лимит)
+    dashboard/messages/              — inbox + thread view
     listings/                        — публичен списък + филтри
-    listings/[id]/                   — детайлна страница на обява
+    listings/[id]/                   — детайлна страница на обява + "Пиши на..."
+    pricing/                         — планове (Basic/Pro/Unlimited, без плащане)
     page.tsx                         — начална страница (карта на България)
+    sitemap.ts, robots.ts            — SEO
   components/
     bulgaria-map.tsx                 — интерактивната Leaflet карта (виж по-долу)
     new-listing-form.tsx             — форма + upload на снимки към Storage
     listing-filters.tsx              — пълния филтър панел
+    message-thread-form.tsx, admin-listings-table.tsx
     my-listings.tsx, listing-card.tsx, site-header.tsx
   lib/
-    actions/auth.ts, actions/listings.ts  — Server Actions
+    actions/auth.ts, listings.ts, messages.ts, admin.ts  — Server Actions
     supabase/client.ts, server.ts, middleware.ts, dal.ts
     types/database.ts, listing-labels.ts
   proxy.ts                           — session refresh (виж Next.js 16 бележката)
@@ -93,7 +107,10 @@ supabase/migrations/
   0003_listings_visibility.sql       — RLS fix: expired обяви остават публични
   0004_city_coordinates.sql          — lat/lng на градовете (за картата)
   0005_neighborhood_coordinates.sql  — lat/lng на кварталите (за drill-down)
+  0006_expire_stale_listings.sql     — auto-expire SQL функция (за Cron)
+  0007_admin.sql                     — profiles.is_admin + admin RLS policies
 docs/PLAN.md                         — пълната бизнес спецификация + фази
+vercel.json                          — Cron конфигурация
 ```
 
 **Миграциите не са автоматично приложени** — няма link-нат Supabase CLI.
@@ -152,19 +169,48 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - ✅ **Фаза 3** — Интерактивна карта (виж по-горе), пълен филтър панел
   (тип сделка, тип имот, град, квартал, цена диапазон, кв.м диапазон,
   стаи, етаж, паркинг/асансьор/тераса/обзавеждане, сортиране).
-- ⬜ **Фаза 4** — Абонаменти (Stripe или myPOS/Borica — **не е избрано**),
-  ограничения по план (Basic/Pro/Unlimited — enum-ът вече съществува в
-  schema-та, но **не се прилага** никъде все още).
-- ⬜ **Фаза 5** — Вътрешни съобщения между потребители, седмична
-  актуализация на обяви с email reminder, auto-expire логика (enum
-  статусите `active`/`inactive`/`expired` вече съществуват, но нищо
-  автоматично не преминава обява в `expired` все още).
-- ⬜ **Фаза 6** — SEO, admin панел, performance polish.
+- 🟡 **Фаза 4 (частично)** — `/pricing` страница (Basic/Pro/Unlimited),
+  лимит на активни обяви приложен и на сървъра (`createListing`), и на
+  ниво страница (`/dashboard/listings/new` блокира с ясно съобщение при
+  достигнат лимит). **Реално плащане (Stripe/myPOS/Borica) не е
+  свързано** — "Upgrade" бутоните на `/pricing` са нарочно disabled
+  ("Очаквайте скоро"), защото изисква платежен акаунт, който само
+  собственикът на проекта може да създаде. Цените на Pro/Unlimited в
+  `lib/listing-labels.ts` (`PLAN_PRICES_BGN`) са **примерни, не
+  потвърдени**.
+- ✅ **Фаза 5** — Вътрешни съобщения (`/dashboard/messages`, inbox +
+  thread view, `lib/actions/messages.ts`), седмична актуализация
+  (бутон "Обявата е още активна" в dashboard-а, `confirmListingActive`),
+  auto-expire логика (SQL функция `expire_stale_listings()` + Vercel
+  Cron всеки ден в 03:00 UTC, виж `vercel.json` +
+  `app/api/cron/expire-listings/route.ts`). **Email/push reminder не е
+  включен** — изисква Resend/SendGrid акаунт (същата категория блокер
+  като Stripe в Фаза 4).
+- 🟡 **Фаза 6 (частично)** — SEO metadata (title template, OG за
+  обявите с корица снимка), `sitemap.ts` + `robots.ts`, минимален admin
+  панел (`/admin`, изисква `profiles.is_admin = true` — виж коментара в
+  `0007_admin.sql` как да си дадеш админ права), responsive-ът е
+  проверен визуално на мобилен viewport. Performance profiling/по-нататъшно
+  polish не е правено.
+
+### Cron job — важно за deploy
+
+`vercel.json` дефинира daily cron към `/api/cron/expire-listings`.
+За да работи в production, добави `CRON_SECRET` environment variable в
+Vercel project settings (произволен таен низ) — Vercel автоматично го
+праща като `Authorization: Bearer <CRON_SECRET>` header на всеки cron
+request, а route handler-ът го проверява. Без зададен `CRON_SECRET`
+route-ът работи и без auth проверка (за локално тестване), но за
+production **задай го**.
 
 ## Съзнателно извън обхват (не са бъгове)
 
 - Пълна редакция на обява (само create/deactivate/delete за момента).
-- Квоти по абонаментен план (изисква Фаза 4 billing, за да имат смисъл).
+- Реално плащане/billing (Stripe или myPOS/Borica) — изисква акаунт,
+  който само собственикът на проекта може да създаде; UI-то за планове
+  вече съществува и чака интеграцията.
+- Email/push известия за седмичната актуализация — изисква Resend/
+  SendGrid акаунт; auto-expire логиката работи без тях.
 - Neighborhood-level map полигони (само точки/маркери — нямаше открити
   свободно лицензирани полигонни граници на квартален level).
 

@@ -3,6 +3,10 @@ import Link from "next/link";
 import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { MyListings, type MyListing } from "@/components/my-listings";
+import {
+  PLAN_ACTIVE_LISTING_LIMITS,
+  PLAN_LABELS,
+} from "@/lib/listing-labels";
 
 export const metadata: Metadata = { title: "Моят профил" };
 
@@ -13,9 +17,15 @@ export default async function DashboardPage() {
 
   const { data: listings } = await supabase
     .from("listings")
-    .select("id, title, type, property_type, price, status")
+    .select("id, title, type, property_type, price, status, last_confirmed_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  const plan = profile?.subscription_plan ?? "basic";
+  const limit = PLAN_ACTIVE_LISTING_LIMITS[plan];
+  const activeCount = (listings ?? []).filter(
+    (l) => l.status === "active",
+  ).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -26,9 +36,11 @@ export default async function DashboardPage() {
           </h1>
           <p className="mt-2 text-slate-500">
             План:{" "}
-            <span className="font-medium text-slate-900">
-              {profile?.subscription_plan ?? "basic"}
-            </span>
+            <Link href="/pricing" className="font-medium text-slate-900 underline">
+              {PLAN_LABELS[plan]}
+            </Link>{" "}
+            · {activeCount}/{Number.isFinite(limit) ? limit : "∞"} активни
+            обяви
           </p>
         </div>
         <Link
