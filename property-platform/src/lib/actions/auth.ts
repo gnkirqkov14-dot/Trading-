@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -11,6 +12,15 @@ function getRedirectTarget(formData: FormData) {
   return typeof redirectTo === "string" && redirectTo.startsWith("/")
     ? redirectTo
     : "/dashboard";
+}
+
+async function getSiteOrigin() {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host");
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ??
+    (host?.startsWith("localhost") ? "http" : "https");
+  return `${protocol}://${host}`;
 }
 
 export async function signUp(
@@ -76,4 +86,26 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+export async function signInWithOAuth(
+  provider: "google" | "facebook",
+  redirectTo: string,
+) {
+  const supabase = await createClient();
+  const origin = await getSiteOrigin();
+  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/dashboard";
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+    },
+  });
+
+  if (error || !data.url) {
+    redirect("/login?error=oauth_failed");
+  }
+
+  redirect(data.url);
 }
