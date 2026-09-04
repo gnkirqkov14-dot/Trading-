@@ -38,6 +38,12 @@ export default async function DashboardPage() {
             · {activeCount} активни обяви (публикуването е безплатно и
             неограничено)
           </p>
+          <Link
+            href="/dashboard/profile"
+            className="mt-1 inline-block text-sm text-slate-500 underline hover:text-slate-900"
+          >
+            Настройки на профила
+          </Link>
         </div>
         <Link
           href="/dashboard/listings/new"
