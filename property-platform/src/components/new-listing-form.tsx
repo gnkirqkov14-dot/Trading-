@@ -23,10 +23,12 @@ export function NewListingForm({
   userId,
   cities,
   neighborhoods,
+  initialPhone = "",
 }: {
   userId: string;
   cities: City[];
   neighborhoods: Neighborhood[];
+  initialPhone?: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +50,7 @@ export function NewListingForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initialPhone);
   const [videoUrl, setVideoUrl] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
 

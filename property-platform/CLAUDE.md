@@ -68,9 +68,32 @@ demo (`backend/`, `frontend/`, `docs/`, `netlify.toml`, `render.yaml` в
   същата проверка предварително, само за да покаже приятелско съобщение
   на грешка вместо суров Postgres RLS error; истинската защита е
   policy-то в базата.
-- `profiles.phone` полето съществува в схемата, но никога не е било
-  показвано никъде в UI-то (нито преди, нито сега) — така адресът/
-  телефонът никога не изтичат към нeабонирани потребители по подразбиране.
+- `profiles.phone` вече се редактира от `/dashboard/profile` (виж по-долу)
+  и служи само като начална стойност за телефонното поле при публикуване
+  на нова обява — истинският телефон, който се показва на купувачите, е
+  `listings.phone` (отделен, per-listing).
+
+## ⚠️ Security fix: column-level grants на `profiles`
+
+При изграждане на `/dashboard/profile` открихме пропуск от Фаза 1: RLS
+policy-то `"Users can update their own profile"` има само
+`using (auth.uid() = id)`, без `with check`, а Supabase's default table
+grants дават на `authenticated` UPDATE право върху **всички** колони.
+Тъй като приложението ползва публичен anon/publishable ключ, всеки логнат
+потребител технически е можел да прати директна заявка към Supabase REST
+API-то (заобикаляйки цялото UI) и:
+- да си зададе `subscription_plan = 'pro'/'unlimited'` — заобикаляйки
+  целия paywall от Фаза 4, безплатно, или
+- да си зададе `is_admin = true` — пълна admin ескалация (Фаза 6).
+
+`supabase/migrations/0010_lock_profile_columns.sql` затваря дупката с
+column-level grant: `revoke update ... from authenticated, anon; grant
+update (name, phone) on public.profiles to authenticated;` — оттук
+нататък update е физически възможен само върху `name`/`phone`, каквото
+UI-то изобщо позволява. `subscription_plan`/`is_admin` остават
+променяеми само през `service_role` ключа (бъдещ payment webhook или
+директен достъп до базата). **Тази миграция е важна за сигурността —
+пусни я възможно най-скоро.**
 
 ## ⚠️ Next.js 16 — не е Next.js-ът, който познаваш
 
@@ -127,6 +150,7 @@ src/
     dashboard/                       — защитен route: моите обяви, профил
     dashboard/listings/new/          — форма за нова обява (безплатна, без лимит)
     dashboard/listings/[id]/edit/    — редакция на съществуваща обява (само собственик)
+    dashboard/profile/               — настройки на профила (име, телефон)
     dashboard/messages/              — inbox + thread view
     listings/                        — публичен списък + филтри
     listings/[id]/                   — детайлна страница + paywall за нeабонирани
@@ -139,11 +163,12 @@ src/
     edit-listing-form.tsx            — редакция: пази/маха стари снимки, добавя нови
     logo.tsx                         — икона на къща + wordmark (хедър/футър)
     site-footer.tsx                  — футър (мини лого, навигация, copyright)
+    profile-form.tsx                 — редакция на име/телефон в профила
     listing-filters.tsx              — пълния филтър панел
     message-thread-form.tsx, admin-listings-table.tsx
     my-listings.tsx, listing-card.tsx, site-header.tsx
   lib/
-    actions/auth.ts, listings.ts, messages.ts, admin.ts  — Server Actions
+    actions/auth.ts, listings.ts, messages.ts, admin.ts, profile.ts  — Server Actions
     supabase/client.ts, server.ts, middleware.ts, dal.ts
     types/database.ts, listing-labels.ts
   proxy.ts                           — session refresh (виж Next.js 16 бележката)
@@ -159,6 +184,7 @@ supabase/migrations/
   0007_admin.sql                     — profiles.is_admin + admin RLS policies
   0008_search_subscription_paywall.sql — RLS: само абонати/собственик пращат съобщения
   0009_listing_contact_fields.sql    — listings.address + listings.phone (задължителни)
+  0010_lock_profile_columns.sql      — security fix: column-level grants на profiles
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 ```

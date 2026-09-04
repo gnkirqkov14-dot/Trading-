@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAuthedUser } from "@/lib/supabase/dal";
+import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { NewListingForm } from "@/components/new-listing-form";
 
@@ -9,10 +9,12 @@ export default async function NewListingPage() {
   const user = await getAuthedUser();
   const supabase = await createClient();
 
-  const [{ data: cities }, { data: neighborhoods }] = await Promise.all([
-    supabase.from("cities").select("id, name, region").order("name"),
-    supabase.from("neighborhoods").select("id, city_id, name").order("name"),
-  ]);
+  const [{ data: cities }, { data: neighborhoods }, profile] =
+    await Promise.all([
+      supabase.from("cities").select("id, name, region").order("name"),
+      supabase.from("neighborhoods").select("id, city_id, name").order("name"),
+      getProfile(),
+    ]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -21,6 +23,7 @@ export default async function NewListingPage() {
         userId={user.id}
         cities={cities ?? []}
         neighborhoods={neighborhoods ?? []}
+        initialPhone={profile?.phone ?? ""}
       />
     </div>
   );
