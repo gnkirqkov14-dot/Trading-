@@ -22,6 +22,7 @@ export const STATUS_LABELS: Record<ListingStatus, string> = {
   active: "Активна",
   inactive: "Неактивна",
   expired: "Неактуална",
+  archived: "Архивирана",
 };
 
 export const HEATING_OPTIONS = [

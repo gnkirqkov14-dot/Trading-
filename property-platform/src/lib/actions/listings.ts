@@ -279,7 +279,11 @@ export async function setListingStatus(
 
   const { error } = await supabase
     .from("listings")
-    .update({ status, last_confirmed_at: new Date().toISOString() })
+    .update({
+      status,
+      last_confirmed_at: new Date().toISOString(),
+      reminder_count: 0,
+    })
     .eq("id", listingId)
     .eq("user_id", user.id);
 
@@ -297,7 +301,11 @@ export async function confirmListingActive(listingId: string) {
 
   const { error } = await supabase
     .from("listings")
-    .update({ status: "active", last_confirmed_at: new Date().toISOString() })
+    .update({
+      status: "active",
+      last_confirmed_at: new Date().toISOString(),
+      reminder_count: 0,
+    })
     .eq("id", listingId)
     .eq("user_id", user.id);
 
