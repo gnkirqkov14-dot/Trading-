@@ -230,26 +230,42 @@ geojson-ът се фетчва async), те лягат ОТГОРЕ и крад�
 
 ## Вход с Google/Facebook (OAuth)
 
-Кодът е готов (`lib/actions/auth.ts` → `signInWithOAuth()`, `app/auth/
-callback/route.ts`, `components/oauth-buttons.tsx` — вграден в `login-
-form.tsx`/`register-form.tsx`), но **не работи, докато собственикът на
-проекта не направи 3 неща извън тази codebase**:
+✅ **Google работи в production** (тествано на живо от собственика на
+27.09.2026 — влизане с реален Google акаунт стигна успешно до
+`/dashboard`). Кодът: `lib/actions/auth.ts` → `signInWithOAuth()`,
+`app/auth/callback/route.ts`, `components/oauth-buttons.tsx` (вграден в
+`login-form.tsx`/`register-form.tsx`).
 
-1. Създаде OAuth client в [Google Cloud Console](https://console.cloud.google.com/)
-   (APIs & Services → Credentials → Create Credentials → OAuth client ID
-   → Web application) с authorized redirect URI = **Supabase-ския**
-   callback (`https://<project-ref>.supabase.co/auth/v1/callback` — вижда
-   се в Supabase Dashboard → Authentication → Providers → Google), **не**
-   адрес от property-platform-five.vercel.app.
-2. Аналогично създаде Facebook App в [Meta for Developers](https://developers.facebook.com/)
-   с продукт "Facebook Login", същия redirect URI формат. Facebook App-и
-   в "Development mode" пускат само test users — за реални потребители
-   трябва App Review (Meta одобрява "public_profile"/"email" permissions
-   обичайно бързо, но е допълнителна стъпка, която само собственикът на
-   Facebook App-а може да подаде).
-3. Постави получените Client ID/Secret от двете в Supabase Dashboard →
-   Authentication → Providers → Google/Facebook, и включи (enable) двата
-   provider-а.
+🔲 **Facebook е нарочно спрян/скрит** — собственикът избра да продължи
+само с Google засега. Бутонът "Продължи с Facebook" е премахнат от
+`oauth-buttons.tsx` (не само скрит с CSS — кодът му е изтрит), за да не
+показва счупен вход. За да се върне: пресъздай `FacebookIcon` и втория
+`<form>` (виж git история на `oauth-buttons.tsx` преди премахването,
+commit "Скрий бутона за Facebook..."), плюс стъпките по-долу за Meta.
+
+### Как се направи Google (за референция / за бъдещи доставчици)
+
+1. Google Cloud Console → создаде се отделен проект ("Imotibezpowrednik",
+   различен от други лични Google Cloud проекти на собственика) →
+   **Google Auth Platform** (по-новото име на "OAuth consent screen") →
+   Get started → App name / support email / **External** audience /
+   contact info.
+2. APIs & Services → Credentials → Create OAuth client ID → **Web
+   application** → Authorized redirect URI = **Supabase-ският** callback
+   `https://<project-ref>.supabase.co/auth/v1/callback` (**не** адрес от
+   property-platform-five.vercel.app!) → Create → свали JSON-а с
+   `client_id`/`client_secret` (показва се само веднъж).
+3. Supabase Dashboard → Authentication → Sign In / Providers → Google →
+   Enable → постави `client_id` в "Client IDs" и `client_secret` в
+   "Client Secret (for OAuth)" → Save.
+4. **Критична стъпка, лесно се пропуска**: Supabase Dashboard →
+   Authentication → **URL Configuration** → **Site URL** трябва да е
+   `https://property-platform-five.vercel.app` (по подразбиране е
+   `http://localhost:3000`!) и **Redirect URLs** трябва да съдържа
+   `https://property-platform-five.vercel.app/**`. Без това стъпка
+   Supabase успешно автентикира потребителя, но го връща на localhost
+   вместо на живия сайт — точно това се случи първия път, преди да го
+   оправим.
 
 Flow-ът след това: `OAuthButtons` форма → `signInWithOAuth(provider,
 redirectTo)` → Supabase връща consent-screen URL → `/auth/callback`
@@ -259,6 +275,14 @@ redirectTo)` → Supabase връща consent-screen URL → `/auth/callback`
 чете името от `raw_user_meta_data` с fallback верига
 (`name` → `full_name` → префикс на имейла), защото различните
 доставчици попълват различен ключ.
+
+Ако/когато Facebook се добави по-късно: аналогичен процес в
+[Meta for Developers](https://developers.facebook.com/) с продукт
+"Facebook Login", същия redirect URI формат. Facebook App-и в
+"Development mode" пускат само test users — за реални потребители
+трябва App Review (Meta одобрява "public_profile"/"email" permissions
+обичайно бързо, но е допълнителна стъпка, която само собственикът на
+Facebook App-а може да подаде).
 
 ## Environment variables
 
