@@ -26,10 +26,14 @@ export type MyListing = {
   property_type: PropertyType;
   price: number;
   status: ListingStatus;
+  reminder_count: number;
   last_confirmed_at: string;
 };
 
-const CONFIRM_WINDOW_DAYS = 7;
+// Ден 7: 1-во напомняне (имейл), ден 14: 2-ро напомняне + обявата
+// минава в "Неактуална", ден 21: автоматично архивиране (виж
+// process_listing_reminders() в 0013_listing_reminder_schedule.sql).
+const REMINDER_SCHEDULE_DAYS = [7, 14, 21] as const;
 
 function daysSince(dateString: string) {
   const ms = Date.now() - new Date(dateString).getTime();
@@ -57,12 +61,15 @@ export function MyListings({ listings }: { listings: MyListing[] }) {
 function MyListingRow({ listing }: { listing: MyListing }) {
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState(listing.status);
+  const [reminderCount, setReminderCount] = useState(listing.reminder_count);
   const [lastConfirmedAt, setLastConfirmedAt] = useState(
     listing.last_confirmed_at,
   );
   const [error, setError] = useState<string | null>(null);
 
-  const daysLeft = CONFIRM_WINDOW_DAYS - daysSince(lastConfirmedAt);
+  const daysSinceConfirm = daysSince(lastConfirmedAt);
+  const stage = Math.min(reminderCount, REMINDER_SCHEDULE_DAYS.length - 1);
+  const daysUntilNext = REMINDER_SCHEDULE_DAYS[stage] - daysSinceConfirm;
 
   function toggleStatus() {
     const next = status === "active" ? "inactive" : "active";
@@ -71,6 +78,7 @@ function MyListingRow({ listing }: { listing: MyListing }) {
       try {
         await setListingStatus(listing.id, next);
         setStatus(next);
+        setReminderCount(0);
         setLastConfirmedAt(new Date().toISOString());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Грешка.");
@@ -84,6 +92,7 @@ function MyListingRow({ listing }: { listing: MyListing }) {
       try {
         await confirmListingActive(listing.id);
         setStatus("active");
+        setReminderCount(0);
         setLastConfirmedAt(new Date().toISOString());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Грешка.");
@@ -118,18 +127,42 @@ function MyListingRow({ listing }: { listing: MyListing }) {
           {formatPrice(listing.price)} ·{" "}
           <span
             className={
-              status === "active" ? "text-emerald-600" : "text-amber-600"
+              status === "active"
+                ? "text-emerald-600"
+                : status === "archived"
+                  ? "text-red-600"
+                  : "text-amber-600"
             }
           >
             {STATUS_LABELS[status]}
           </span>
         </p>
-        {status === "active" && (
-          <p className="text-xs text-slate-400">
-            {daysLeft > 0
-              ? `Потвърди до ${daysLeft} ${daysLeft === 1 ? "ден" : "дни"}, за да не изтече.`
-              : "Изтича скоро — потвърди, че е още активна."}
+
+        {status === "archived" ? (
+          <p className="text-xs text-red-500">
+            Архивирана автоматично поради липса на потвърждение. Натисни
+            „Активирай“, ако имотът е все още наличен.
           </p>
+        ) : (
+          (status === "active" || status === "expired") && (
+            <p
+              className={`text-xs ${
+                reminderCount >= 2
+                  ? "text-red-500"
+                  : reminderCount === 1
+                    ? "text-amber-600"
+                    : "text-slate-400"
+              }`}
+            >
+              {daysUntilNext > 0
+                ? reminderCount === 0
+                  ? `Потвърди до ${daysUntilNext} ${daysUntilNext === 1 ? "ден" : "дни"}, за да не получиш напомняне.`
+                  : reminderCount === 1
+                    ? `Получи напомняне по имейл — остават ${daysUntilNext} ${daysUntilNext === 1 ? "ден" : "дни"} до второ предупреждение.`
+                    : `Последно предупреждение — остават ${daysUntilNext} ${daysUntilNext === 1 ? "ден" : "дни"} до автоматично архивиране.`
+                : "Очаква се скоро актуализация на статуса."}
+            </p>
+          )
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>

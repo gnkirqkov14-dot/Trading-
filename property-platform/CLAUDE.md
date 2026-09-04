@@ -182,12 +182,14 @@ supabase/migrations/
   0003_listings_visibility.sql       — RLS fix: expired обяви остават публични
   0004_city_coordinates.sql          — lat/lng на градовете (за картата)
   0005_neighborhood_coordinates.sql  — lat/lng на кварталите (за drill-down)
-  0006_expire_stale_listings.sql     — auto-expire SQL функция (за Cron)
+  0006_expire_stale_listings.sql     — стара auto-expire функция (заменена от 0013)
   0007_admin.sql                     — profiles.is_admin + admin RLS policies
   0008_search_subscription_paywall.sql — RLS: само абонати/собственик пращат съобщения
   0009_listing_contact_fields.sql    — listings.address + listings.phone (задължителни)
   0010_lock_profile_columns.sql      — security fix: column-level grants на profiles
   0011_oauth_profile_name_fallback.sql — handle_new_user() fallback за OAuth име
+  0012_archived_listing_status.sql   — нова enum стойност 'archived' (самостоятелна)
+  0013_listing_reminder_schedule.sql — 3-степенна схема + process_listing_reminders()
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 ```
@@ -291,6 +293,13 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+По избор (за реални email напомняния при обяви, виж Фаза 5):
+
+```
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=   # напр. "Имоти без посредници <notifications@твоя-домейн.bg>"
+```
+
 Виж `.env.local.example`. Логото/favicon-ът (`components/logo.tsx`, `app/icon.svg`) показва само
 иконата на екрани под `sm` breakpoint (`wordmarkClassName="hidden
 sm:inline"` в `site-header.tsx`) — с пълния текст навигацията в хедъра
@@ -332,13 +341,37 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
   `lib/listing-labels.ts` (`PLAN_PRICES_EUR`) са **примерни, не
   потвърдени**.
 - ✅ **Фаза 5** — Вътрешни съобщения (`/dashboard/messages`, inbox +
-  thread view, `lib/actions/messages.ts`), седмична актуализация
-  (бутон "Обявата е още активна" в dashboard-а, `confirmListingActive`),
-  auto-expire логика (SQL функция `expire_stale_listings()` + Vercel
-  Cron всеки ден в 03:00 UTC, виж `vercel.json` +
-  `app/api/cron/expire-listings/route.ts`). **Email/push reminder не е
-  включен** — изисква Resend/SendGrid акаунт (същата категория блокер
-  като Stripe в Фаза 4).
+  thread view, `lib/actions/messages.ts`), **3-степенна схема за
+  напомняния** (заменя старата еднократна "expire след 7 дни" логика):
+  - ден 7 от последно потвърждение → 1-во напомняне (имейл + банер),
+    обявата остава "Активна";
+  - ден 14 → 2-ро напомняне, обявата минава в "Неактуална" (сдйнка в
+    резултатите, но остава публична);
+  - ден 21 → автоматично **архивиране** (`status = 'archived'`) — вече
+    не се вижда публично никъде (RLS-ът от 0003 крие всичко освен
+    active/expired), но собственикът може да я активира отново по всяко
+    време от `/dashboard` (бутон "Активирай" вече работи и за архивирани).
+
+  SQL: `process_listing_reminders()` (0013, заменя старата
+  `expire_stale_listings()`) — `security definer` функция, чете
+  `auth.users.email` вътрешно (профилите нямат email колона), връща
+  редове за имейлите и обновява `reminder_count`/`status` наведнъж.
+  Извиква се от същия daily Vercel Cron (03:00 UTC, виж `vercel.json` +
+  `app/api/cron/expire-listings/route.ts`). Всеки път, когато
+  собственикът потвърди/активира обява (`setListingStatus`,
+  `confirmListingActive`), `reminder_count` се нулира и цикълът
+  започва отначало.
+
+  Имейлите се пращат през `lib/email.ts` (директни HTTP заявки към
+  Resend API, без техния SDK) — **тихо не прави нищо без
+  `RESEND_API_KEY`**, банерът в `/dashboard` (`my-listings.tsx`) винаги
+  показва верния статус независимо дали имейл е настроен. **Важно
+  ограничение**: Resend изисква верифициран **собствен домейн** (DNS
+  записи), за да праща до произволни получатели — с адрес на
+  `property-platform-five.vercel.app` (Vercel поддомейн, DNS-ът не е
+  под наш контрол) Resend може да праща само тестови имейли до имейла
+  на собственика на Resend акаунта, не до реални собственици на обяви.
+  За реални имейли трябва собствен домейн (напр. закупен `.bg` домейн).
 - 🟡 **Фаза 6 (частично)** — SEO metadata (title template, OG за
   обявите с корица снимка), `sitemap.ts` + `robots.ts`, минимален admin
   панел (`/admin`, изисква `profiles.is_admin = true` — виж коментара в
@@ -361,8 +394,9 @@ production **задай го**.
 - Реално плащане/billing (Stripe или myPOS/Borica) — изисква акаунт,
   който само собственикът на проекта може да създаде; UI-то за планове
   вече съществува и чака интеграцията.
-- Email/push известия за седмичната актуализация — изисква Resend/
-  SendGrid акаунт; auto-expire логиката работи без тях.
+- Реални email напомняния за обявите — кодът е готов (`lib/email.ts`),
+  но изисква `RESEND_API_KEY` + верифициран собствен домейн в Resend
+  (виж Фаза 5 по-горе); банерът в `/dashboard` работи без тях.
 - Neighborhood-level map полигони (само точки/маркери — нямаше открити
   свободно лицензирани полигонни граници на квартален level).
 

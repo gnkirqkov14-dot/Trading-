@@ -6,7 +6,7 @@
 export type SubscriptionPlan = "basic" | "pro" | "unlimited";
 export type ListingDealType = "rent" | "sale";
 export type PropertyType = "apartment" | "house" | "plot" | "office" | "shop";
-export type ListingStatus = "active" | "inactive" | "expired";
+export type ListingStatus = "active" | "inactive" | "expired" | "archived";
 
 type Table<Row, Insert, Update = Partial<Insert>> = {
   Row: Row;
@@ -95,6 +95,7 @@ export interface Database {
           address: string;
           phone: string;
           status: ListingStatus;
+          reminder_count: number;
           last_confirmed_at: string;
           created_at: string;
         },
@@ -122,6 +123,7 @@ export interface Database {
           address: string;
           phone: string;
           status?: ListingStatus;
+          reminder_count?: number;
           last_confirmed_at?: string;
           created_at?: string;
         }
@@ -178,9 +180,15 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
-      expire_stale_listings: {
+      process_listing_reminders: {
         Args: Record<PropertyKey, never>;
-        Returns: void;
+        Returns: {
+          listing_id: string;
+          owner_email: string | null;
+          owner_name: string | null;
+          listing_title: string;
+          stage: number;
+        }[];
       };
     };
     Enums: {
