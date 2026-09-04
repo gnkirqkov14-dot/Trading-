@@ -144,7 +144,8 @@ hint синтаксис с името на FK constraint-а:
 ```
 src/
   app/
-    (auth)/login, (auth)/register    — auth страници
+    (auth)/login, (auth)/register    — auth страници (+ Google/Facebook OAuth)
+    auth/callback/                   — route handler: разменя OAuth code за сесия
     admin/                           — минимален admin панел (изисква is_admin)
     api/cron/expire-listings/        — Vercel Cron endpoint (виж по-долу)
     dashboard/                       — защитен route: моите обяви, профил
@@ -164,6 +165,7 @@ src/
     logo.tsx                         — икона на къща + wordmark (хедър/футър)
     site-footer.tsx                  — футър (мини лого, навигация, copyright)
     profile-form.tsx                 — редакция на име/телефон в профила
+    oauth-buttons.tsx                 — Google/Facebook бутони (login/register)
     listing-filters.tsx              — пълния филтър панел
     message-thread-form.tsx, admin-listings-table.tsx
     my-listings.tsx, listing-card.tsx, site-header.tsx
@@ -185,6 +187,7 @@ supabase/migrations/
   0008_search_subscription_paywall.sql — RLS: само абонати/собственик пращат съобщения
   0009_listing_contact_fields.sql    — listings.address + listings.phone (задължителни)
   0010_lock_profile_columns.sql      — security fix: column-level grants на profiles
+  0011_oauth_profile_name_fallback.sql — handle_new_user() fallback за OAuth име
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 ```
@@ -225,6 +228,38 @@ geojson-ът се фетчва async), те лягат ОТГОРЕ и крад�
 Координатите на градовете/кварталите са **приблизителни, илюстративни**
 (не survey-precision) — достатъчни за визуален MVP, не за навигация.
 
+## Вход с Google/Facebook (OAuth)
+
+Кодът е готов (`lib/actions/auth.ts` → `signInWithOAuth()`, `app/auth/
+callback/route.ts`, `components/oauth-buttons.tsx` — вграден в `login-
+form.tsx`/`register-form.tsx`), но **не работи, докато собственикът на
+проекта не направи 3 неща извън тази codebase**:
+
+1. Създаде OAuth client в [Google Cloud Console](https://console.cloud.google.com/)
+   (APIs & Services → Credentials → Create Credentials → OAuth client ID
+   → Web application) с authorized redirect URI = **Supabase-ския**
+   callback (`https://<project-ref>.supabase.co/auth/v1/callback` — вижда
+   се в Supabase Dashboard → Authentication → Providers → Google), **не**
+   адрес от property-platform-five.vercel.app.
+2. Аналогично създаде Facebook App в [Meta for Developers](https://developers.facebook.com/)
+   с продукт "Facebook Login", същия redirect URI формат. Facebook App-и
+   в "Development mode" пускат само test users — за реални потребители
+   трябва App Review (Meta одобрява "public_profile"/"email" permissions
+   обичайно бързо, но е допълнителна стъпка, която само собственикът на
+   Facebook App-а може да подаде).
+3. Постави получените Client ID/Secret от двете в Supabase Dashboard →
+   Authentication → Providers → Google/Facebook, и включи (enable) двата
+   provider-а.
+
+Flow-ът след това: `OAuthButtons` форма → `signInWithOAuth(provider,
+redirectTo)` → Supabase връща consent-screen URL → `/auth/callback`
+(route handler) разменя `?code=` за сесия (`exchangeCodeForSession`) и
+редиректва към `next` (запазен `redirectTo` от `/login?redirectTo=...`)
+или `/dashboard`. `handle_new_user()` тригерът (виж 0011-та миграция)
+чете името от `raw_user_meta_data` с fallback верига
+(`name` → `full_name` → префикс на имейла), защото различните
+доставчици попълват различен ключ.
+
 ## Environment variables
 
 ```
@@ -243,7 +278,9 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
 
 ## Статус по фази (виж docs/PLAN.md за пълния план)
 
-- ✅ **Фаза 1** — Скелет, auth (регистрация/логин/изход), базов data model.
+- ✅ **Фаза 1** — Скелет, auth (регистрация/логин/изход, + Google/Facebook
+  OAuth — виж "Вход с Google/Facebook" по-долу за задължителните ръчни
+  стъпки от собственика), базов data model.
 - ✅ **Фаза 2** — Публикуване на обява (снимки в Supabase Storage, до 30
   бр., **незадължителни** — само мек hint за препоръчителен минимум,
   виж `MIN_LISTING_PHOTOS_HINT`; видео линк), публичен списък, детайлна
