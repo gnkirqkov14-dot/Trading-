@@ -53,17 +53,9 @@ export default async function CityMapPage({
         ← Начало
       </Link>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          Изберете квартал в {city.name}
-        </h1>
-        <Link
-          href={`/listings?city=${city.id}`}
-          className="text-sm font-medium text-slate-900 underline"
-        >
-          Всички обяви в {city.name} →
-        </Link>
-      </div>
+      <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+        Изберете квартал в {city.name}
+      </h1>
 
       <div className="mt-6">
         <CityMap
@@ -71,6 +63,25 @@ export default async function CityMapPage({
           neighborhoods={neighborhoods as CityMapNeighborhood[]}
         />
       </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {neighborhoods.map((n) => (
+          <Link
+            key={n.id}
+            href={`/listings?city=${city.id}&neighborhood=${n.id}`}
+            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
+          >
+            {n.name}
+          </Link>
+        ))}
+      </div>
+
+      <Link
+        href={`/listings?city=${city.id}`}
+        className="mt-6 inline-block text-sm font-medium text-slate-500 underline hover:text-slate-900"
+      >
+        Всички обяви в {city.name} (без избран квартал) →
+      </Link>
     </div>
   );
 }
