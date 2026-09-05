@@ -18,16 +18,12 @@ export type CityMapNeighborhood = {
 // вече имаме — всяка точка получава клетка от равнината, най-близка до
 // нея. Изглежда като разделени именувани райони, без да претендираме за
 // геодезическа точност.
-const NEIGHBORHOOD_PALETTE = [
-  "#bfdbfe",
-  "#fde68a",
-  "#fbcfe8",
-  "#ddd6fe",
-  "#99f6e4",
-  "#fecaca",
-  "#d9f99d",
-  "#fed7aa",
-];
+//
+// Един топъл неутрален тон за всички клетки (като imot.bg) вместо пъстра
+// палитра по клетка — пъстрото изглеждаше като "бонбонки", не като карта.
+const NEIGHBORHOOD_FILL = "#ede4d3";
+const NEIGHBORHOOD_FILL_HOVER = "#a7f3d0";
+const NEIGHBORHOOD_BORDER = "#a89572";
 
 async function computeNeighborhoodCells(
   cityNeighborhoods: CityMapNeighborhood[],
@@ -106,7 +102,7 @@ export function CityMap({
             radius: 7,
             color: "#ffffff",
             weight: 2,
-            fillColor: "#2563eb",
+            fillColor: "#059669",
             fillOpacity: 1,
           }).addTo(map);
           marker.bindTooltip(n.name, {
@@ -122,13 +118,13 @@ export function CityMap({
         return;
       }
 
-      cells.forEach(({ neighborhood: n, latLngs }, i) => {
+      cells.forEach(({ neighborhood: n, latLngs }) => {
         const polygon = L.polygon(latLngs, {
           pane: "markers",
-          color: "#334155",
+          color: NEIGHBORHOOD_BORDER,
           weight: 1.5,
-          fillColor: NEIGHBORHOOD_PALETTE[i % NEIGHBORHOOD_PALETTE.length],
-          fillOpacity: 0.85,
+          fillColor: NEIGHBORHOOD_FILL,
+          fillOpacity: 1,
         }).addTo(map);
         polygon.bindTooltip(n.name, {
           permanent: true,
@@ -136,10 +132,10 @@ export function CityMap({
           className: "map-label",
         });
         polygon.on("mouseover", () =>
-          polygon.setStyle({ fillOpacity: 1, weight: 2.5 }),
+          polygon.setStyle({ fillColor: NEIGHBORHOOD_FILL_HOVER, weight: 2.5 }),
         );
         polygon.on("mouseout", () =>
-          polygon.setStyle({ fillOpacity: 0.85, weight: 1.5 }),
+          polygon.setStyle({ fillColor: NEIGHBORHOOD_FILL, weight: 1.5 }),
         );
         polygon.on("click", () => {
           router.push(`/listings?city=${city.id}&neighborhood=${n.id}`);

@@ -145,7 +145,9 @@ export function BulgariaMap({
             showCityMarkers(regionName);
           });
           path.bindTooltip(feature.properties?.name ?? "", {
-            sticky: true,
+            permanent: true,
+            direction: "center",
+            className: "map-label",
           });
         },
       }).addTo(map);
