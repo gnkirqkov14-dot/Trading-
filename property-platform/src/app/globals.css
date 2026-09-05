@@ -35,3 +35,36 @@ body {
 .leaflet-tooltip.map-label::before {
   display: none;
 }
+
+/* components/bulgaria-map.tsx: city markers as one tappable "chip" (dot
+   + name) instead of a tiny dot with a separate, non-clickable label —
+   the old split layout left a dead zone where tapping the (visually
+   obvious) name did nothing. */
+.leaflet-div-icon.city-chip-icon {
+  background: transparent;
+  border: none;
+}
+.city-chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 7px;
+  background: #ffffff;
+  border: 1.5px solid #059669;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+  cursor: pointer;
+}
+.city-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #059669;
+  flex-shrink: 0;
+}
