@@ -32,19 +32,6 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      # ЕДНОКРАТНО: 0001-0013 вече бяха пуснати ръчно преди тази автоматизация
-      # съществуваше, но Supabase's remote history не го знае — без този ред
-      # `db push` се опитва да ги приложи пак от нулата и гърми на "вече
-      # съществува". Маркира ги като приложени, без да ги изпълнява отново.
-      # Ще махнем тази стъпка в следващ commit, след като мине веднъж чисто.
-      - name: Mark pre-automation migrations as already applied
-        run: |
-          supabase migration repair --status applied \
-            0001 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
       - name: Push pending migrations
         run: supabase db push --yes
         env:

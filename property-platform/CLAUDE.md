@@ -193,6 +193,7 @@ supabase/migrations/
   0012_archived_listing_status.sql   — нова enum стойност 'archived' (самостоятелна)
   0013_listing_reminder_schedule.sql — 3-степенна схема + process_listing_reminders()
   0014_missing_region_cities.sql     — 10 области без нито един seed-нат град
+  0015_backfill_neighborhood_coordinates.sql — 0005 беше пропусната ръчно (виж по-долу)
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 .github/workflows/supabase-migrations.yml — авто-пускане на миграциите (виж по-долу)
@@ -224,6 +225,17 @@ repo** (не в `property-platform/`, защото GitHub Actions гледа с�
 
 Ако workflow-ът fail-не (грешни secrets, забравен secret и т.н.), проверка
 е в GitHub → repo → Actions таб → последния run на "Supabase migrations".
+
+**Важен урок оттук**: при първото пускане излезе, че `0005_neighborhood_
+coordinates.sql` никога не е била пусната ръчно преди автоматизацията —
+кварталите на София/Пловдив/Варна/Бургас съществуваха в базата, но с
+`lat`/`lng` = NULL, и затова кликването на тези градове винаги е скачало
+направо към списъка с обяви вместо да отваря картата с квартали (0
+"истински" квартала → early-redirect). Оправено с `0015_backfill_
+neighborhood_coordinates.sql` (същото съдържание като 0005, нов номер).
+**Ако занапред нещо "изглежда празно" необяснимо** — първо провери в
+Supabase дали конкретните редове реално имат стойност в lat/lng, преди да
+търсиш бъг във фронтенд кода.
 
 ## Карта на България — детайли на имплементацията
 
