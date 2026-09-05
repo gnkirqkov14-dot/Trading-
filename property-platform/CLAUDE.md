@@ -192,13 +192,38 @@ supabase/migrations/
   0011_oauth_profile_name_fallback.sql — handle_new_user() fallback за OAuth име
   0012_archived_listing_status.sql   — нова enum стойност 'archived' (самостоятелна)
   0013_listing_reminder_schedule.sql — 3-степенна схема + process_listing_reminders()
+  0014_missing_region_cities.sql     — 10 области без нито един seed-нат град
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
+.github/workflows/supabase-migrations.yml — авто-пускане на миграциите (виж по-долу)
 ```
 
-**Миграциите не са автоматично приложени** — няма link-нат Supabase CLI.
-Всяка нова `.sql` миграция трябва да се пусне ръчно в Supabase Dashboard
-→ SQL Editor → New query → paste → Run, по ред на номерата.
+### Миграциите вече се пускат автоматично
+
+**До 0014 включително миграциите се пускаха РЪЧНО** (Supabase Dashboard →
+SQL Editor → paste → Run) — лесно се пропускаше стъпката, защото кодът
+излизаше в production веднага (през Vercel), но SQL-ът не, и сайтът
+изглеждаше "нищо не се е променило", докато всъщност само данните липсваха.
+Точно това се случи с `0014_missing_region_cities.sql`.
+
+Вече има `.github/workflows/supabase-migrations.yml` в **корена на целия
+repo** (не в `property-platform/`, защото GitHub Actions гледа само
+`<repo-root>/.github/workflows/`): при всеки push към deploy branch-а
+(`claude/ai-autonomous-trader-crypto-etf-anstj4`), който пипа файл в
+`property-platform/supabase/migrations/`, автоматично се изпълнява
+`supabase db push` към живата база — код и схема излизат заедно, без
+ръчна стъпка занапред.
+
+Изисква 3 GitHub Secrets (Settings → Secrets and variables → Actions),
+еднократно зададени от собственика:
+- `SUPABASE_ACCESS_TOKEN` — Supabase Dashboard → акаунт → Access Tokens
+- `SUPABASE_PROJECT_REF` — Project Settings → General → Reference ID
+- `SUPABASE_DB_PASSWORD` — паролата на базата (Project Settings →
+  Database; може да се ресетне оттам ако не е известна — това НЕ е
+  същото като anon/service key и не чупи вече работещия сайт)
+
+Ако workflow-ът fail-не (грешни secrets, забравен secret и т.н.), проверка
+е в GitHub → repo → Actions таб → последния run на "Supabase migrations".
 
 ## Карта на България — детайли на имплементацията
 

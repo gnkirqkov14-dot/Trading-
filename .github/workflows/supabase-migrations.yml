@@ -1,0 +1,39 @@
+name: Supabase migrations
+
+# Автоматично пуска чакащите SQL миграции от property-platform/supabase/migrations
+# към живата Supabase база всеки път, когато такъв файл стигне до deploy branch-а.
+# Преди това е ставало ръчно (Supabase Dashboard -> SQL Editor -> paste -> Run) и
+# лесно се пропускаше — кодът излизаше в production, но данните/схемата не.
+
+on:
+  push:
+    branches:
+      - claude/ai-autonomous-trader-crypto-etf-anstj4
+    paths:
+      - "property-platform/supabase/migrations/**"
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: property-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Push pending migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
