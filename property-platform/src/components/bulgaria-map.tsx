@@ -71,20 +71,21 @@ export function BulgariaMap({
       function showCityMarkers() {
         markersLayer.clearLayers();
         cities.forEach((city) => {
-          const marker = L.circleMarker([city.lat, city.lng], {
-            pane: "markers",
-            radius: 6,
-            color: "#ffffff",
-            weight: 2,
-            fillColor: "#059669",
-            fillOpacity: 1,
-          }).addTo(markersLayer);
-          marker.bindTooltip(city.name, {
-            permanent: true,
-            direction: "bottom",
-            offset: [0, 4],
-            className: "map-label",
+          // A tiny dot + a separate non-interactive label left a dead
+          // zone where the (visually obvious) name wasn't actually
+          // clickable — on touch screens people tap the text, not the
+          // 6px dot above it. A single divIcon "chip" makes the whole
+          // name+dot one generous tap target.
+          const icon = L.divIcon({
+            className: "city-chip-icon",
+            html: `<span class="city-chip"><span class="city-chip-dot"></span>${city.name}</span>`,
+            iconSize: [1, 1],
+            iconAnchor: [0, 0],
           });
+          const marker = L.marker([city.lat, city.lng], {
+            pane: "markers",
+            icon,
+          }).addTo(markersLayer);
           marker.on("click", () => {
             const hasNeighborhoods = neighborhoods.some(
               (n) => n.city_id === city.id,
