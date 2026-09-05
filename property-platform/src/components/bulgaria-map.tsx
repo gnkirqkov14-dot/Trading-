@@ -42,6 +42,15 @@ export function BulgariaMap({
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const router = useRouter();
 
+  function goToCity(city: MapCity) {
+    const hasNeighborhoods = neighborhoods.some((n) => n.city_id === city.id);
+    if (hasNeighborhoods) {
+      router.push(`/map/${city.id}`);
+    } else {
+      router.push(`/listings?city=${city.id}`);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -86,16 +95,7 @@ export function BulgariaMap({
             pane: "markers",
             icon,
           }).addTo(markersLayer);
-          marker.on("click", () => {
-            const hasNeighborhoods = neighborhoods.some(
-              (n) => n.city_id === city.id,
-            );
-            if (hasNeighborhoods) {
-              router.push(`/map/${city.id}`);
-            } else {
-              router.push(`/listings?city=${city.id}`);
-            }
-          });
+          marker.on("click", () => goToCity(city));
         });
       }
 
@@ -149,6 +149,10 @@ export function BulgariaMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const citiesInRegion = selectedRegion
+    ? cities.filter((c) => c.region === selectedRegion)
+    : [];
+
   function resetView() {
     const map = mapRef.current;
     if (!map) return;
@@ -181,6 +185,20 @@ export function BulgariaMap({
         ref={containerRef}
         className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
       />
+      {citiesInRegion.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {citiesInRegion.map((city) => (
+            <button
+              key={city.id}
+              type="button"
+              onClick={() => goToCity(city)}
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
+            >
+              {city.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
