@@ -77,32 +77,44 @@ export function BulgariaMap({
       const markersLayer = L.layerGroup().addTo(map);
       markersLayerRef.current = markersLayer;
 
-      function showCityMarkers() {
+      function showCityMarkers(region: string | null) {
         markersLayer.clearLayers();
-        cities.forEach((city) => {
-          // A tiny dot + a separate non-interactive label left a dead
-          // zone where the (visually obvious) name wasn't actually
-          // clickable — on touch screens people tap the text, not the
-          // 6px dot above it. A single divIcon "chip" makes the whole
-          // name+dot one generous tap target.
-          const icon = L.divIcon({
-            className: "city-chip-icon",
-            html: `<span class="city-chip"><span class="city-chip-dot"></span>${city.name}</span>`,
-            iconSize: [1, 1],
-            iconAnchor: [0, 0],
+        // At the whole-country zoom level we show no city dots at all —
+        // only the region has to be picked first (like imot.bg). Showing
+        // every city's dot here let people tap a city directly and jump
+        // straight to it, completely skipping the "pick a region, see the
+        // list of its cities" step — which made that new list look like it
+        // never appeared, since this dot-tap path never reaches it.
+        if (!region) return;
+        cities
+          .filter((city) => city.region === region)
+          .forEach((city) => {
+            // A tiny dot + a separate non-interactive label left a dead
+            // zone where the (visually obvious) name wasn't actually
+            // clickable — on touch screens people tap the text, not the
+            // 6px dot above it. A single divIcon "chip" makes the whole
+            // name+dot one generous tap target.
+            const icon = L.divIcon({
+              className: "city-chip-icon",
+              html: `<span class="city-chip"><span class="city-chip-dot"></span>${city.name}</span>`,
+              iconSize: [1, 1],
+              iconAnchor: [0, 0],
+            });
+            const marker = L.marker([city.lat, city.lng], {
+              pane: "markers",
+              icon,
+            }).addTo(markersLayer);
+            marker.on("click", () => goToCity(city));
           });
-          const marker = L.marker([city.lat, city.lng], {
-            pane: "markers",
-            icon,
-          }).addTo(markersLayer);
-          marker.on("click", () => goToCity(city));
-        });
       }
 
-      showCityMarkers();
+      showCityMarkers(null);
       // expose for the "back" button below without re-running the effect
-      (map as unknown as { __showCityMarkers?: () => void }).__showCityMarkers =
-        showCityMarkers;
+      (
+        map as unknown as {
+          __showCityMarkers?: (region: string | null) => void;
+        }
+      ).__showCityMarkers = showCityMarkers;
 
       const res = await fetch("/data/bulgaria-provinces.geojson");
       const geojson = await res.json();
@@ -128,8 +140,9 @@ export function BulgariaMap({
               padding: [20, 20],
               animate: false,
             });
-            setSelectedRegion(feature.properties?.name ?? null);
-            showCityMarkers();
+            const regionName = feature.properties?.name ?? null;
+            setSelectedRegion(regionName);
+            showCityMarkers(regionName);
           });
           path.bindTooltip(feature.properties?.name ?? "", {
             sticky: true,
@@ -159,8 +172,10 @@ export function BulgariaMap({
     map.setView(BULGARIA_CENTER, BULGARIA_ZOOM, { animate: false });
     setSelectedRegion(null);
     (
-      map as unknown as { __showCityMarkers?: () => void }
-    ).__showCityMarkers?.();
+      map as unknown as {
+        __showCityMarkers?: (region: string | null) => void;
+      }
+    ).__showCityMarkers?.(null);
   }
 
   return (
