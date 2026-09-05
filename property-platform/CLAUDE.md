@@ -146,6 +146,7 @@ src/
   app/
     (auth)/login, (auth)/register    — auth страници (+ Google/Facebook OAuth)
     auth/callback/                   — route handler: разменя OAuth code за сесия
+    map/[cityId]/                    — голяма карта на 1 град, избор на квартал
     admin/                           — минимален admin панел (изисква is_admin)
     api/cron/expire-listings/        — Vercel Cron endpoint (виж по-долу)
     dashboard/                       — защитен route: моите обяви, профил
@@ -159,7 +160,8 @@ src/
     page.tsx                         — начална страница (карта на България)
     sitemap.ts, robots.ts            — SEO
   components/
-    bulgaria-map.tsx                 — интерактивната Leaflet карта (виж по-долу)
+    bulgaria-map.tsx                 — homepage карта, ниво държава/област/град (виж по-долу)
+    city-map.tsx                     — отделна голяма карта за 1 град (Voronoi квартали)
     new-listing-form.tsx             — форма + upload на снимки към Storage
     edit-listing-form.tsx            — редакция: пази/маха стари снимки, добавя нови
     logo.tsx                         — икона на къща + wordmark (хедър/футър)
@@ -200,25 +202,34 @@ vercel.json                          — Cron конфигурация
 
 ## Карта на България — детайли на имплементацията
 
-`components/bulgaria-map.tsx`, три нива на drill-down. **Нарочно "плосък"
-диаграмен стил** (без OpenStreetMap tile слой, само оцветени форми) —
-по искане на собственика, вдъхновено от imot.bg визуално, не реалистична
-улична карта.
+Две отделни карти, **нарочно "плосък" диаграмен стил** (без OpenStreetMap
+tile слой, само оцветени форми) по искане на собственика, вдъхновено от
+imot.bg визуално — не реалистична улична карта:
 
-1. **България** — 28 полигона на области от `public/data/bulgaria-provinces.geojson`.
-   Данните са от [Natural Earth](https://www.naturalearthdata.com/)
-   (`ne_10m_admin_1_states_provinces`, **public domain**), филтрирани само
-   за България и с добавени кирилски имена от `name_local` полето. **Не**
-   използвай `yurukov/Bulgaria-geocoding` repo-то като алтернативен
-   източник — няма посочен license. Стил: плътен slate-200 фон,
-   emerald-200 при hover (виж `style`/`onEachFeature` в компонента).
-2. **Област → Град** — клик на полигон прави `fitBounds` към него;
-   зелени точки (`cities` таблицата) с постоянен label (името на града,
-   винаги видимо, не само при hover) навигират към `/listings?city=X`,
-   освен ако градът има квартали в базата — тогава zoom-ва навътре
-   (ниво 3).
-3. **Град → Квартал** — **Voronoi полигони**, не точки (виж по-долу),
-   навигират към `/listings?city=X&neighborhood=Y`. Само София,
+1. **`components/bulgaria-map.tsx`** (на началната страница) — 2 нива:
+   - **България** — 28 полигона на области от
+     `public/data/bulgaria-provinces.geojson`. Данните са от
+     [Natural Earth](https://www.naturalearthdata.com/)
+     (`ne_10m_admin_1_states_provinces`, **public domain**), филтрирани
+     само за България и с добавени кирилски имена от `name_local`
+     полето. **Не** използвай `yurukov/Bulgaria-geocoding` repo-то като
+     алтернативен източник — няма посочен license. Стил: плътен
+     slate-200 фон, emerald-200 при hover.
+   - **Област → Град** — клик на полигон прави `fitBounds` към него;
+     зелени точки (`cities` таблицата) с постоянен label (името на
+     града, винаги видимо, не само при hover). Клик на град с квартали
+     в базата → `router.push("/map/{cityId}")` (**навигира към нова
+     страница**, не зумира на място — собственикът изрично поиска
+     отделна страница за квартал-picker-а, а не inline zoom в малкия
+     widget). Клик на град без квартали → директно
+     `/listings?city={cityId}`.
+2. **`app/map/[cityId]/page.tsx`** + **`components/city-map.tsx`** —
+   отделна страница само за един град, голяма карта (по-висока от
+   homepage widget-а), показва кварталите му като **Voronoi полигони**
+   (виж по-долу), клик навигира към
+   `/listings?city={cityId}&neighborhood={neighborhoodId}`. Ако някой
+   отвори `/map/{cityId}` за град без квартали в базата, страницата
+   прави `redirect()` към `/listings?city={cityId}`. Само София,
    Пловдив, Варна и Бургас имат seed-нати квартали в момента.
 
 ### Voronoi "райони" за квартали (решава дупката от старата версия)
@@ -230,7 +241,7 @@ vercel.json                          — Cron конфигурация
 изглеждат като именувани "райони" (както в imot.bg picker-а), не само
 черни/сини точки.
 
-Решение: `computeNeighborhoodCells()` в `bulgaria-map.tsx` изгражда
+Решение: `computeNeighborhoodCells()` в `city-map.tsx` изгражда
 **Voronoi диаграма** (пакет `d3-delaunay`) от координатите, които вече
 имаме за всеки квартал (`neighborhoods.lat/lng`, виж 0005-та миграция)
 — всяка точка получава клетка от равнината, най-близка до нея. Резултатът
@@ -244,7 +255,7 @@ vercel.json                          — Cron конфигурация
 кутийка, за да изглежда като директен надпис върху областта.
 
 За градове с само 1 квартал (Voronoi няма смисъл с 1 точка) остава
-старият точков маркер (`showNeighborhoodPoints()`).
+старият точков маркер.
 
 **Ако добавяш нови квартали**: колкото повече точки, толкова по-малки/
 по-адекватни стават клетките — с 2-3 квартала клетките ще изглеждат
