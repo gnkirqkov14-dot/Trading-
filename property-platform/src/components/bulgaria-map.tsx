@@ -17,24 +17,10 @@ export type MapCity = {
   lng: number;
 };
 
-export type MapNeighborhood = {
-  id: string;
-  city_id: string;
-  name: string;
-  lat: number;
-  lng: number;
-};
-
 const BULGARIA_CENTER: [number, number] = [42.7339, 25.4858];
 const BULGARIA_ZOOM = 7;
 
-export function BulgariaMap({
-  cities,
-  neighborhoods,
-}: {
-  cities: MapCity[];
-  neighborhoods: MapNeighborhood[];
-}) {
+export function BulgariaMap({ cities }: { cities: MapCity[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const provincesRef = useRef<LeafletGeoJSON | null>(null);
@@ -42,13 +28,12 @@ export function BulgariaMap({
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const router = useRouter();
 
+  // Директно към ръчния филтър в /listings — премахнахме интерактивната
+  // карта с квартали (Voronoi/ръчно пресъздадени форми), собственикът
+  // прецени, че опростен филтър е по-надежден от опит за визуално точна
+  // карта на кварталите (виж CLAUDE.md).
   function goToCity(city: MapCity) {
-    const hasNeighborhoods = neighborhoods.some((n) => n.city_id === city.id);
-    if (hasNeighborhoods) {
-      router.push(`/map/${city.id}`);
-    } else {
-      router.push(`/listings?city=${city.id}`);
-    }
+    router.push(`/listings?city=${city.id}`);
   }
 
   useEffect(() => {
