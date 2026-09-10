@@ -1,38 +1,27 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  BulgariaMap,
-  type MapCity,
-  type MapNeighborhood,
-} from "@/components/bulgaria-map";
+import { BulgariaMap, type MapCity } from "@/components/bulgaria-map";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
 
 export default async function Home() {
   const supabase = await createClient();
-  const [{ data: cities }, { data: neighborhoods }, { data: recentListings }] =
-    await Promise.all([
-      supabase
-        .from("cities")
-        .select("id, name, region, lat, lng")
-        .not("lat", "is", null)
-        .not("lng", "is", null),
-      supabase
-        .from("neighborhoods")
-        .select("id, city_id, name, lat, lng")
-        .not("lat", "is", null)
-        .not("lng", "is", null),
-      supabase
-        .from("listings")
-        .select(
-          "id, type, property_type, price, area_sqm, rooms, status, title, cities(name), neighborhoods(name), listing_photos(url, position)",
-        )
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(6),
-    ]);
+  const [{ data: cities }, { data: recentListings }] = await Promise.all([
+    supabase
+      .from("cities")
+      .select("id, name, region, lat, lng")
+      .not("lat", "is", null)
+      .not("lng", "is", null),
+    supabase
+      .from("listings")
+      .select(
+        "id, type, property_type, price, area_sqm, rooms, status, title, cities(name), neighborhoods(name), listing_photos(url, position)",
+      )
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(6),
+  ]);
 
   const mapCities = (cities ?? []) as MapCity[];
-  const mapNeighborhoods = (neighborhoods ?? []) as MapNeighborhood[];
   const listings = (recentListings ?? []) as unknown as ListingCardData[];
 
   return (
@@ -66,7 +55,7 @@ export default async function Home() {
         </div>
 
         <div className="mt-10 w-full max-w-3xl">
-          <BulgariaMap cities={mapCities} neighborhoods={mapNeighborhoods} />
+          <BulgariaMap cities={mapCities} />
         </div>
       </section>
 
