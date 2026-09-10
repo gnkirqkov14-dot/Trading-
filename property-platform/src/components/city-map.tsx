@@ -25,6 +25,57 @@ const NEIGHBORHOOD_FILL = "#ede4d3";
 const NEIGHBORHOOD_FILL_HOVER = "#a7f3d0";
 const NEIGHBORHOOD_BORDER = "#a89572";
 
+// Sutherland-Hodgman: clip `subject` against the convex polygon `clip`
+// (vertices must be counter-clockwise, which is what Delaunay.hull gives
+// us). Used below to trim each Voronoi cell to an organic city outline
+// instead of the artificial straight-edged rectangle it'd otherwise be
+// clipped to — that rectangle was the "looks like a box, not a map" issue.
+function isLeftOf(p: number[], a: number[], b: number[]) {
+  return (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) >= 0;
+}
+
+function segmentIntersection(
+  p1: number[],
+  p2: number[],
+  a: number[],
+  b: number[],
+) {
+  const A1 = p2[1] - p1[1];
+  const B1 = p1[0] - p2[0];
+  const C1 = A1 * p1[0] + B1 * p1[1];
+  const A2 = b[1] - a[1];
+  const B2 = a[0] - b[0];
+  const C2 = A2 * a[0] + B2 * a[1];
+  const det = A1 * B2 - A2 * B1;
+  if (Math.abs(det) < 1e-12) return p1;
+  return [(B2 * C1 - B1 * C2) / det, (A1 * C2 - A2 * C1) / det];
+}
+
+function clipToConvexPolygon(subject: number[][], clip: number[][]) {
+  let output = subject;
+  for (let i = 0; i < clip.length && output.length > 0; i++) {
+    const clipStart = clip[i];
+    const clipEnd = clip[(i + 1) % clip.length];
+    const input = output;
+    output = [];
+    for (let j = 0; j < input.length; j++) {
+      const current = input[j];
+      const prev = input[(j - 1 + input.length) % input.length];
+      const currentInside = isLeftOf(current, clipStart, clipEnd);
+      const prevInside = isLeftOf(prev, clipStart, clipEnd);
+      if (currentInside) {
+        if (!prevInside) {
+          output.push(segmentIntersection(prev, current, clipStart, clipEnd));
+        }
+        output.push(current);
+      } else if (prevInside) {
+        output.push(segmentIntersection(prev, current, clipStart, clipEnd));
+      }
+    }
+  }
+  return output;
+}
+
 async function computeNeighborhoodCells(
   cityNeighborhoods: CityMapNeighborhood[],
 ) {
@@ -38,20 +89,50 @@ async function computeNeighborhoodCells(
   const lngs = cityNeighborhoods.map((n) => n.lng);
   const latSpan = Math.max(...lats) - Math.min(...lats) || 0.01;
   const lngSpan = Math.max(...lngs) - Math.min(...lngs) || 0.01;
+  // Generous bounds just so the Voronoi cells aren't truncated before the
+  // real (hull-shaped) clip below runs.
   const bounds: [number, number, number, number] = [
-    Math.min(...lngs) - lngSpan * 0.4,
-    Math.min(...lats) - latSpan * 0.4,
-    Math.max(...lngs) + lngSpan * 0.4,
-    Math.max(...lats) + latSpan * 0.4,
+    Math.min(...lngs) - lngSpan * 0.8,
+    Math.min(...lats) - latSpan * 0.8,
+    Math.max(...lngs) + lngSpan * 0.8,
+    Math.max(...lats) + latSpan * 0.8,
   ];
 
-  const voronoi = Delaunay.from(points).voronoi(bounds);
+  const delaunay = Delaunay.from(points);
+  const voronoi = delaunay.voronoi(bounds);
+
+  // The convex hull of the neighborhood points, pushed outward from the
+  // centroid, gives an organic outer boundary that follows how the city's
+  // points actually spread out — instead of an axis-aligned box.
+  let hullPoints = Array.from(delaunay.hull).map((i) => points[i]);
+  // delaunay.hull's winding direction isn't guaranteed CW or CCW for a
+  // given point set — clipToConvexPolygon assumes CCW, so normalize it
+  // (a CW clip polygon makes every point test as "outside", clipping
+  // every cell away to nothing).
+  const hullSignedArea2x = hullPoints.reduce((sum, [x0, y0], i) => {
+    const [x1, y1] = hullPoints[(i + 1) % hullPoints.length];
+    return sum + (x0 * y1 - x1 * y0);
+  }, 0);
+  if (hullSignedArea2x < 0) hullPoints = hullPoints.slice().reverse();
+  const centroid = hullPoints.reduce(
+    (acc, [x, y]) => [acc[0] + x / hullPoints.length, acc[1] + y / hullPoints.length],
+    [0, 0],
+  );
+  const HULL_EXPAND = 1.35;
+  const expandedHull = hullPoints.map(([x, y]) => [
+    centroid[0] + (x - centroid[0]) * HULL_EXPAND,
+    centroid[1] + (y - centroid[1]) * HULL_EXPAND,
+  ]);
 
   return cityNeighborhoods
     .map((n, i) => {
       const cell = voronoi.cellPolygon(i);
       if (!cell) return null;
-      const latLngs = cell.map(([lng, lat]) => [lat, lng] as [number, number]);
+      const clipped = clipToConvexPolygon(cell, expandedHull);
+      if (clipped.length < 3) return null;
+      const latLngs = clipped.map(
+        ([lng, lat]) => [lat, lng] as [number, number],
+      );
       return { neighborhood: n, latLngs };
     })
     .filter(
