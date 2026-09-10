@@ -9,48 +9,45 @@ export async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const navLinkClassName =
+    "whitespace-nowrap rounded-full border border-slate-200 px-3 py-1.5 font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50";
+
   return (
-    <header className="sticky top-0 z-10 h-16 border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
+    <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-3 px-4 py-3">
         <Link href="/" className="flex shrink-0 items-center">
           <Logo wordmarkClassName="hidden sm:inline" />
         </Link>
 
-        <nav className="flex items-center gap-3 text-sm sm:gap-4">
-          <Link href="/listings" className="text-slate-700 hover:text-slate-900">
+        <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <Link href="/listings" className={navLinkClassName}>
             Обяви
           </Link>
-          <Link href="/pricing" className="text-slate-700 hover:text-slate-900">
+          <Link href="/pricing" className={navLinkClassName}>
             Планове
           </Link>
           {user ? (
             <>
-              <Link href="/dashboard" className="text-slate-700 hover:text-slate-900">
+              <Link href="/dashboard" className={navLinkClassName}>
                 Моят профил
               </Link>
-              <Link
-                href="/dashboard/messages"
-                className="text-slate-700 hover:text-slate-900"
-              >
+              <Link href="/dashboard/messages" className={navLinkClassName}>
                 Съобщения
               </Link>
               <form action={signOut}>
-                <button
-                  type="submit"
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-                >
+                <button type="submit" className={navLinkClassName}>
                   Изход
                 </button>
               </form>
             </>
           ) : (
             <>
-              <Link href="/login" className="text-slate-700 hover:text-slate-900">
+              <Link href="/login" className={navLinkClassName}>
                 Вход
               </Link>
               <Link
                 href="/register"
-                className="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-700"
+                className="whitespace-nowrap rounded-full bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-700"
               >
                 Регистрация
               </Link>
