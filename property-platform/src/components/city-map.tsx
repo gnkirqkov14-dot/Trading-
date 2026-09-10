@@ -25,6 +25,14 @@ const NEIGHBORHOOD_FILL = "#ede4d3";
 const NEIGHBORHOOD_FILL_HOVER = "#a7f3d0";
 const NEIGHBORHOOD_BORDER = "#a89572";
 
+// За градове, за които собственикът е дал реална снимка на кварталите
+// (виж CLAUDE.md), имаме ръчно пресъздадени форми в GeoJSON — по-близки
+// до истинската форма/разположение, отколкото Voronoi изчислението може
+// да предложи. Fallback за всеки друг град си остава Voronoi.
+const HAND_AUTHORED_DISTRICTS: Record<string, string> = {
+  Пловдив: "/data/plovdiv-districts.geojson",
+};
+
 // Sutherland-Hodgman: clip `subject` against the convex polygon `clip`
 // (vertices must be counter-clockwise, which is what Delaunay.hull gives
 // us). Used below to trim each Voronoi cell to an organic city outline
@@ -195,6 +203,57 @@ export function CityMap({
       const markersPane = map.createPane("markers");
       markersPane.style.zIndex = "450";
 
+      function addDistrictPolygon(
+        n: CityMapNeighborhood,
+        latLngs: [number, number][],
+      ) {
+        const polygon = L.polygon(latLngs, {
+          pane: "markers",
+          color: NEIGHBORHOOD_BORDER,
+          weight: 1.5,
+          fillColor: NEIGHBORHOOD_FILL,
+          fillOpacity: 1,
+        }).addTo(map);
+        polygon.bindTooltip(n.name, {
+          permanent: true,
+          direction: "center",
+          className: "map-label",
+        });
+        polygon.on("mouseover", () =>
+          polygon.setStyle({ fillColor: NEIGHBORHOOD_FILL_HOVER, weight: 2.5 }),
+        );
+        polygon.on("mouseout", () =>
+          polygon.setStyle({ fillColor: NEIGHBORHOOD_FILL, weight: 1.5 }),
+        );
+        polygon.on("click", () => {
+          router.push(`/listings?city=${city.id}&neighborhood=${n.id}`);
+        });
+      }
+
+      const handAuthoredUrl = HAND_AUTHORED_DISTRICTS[city.name];
+      if (handAuthoredUrl) {
+        const res = await fetch(handAuthoredUrl);
+        if (cancelled) return;
+        if (res.ok) {
+          const geojson = await res.json();
+          if (cancelled) return;
+          const byName = new Map(neighborhoods.map((n) => [n.name, n]));
+          for (const feature of geojson.features) {
+            const n = byName.get(feature.properties?.name);
+            if (!n) continue;
+            const ring = feature.geometry.coordinates[0] as [
+              number,
+              number,
+            ][];
+            const latLngs = ring.map(
+              ([lng, lat]) => [lat, lng] as [number, number],
+            );
+            addDistrictPolygon(n, latLngs);
+          }
+          return;
+        }
+      }
+
       const cells = await computeNeighborhoodCells(neighborhoods);
       if (cancelled) return;
 
@@ -222,27 +281,7 @@ export function CityMap({
       }
 
       cells.forEach(({ neighborhood: n, latLngs }) => {
-        const polygon = L.polygon(latLngs, {
-          pane: "markers",
-          color: NEIGHBORHOOD_BORDER,
-          weight: 1.5,
-          fillColor: NEIGHBORHOOD_FILL,
-          fillOpacity: 1,
-        }).addTo(map);
-        polygon.bindTooltip(n.name, {
-          permanent: true,
-          direction: "center",
-          className: "map-label",
-        });
-        polygon.on("mouseover", () =>
-          polygon.setStyle({ fillColor: NEIGHBORHOOD_FILL_HOVER, weight: 2.5 }),
-        );
-        polygon.on("mouseout", () =>
-          polygon.setStyle({ fillColor: NEIGHBORHOOD_FILL, weight: 1.5 }),
-        );
-        polygon.on("click", () => {
-          router.push(`/listings?city=${city.id}&neighborhood=${n.id}`);
-        });
+        addDistrictPolygon(n, latLngs);
       });
     }
 
