@@ -33,12 +33,12 @@ export function Logo({
   wordmarkClassName?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
-        <HouseIcon className="h-5 w-5" />
+    <span className={`inline-flex items-center gap-2.5 ${className ?? ""}`}>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
+        <HouseIcon className="h-6 w-6" />
       </span>
       <span
-        className={`text-lg font-bold leading-none whitespace-nowrap text-slate-900 ${wordmarkClassName}`}
+        className={`text-xl font-bold leading-none whitespace-nowrap text-slate-900 ${wordmarkClassName}`}
       >
         Имоти{" "}
         <span className="font-medium text-slate-500">без посредници</span>
