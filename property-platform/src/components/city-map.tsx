@@ -51,6 +51,27 @@ function segmentIntersection(
   return [(B2 * C1 - B1 * C2) / det, (A1 * C2 - A2 * C1) / det];
 }
 
+// Chaikin corner-cutting: rounds a straight-edged polygon into a smooth,
+// organic-looking outline by repeatedly replacing each vertex with two
+// points closer to its neighbors. This is what turns the computed
+// Voronoi "pizza slices" into shapes that read as hand-drawn districts
+// instead of a geometry diagram — the actual complaint, since real
+// per-neighborhood boundary data isn't available (see CLAUDE.md).
+function chaikinSmooth(points: number[][], iterations: number) {
+  let pts = points;
+  for (let iter = 0; iter < iterations; iter++) {
+    const next: number[][] = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p0 = pts[i];
+      const p1 = pts[(i + 1) % pts.length];
+      next.push([p0[0] + 0.25 * (p1[0] - p0[0]), p0[1] + 0.25 * (p1[1] - p0[1])]);
+      next.push([p0[0] + 0.75 * (p1[0] - p0[0]), p0[1] + 0.75 * (p1[1] - p0[1])]);
+    }
+    pts = next;
+  }
+  return pts;
+}
+
 function clipToConvexPolygon(subject: number[][], clip: number[][]) {
   let output = subject;
   for (let i = 0; i < clip.length && output.length > 0; i++) {
@@ -130,7 +151,8 @@ async function computeNeighborhoodCells(
       if (!cell) return null;
       const clipped = clipToConvexPolygon(cell, expandedHull);
       if (clipped.length < 3) return null;
-      const latLngs = clipped.map(
+      const smoothed = chaikinSmooth(clipped, 3);
+      const latLngs = smoothed.map(
         ([lng, lat]) => [lat, lng] as [number, number],
       );
       return { neighborhood: n, latLngs };
