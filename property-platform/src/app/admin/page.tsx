@@ -14,25 +14,93 @@ export const metadata: Metadata = { title: "Админ панел" };
 // (SMS верификация и т.н., виж CLAUDE.md).
 const SUSPECTED_AGENCY_THRESHOLD = 3;
 
+type RawListingRow = {
+  id: string;
+  title: string;
+  status: AdminListing["status"];
+  price: number;
+  phone: string;
+  user_id: string;
+  view_count: number;
+  created_at: string;
+  updated_at: string;
+  profiles: { name: string | null } | null;
+};
+
+type EditLogRow = {
+  id: string;
+  listing_id: string;
+  changed_by: string | null;
+  changed_fields: Record<string, { old: unknown; new: unknown }>;
+  changed_at: string;
+};
+
 export default async function AdminPage() {
   await requireAdmin();
   const supabase = await createClient();
 
   const { data: listings } = await supabase
     .from("listings")
-    .select("id, title, status, price, phone, profiles(name)")
+    .select(
+      "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name)",
+    )
     .order("created_at", { ascending: false });
 
-  const rows = (listings ?? []) as unknown as AdminListing[];
+  const rows = (listings ?? []) as unknown as RawListingRow[];
+
+  const uniqueUserIds = [...new Set(rows.map((row) => row.user_id))];
+  const { data: emailRows } = uniqueUserIds.length
+    ? await supabase.rpc("admin_get_profile_emails", {
+        profile_ids: uniqueUserIds,
+      })
+    : { data: [] as { id: string; email: string | null }[] };
+  const emailByUserId = new Map(
+    (emailRows ?? []).map((row) => [row.id, row.email]),
+  );
+
+  const listingIds = rows.map((row) => row.id);
+  const { data: editLogRows } = listingIds.length
+    ? await supabase
+        .from("listing_edit_log")
+        .select("id, listing_id, changed_by, changed_fields, changed_at")
+        .in("listing_id", listingIds)
+        .order("changed_at", { ascending: false })
+    : { data: [] as EditLogRow[] };
+
+  const editLogByListing = new Map<string, EditLogRow[]>();
+  for (const log of (editLogRows ?? []) as unknown as EditLogRow[]) {
+    const list = editLogByListing.get(log.listing_id) ?? [];
+    list.push(log);
+    editLogByListing.set(log.listing_id, list);
+  }
+
+  const rowsWithExtras: AdminListing[] = rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    price: row.price,
+    phone: row.phone,
+    email: emailByUserId.get(row.user_id) ?? null,
+    viewCount: row.view_count,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    profiles: row.profiles,
+    editLog: (editLogByListing.get(row.id) ?? []).map((log) => ({
+      id: log.id,
+      changedAt: log.changed_at,
+      changedByOwner: log.changed_by === row.user_id,
+      changedFields: log.changed_fields,
+    })),
+  }));
 
   const phoneCounts = new Map<string, number>();
-  for (const row of rows) {
+  for (const row of rowsWithExtras) {
     phoneCounts.set(row.phone, (phoneCounts.get(row.phone) ?? 0) + 1);
   }
 
   // Заподозрените (споделен телефон с 3+ обяви) най-отгоре, за да не се
   // налага да скролваш през целия списък, за да ги забележиш.
-  const sorted = [...rows].sort((a, b) => {
+  const sorted = [...rowsWithExtras].sort((a, b) => {
     const countA = phoneCounts.get(a.phone) ?? 1;
     const countB = phoneCounts.get(b.phone) ?? 1;
     if (countA !== countB) return countB - countA;

@@ -23,6 +23,7 @@ export interface Database {
           id: string;
           name: string | null;
           phone: string | null;
+          email: string | null;
           subscription_plan: SubscriptionPlan;
           subscription_expires_at: string | null;
           is_admin: boolean;
@@ -32,6 +33,7 @@ export interface Database {
           id: string;
           name?: string | null;
           phone?: string | null;
+          email?: string | null;
           subscription_plan?: SubscriptionPlan;
           subscription_expires_at?: string | null;
           is_admin?: boolean;
@@ -97,7 +99,9 @@ export interface Database {
           status: ListingStatus;
           reminder_count: number;
           last_confirmed_at: string;
+          view_count: number;
           created_at: string;
+          updated_at: string;
         },
         {
           id?: string;
@@ -125,7 +129,9 @@ export interface Database {
           status?: ListingStatus;
           reminder_count?: number;
           last_confirmed_at?: string;
+          view_count?: number;
           created_at?: string;
+          updated_at?: string;
         }
       >;
       listing_photos: Table<
@@ -140,6 +146,22 @@ export interface Database {
       listing_videos: Table<
         { id: string; listing_id: string; url: string },
         { id?: string; listing_id: string; url: string }
+      >;
+      listing_edit_log: Table<
+        {
+          id: string;
+          listing_id: string;
+          changed_by: string | null;
+          changed_fields: Record<string, { old: unknown; new: unknown }>;
+          changed_at: string;
+        },
+        {
+          id?: string;
+          listing_id: string;
+          changed_by?: string | null;
+          changed_fields: Record<string, { old: unknown; new: unknown }>;
+          changed_at?: string;
+        }
       >;
       messages: Table<
         {
@@ -189,6 +211,14 @@ export interface Database {
           listing_title: string;
           stage: number;
         }[];
+      };
+      admin_get_profile_emails: {
+        Args: { profile_ids: string[] };
+        Returns: { id: string; email: string | null }[];
+      };
+      increment_listing_view: {
+        Args: { p_listing_id: string };
+        Returns: void;
       };
     };
     Enums: {

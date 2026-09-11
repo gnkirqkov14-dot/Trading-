@@ -3,8 +3,68 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { adminDeleteListing, adminSetListingStatus } from "@/lib/actions/admin";
-import { STATUS_LABELS, formatPrice } from "@/lib/listing-labels";
-import type { ListingStatus } from "@/lib/types/database";
+import {
+  DEAL_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+  STATUS_LABELS,
+  formatPrice,
+} from "@/lib/listing-labels";
+import type {
+  ListingDealType,
+  ListingStatus,
+  PropertyType,
+} from "@/lib/types/database";
+
+const FIELD_LABELS: Record<string, string> = {
+  type: "Сделка",
+  property_type: "Тип имот",
+  city_id: "Град",
+  neighborhood_id: "Квартал",
+  lat: "Ширина (lat)",
+  lng: "Дължина (lng)",
+  price: "Цена",
+  area_sqm: "Кв.м",
+  rooms: "Стаи",
+  floor: "Етаж",
+  year_built: "Година на строеж",
+  heating: "Отопление",
+  has_parking: "Паркинг",
+  has_elevator: "Асансьор",
+  has_terrace: "Тераса",
+  is_furnished: "Обзавеждане",
+  title: "Заглавие",
+  description: "Описание",
+  address: "Адрес",
+  phone: "Телефон",
+  status: "Статус",
+};
+
+function formatFieldValue(field: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (field === "price") return formatPrice(Number(value));
+  if (field === "status")
+    return STATUS_LABELS[value as ListingStatus] ?? String(value);
+  if (field === "type")
+    return DEAL_TYPE_LABELS[value as ListingDealType] ?? String(value);
+  if (field === "property_type")
+    return PROPERTY_TYPE_LABELS[value as PropertyType] ?? String(value);
+  if (typeof value === "boolean") return value ? "Да" : "Не";
+  return String(value);
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("bg-BG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+export type AdminEditLogEntry = {
+  id: string;
+  changedAt: string;
+  changedByOwner: boolean;
+  changedFields: Record<string, { old: unknown; new: unknown }>;
+};
 
 export type AdminListing = {
   id: string;
@@ -12,7 +72,12 @@ export type AdminListing = {
   status: ListingStatus;
   price: number;
   phone: string;
+  email: string | null;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
   profiles: { name: string | null } | null;
+  editLog: AdminEditLogEntry[];
 };
 
 export function AdminListingsTable({
@@ -56,6 +121,7 @@ function AdminListingRow({
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState(listing.status);
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   function toggle() {
     const next: ListingStatus = status === "inactive" ? "active" : "inactive";
@@ -82,51 +148,91 @@ function AdminListingRow({
     });
   }
 
+  const wasEdited = listing.updatedAt !== listing.createdAt;
+
   return (
     <li
-      className={`flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between ${
-        suspectedAgency ? "bg-amber-50" : ""
-      }`}
+      className={`flex flex-col gap-2 p-4 ${suspectedAgency ? "bg-amber-50" : ""}`}
     >
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={`/listings/${listing.id}`}
-            className="font-medium text-slate-900 hover:underline"
-          >
-            {listing.title}
-          </Link>
-          {suspectedAgency && (
-            <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-900">
-              ⚠ Телефон в {phoneCount} обяви
-            </span>
-          )}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/listings/${listing.id}`}
+              className="font-medium text-slate-900 hover:underline"
+            >
+              {listing.title}
+            </Link>
+            {suspectedAgency && (
+              <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-900">
+                ⚠ Телефон в {phoneCount} обяви
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-slate-500">
+            {listing.profiles?.name ?? "Непознат собственик"} ·{" "}
+            {listing.phone} · {listing.email ?? "няма имейл"} ·{" "}
+            {formatPrice(listing.price)} · {STATUS_LABELS[status]}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Качена: {formatDateTime(listing.createdAt)}
+            {wasEdited && <> · Редактирана: {formatDateTime(listing.updatedAt)}</>}
+            {" · "}
+            {listing.viewCount} {listing.viewCount === 1 ? "гледане" : "гледания"}
+          </p>
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
-        <p className="text-sm text-slate-500">
-          {listing.profiles?.name ?? "Непознат собственик"} · {listing.phone} ·{" "}
-          {formatPrice(listing.price)} · {STATUS_LABELS[status]}
-        </p>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={isPending}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {status === "inactive" ? "Активирай" : "Деактивирай"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isPending}
+            className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            Изтрий
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={toggle}
-          disabled={isPending}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-        >
-          {status === "inactive" ? "Активирай" : "Деактивирай"}
-        </button>
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={isPending}
-          className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-        >
-          Изтрий
-        </button>
-      </div>
+      {listing.editLog.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="text-xs font-medium text-slate-500 underline hover:text-slate-700"
+          >
+            {showHistory ? "Скрий" : "Покажи"} история на редакциите (
+            {listing.editLog.length})
+          </button>
+          {showHistory && (
+            <ul className="mt-2 flex flex-col gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+              {listing.editLog.map((entry) => (
+                <li key={entry.id}>
+                  <span className="font-medium text-slate-800">
+                    {formatDateTime(entry.changedAt)}
+                  </span>{" "}
+                  — {entry.changedByOwner ? "от собственика" : "от admin"}:{" "}
+                  {Object.entries(entry.changedFields)
+                    .map(([field, { old: oldVal, new: newVal }]) => {
+                      const label = FIELD_LABELS[field] ?? field;
+                      return `${label}: ${formatFieldValue(field, oldVal)} → ${formatFieldValue(field, newVal)}`;
+                    })
+                    .join("; ")}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </li>
   );
 }
