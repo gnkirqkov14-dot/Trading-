@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { MyListings, type MyListing } from "@/components/my-listings";
-import { PLAN_LABELS } from "@/lib/listing-labels";
 
 export const metadata: Metadata = { title: "Моят профил" };
 
@@ -20,7 +19,6 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const plan = profile?.subscription_plan ?? "basic";
   const activeCount = (listings ?? []).filter(
     (l) => l.status === "active",
   ).length;
@@ -33,11 +31,7 @@ export default async function DashboardPage() {
             Здравей, {profile?.name || user.email}
           </h1>
           <p className="mt-2 text-slate-500">
-            План за търсене:{" "}
-            <Link href="/pricing" className="font-medium text-slate-900 underline">
-              {PLAN_LABELS[plan]}
-            </Link>{" "}
-            · {activeCount} активни обяви (публикуването е безплатно и
+            {activeCount} активни обяви (публикуването е безплатно и
             неограничено)
           </p>
           <Link

@@ -23,9 +23,6 @@ export async function SiteHeader() {
           <Link href="/listings" className={navLinkClassName}>
             Обяви
           </Link>
-          <Link href="/pricing" className={navLinkClassName}>
-            Планове
-          </Link>
           {user ? (
             <>
               <Link href="/dashboard" className={navLinkClassName}>

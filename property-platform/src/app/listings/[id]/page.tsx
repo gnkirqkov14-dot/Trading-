@@ -18,6 +18,7 @@ import type {
 type ListingDetail = {
   id: string;
   user_id: string;
+  created_at: string;
   type: ListingDealType;
   property_type: PropertyType;
   price: number;
@@ -146,8 +147,41 @@ export default async function ListingDetailPage({
     ]);
   }
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "https://property-platform-five.vercel.app";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    name: listing.title,
+    description: listing.description ?? undefined,
+    url: `${siteUrl}/listings/${listing.id}`,
+    datePosted: listing.created_at,
+    image: photos.map((photo) => photo.url),
+    address: listing.cities?.name
+      ? {
+          "@type": "PostalAddress",
+          addressLocality: listing.cities.name,
+          addressCountry: "BG",
+        }
+      : undefined,
+    offers: {
+      "@type": "Offer",
+      price: listing.price,
+      priceCurrency: "EUR",
+      availability:
+        listing.status === "active"
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+    },
+  };
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {listing.status !== "active" && (
         <p className="mb-4 inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
           {STATUS_LABELS[listing.status]}

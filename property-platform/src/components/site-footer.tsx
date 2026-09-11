@@ -11,9 +11,6 @@ export function SiteFooter() {
           <Link href="/listings" className="hover:text-slate-900">
             Обяви
           </Link>
-          <Link href="/pricing" className="hover:text-slate-900">
-            Планове
-          </Link>
           <Link href="/register" className="hover:text-slate-900">
             Публикувай безплатно
           </Link>

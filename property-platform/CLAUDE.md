@@ -73,6 +73,33 @@ demo (`backend/`, `frontend/`, `docs/`, `netlify.toml`, `render.yaml` в
   на нова обява — истинският телефон, който се показва на купувачите, е
   `listings.phone` (отделен, per-listing).
 
+### 🔓 ВРЕМЕННО: платеният достъп е изключен за старта
+
+Собственикът поиска да скрием плащанията в началото на маркетинга —
+**пълен достъп е отключен за всички**, независимо от `subscription_plan`.
+Инфраструктурата отгоре (RLS, `/pricing`, `profiles.subscription_plan`)
+остава непокътната — само два места са превключени, и двете ясно
+маркирани в кода с "ВРЕМЕННО ЗА СТАРТА":
+
+1. `lib/listing-labels.ts` → `hasFullSearchAccess()` връща `true`
+   безусловно (вместо `plan !== "basic"`) — управлява UI-показването на
+   снимки/описание/квартал/контакти на `app/listings/[id]/page.tsx`.
+2. `supabase/migrations/0018_free_launch_messages.sql` замества RLS
+   policy-то на `messages` INSERT с проверка само за `auth.uid() =
+   from_user_id` (без изискване за платен план) — **задължително**,
+   защото UI проверката сама̀ не спира истински Postgres INSERT през
+   публичния anon/authenticated ключ (виж обяснението по-горе).
+
+`/pricing` страницата съществува still, но е разкачена от навигацията
+(`site-header.tsx`/`site-footer.tsx`) и от `sitemap.ts`, достъпна само
+на директен адрес. `dashboard/page.tsx` вече не показва "План за
+търсене" линията.
+
+**За да върнем платения достъп занапред**: смени `hasFullSearchAccess()`
+обратно на `return plan !== "basic";`, пресъздай policy-то от
+`0008_search_subscription_paywall.sql` с нова миграция, и върни линковете
+към `/pricing` в header/footer/sitemap/dashboard.
+
 ## ⚠️ Security fix: column-level grants на `profiles`
 
 При изграждане на `/dashboard/profile` открихме пропуск от Фаза 1: RLS

@@ -50,12 +50,14 @@ export const PLAN_PRICES_EUR: Record<SubscriptionPlan, number> = {
   unlimited: 20,
 };
 
-// Публикуването на обяви е безплатно и неограничено за всички. Абонаментът
-// (Pro/Unlimited) отключва пълния достъп при ТЪРСЕНЕ на обяви — всички
-// снимки, описание, точен квартал и възможност за писане на собственика.
-// "basic" (Free) вижда само ограничена версия на чужди обяви.
+// ВРЕМЕННО ЗА СТАРТА: пълен достъп за всички, без абонамент — собственикът
+// поиска да скрием плащанията в началото на маркетинга. Инфраструктурата
+// (subscription_plan, /pricing, RLS) остава непокътната за занапред — само
+// тази проверка е сменена, за да върнем платения достъп занапред, смени
+// обратно на `return plan !== "basic";`.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function hasFullSearchAccess(plan: SubscriptionPlan) {
-  return plan !== "basic";
+  return true;
 }
 
 export function formatPrice(price: number) {
