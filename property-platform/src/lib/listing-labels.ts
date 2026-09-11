@@ -41,10 +41,8 @@ export const MAX_LISTING_PHOTOS = 30;
 // само fallback, ако полето по някаква причина липсва в отговора.
 export const DEFAULT_LISTING_LIMIT = 3;
 
-// ВРЕМЕННО: смени с реален, наблюдаван адрес след като е настроен приемащ
-// имейл на новия домейн — засега е само placeholder, показван при достигнат
-// лимит на обяви.
-export const SUPPORT_EMAIL = "contact@imotspot.com";
+// Показван при достигнат лимит на обяви (виж createListing).
+export const SUPPORT_EMAIL = "imotspot.help@gmail.com";
 
 export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   basic: "Free",
