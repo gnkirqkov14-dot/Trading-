@@ -54,17 +54,18 @@ export function ProfileForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>Телефон (по избор)</label>
+        <label className={labelClass}>Телефон</label>
         <input
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="08xx xxx xxx"
           className={inputClass}
+          required
         />
         <p className="text-xs text-slate-400">
-          Ще се предлага автоматично при публикуване на нова обява — можеш
-          да го промениш за всяка обява поотделно.
+          Един телефон за всичките ти обяви — сменяш го само тук, вместо за
+          всяка обява поотделно.
         </p>
       </div>
 

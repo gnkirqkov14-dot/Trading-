@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { createListing } from "@/lib/actions/listings";
@@ -23,12 +24,12 @@ export function NewListingForm({
   userId,
   cities,
   neighborhoods,
-  initialPhone = "",
+  profilePhone,
 }: {
   userId: string;
   cities: City[];
   neighborhoods: Neighborhood[];
-  initialPhone?: string;
+  profilePhone: string;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +51,6 @@ export function NewListingForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState(initialPhone);
   const [videoUrl, setVideoUrl] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
 
@@ -96,8 +96,8 @@ export function NewListingForm({
       setError("Въведете адрес на имота.");
       return;
     }
-    if (!phone.trim()) {
-      setError("Въведете телефон за връзка.");
+    if (!profilePhone.trim()) {
+      setError("Добави телефон в профила си, преди да публикуваш обява.");
       return;
     }
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
@@ -156,7 +156,6 @@ export function NewListingForm({
         title,
         description: description || null,
         address,
-        phone,
         photoUrls,
         videoUrl: videoUrl.trim() || null,
       });
@@ -362,14 +361,31 @@ export function NewListingForm({
         </div>
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Телефон за връзка</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="08xx xxx xxx"
-            className={inputClass}
-            required
-          />
+          {profilePhone ? (
+            <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+              {profilePhone}{" "}
+              <Link
+                href="/dashboard/profile"
+                className="text-sm font-medium text-slate-500 underline hover:text-slate-700"
+              >
+                Промени в профила
+              </Link>
+            </p>
+          ) : (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+              Нямаш добавен телефон.{" "}
+              <Link
+                href="/dashboard/profile"
+                className="font-medium underline"
+              >
+                Добави го в профила си
+              </Link>
+              , преди да публикуваш.
+            </p>
+          )}
+          <p className="text-xs text-slate-400">
+            Един телефон за всичките ти обяви — не се задава поотделно.
+          </p>
         </div>
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Описание</label>
@@ -439,7 +455,7 @@ export function NewListingForm({
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !profilePhone.trim()}
         className="rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-60"
       >
         {submitting
