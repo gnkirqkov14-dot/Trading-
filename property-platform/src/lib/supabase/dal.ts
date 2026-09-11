@@ -24,7 +24,9 @@ export const getProfile = cache(async () => {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select(
+      "id, name, phone, subscription_plan, subscription_expires_at, is_admin, created_at",
+    )
     .eq("id", user.id)
     .single();
 

@@ -102,6 +102,14 @@ export default async function ListingDetailPage({
   } = await supabase.auth.getUser();
 
   const isOwner = user?.id === listing.user_id;
+
+  if (!isOwner) {
+    // Не броим собствените прегледи на обявата от собственика ѝ.
+    await supabase.rpc("increment_listing_view", {
+      p_listing_id: listing.id,
+    });
+  }
+
   let viewerHasSubscription = false;
   if (user && !isOwner) {
     const { data: profile } = await supabase
