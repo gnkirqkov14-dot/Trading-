@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   adminBanAgencyListing,
   adminDeleteListing,
+  adminSetListingLimit,
   adminSetListingStatus,
 } from "@/lib/actions/admin";
 import {
@@ -72,6 +73,7 @@ export type AdminEditLogEntry = {
 
 export type AdminListing = {
   id: string;
+  userId: string;
   title: string;
   status: ListingStatus;
   price: number;
@@ -82,6 +84,8 @@ export type AdminListing = {
   updatedAt: string;
   profiles: { name: string | null } | null;
   reportCount: number;
+  ownerListingCount: number;
+  ownerListingLimit: number;
   editLog: AdminEditLogEntry[];
 };
 
@@ -128,6 +132,9 @@ function AdminListingRow({
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [banned, setBanned] = useState(false);
+  const [ownerListingLimit, setOwnerListingLimit] = useState(
+    listing.ownerListingLimit,
+  );
 
   function toggle() {
     const next: ListingStatus = status === "inactive" ? "active" : "inactive";
@@ -169,6 +176,29 @@ function AdminListingRow({
         await adminBanAgencyListing(listing.id);
         setBanned(true);
         setStatus("inactive");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Грешка.");
+      }
+    });
+  }
+
+  function handleChangeLimit() {
+    const input = prompt(
+      `Нов лимит обяви за ${listing.profiles?.name ?? "този потребител"} ` +
+        `(текущ: ${ownerListingLimit}, има ${listing.ownerListingCount} обяви в момента):`,
+      String(ownerListingLimit),
+    );
+    if (input === null) return;
+    const newLimit = Number(input);
+    if (!Number.isInteger(newLimit) || newLimit < 0) {
+      setError("Невалиден лимит — въведи цяло число, 0 или повече.");
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      try {
+        await adminSetListingLimit(listing.userId, newLimit);
+        setOwnerListingLimit(newLimit);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Грешка.");
       }
@@ -217,6 +247,25 @@ function AdminListingRow({
             {wasEdited && <> · Редактирана: {formatDateTime(listing.updatedAt)}</>}
             {" · "}
             {listing.viewCount} {listing.viewCount === 1 ? "гледане" : "гледания"}
+            {" · "}
+            <span
+              className={
+                listing.ownerListingCount >= ownerListingLimit
+                  ? "font-medium text-amber-600"
+                  : undefined
+              }
+            >
+              {listing.ownerListingCount}/{ownerListingLimit} обяви на
+              собственика
+            </span>{" "}
+            <button
+              type="button"
+              onClick={handleChangeLimit}
+              disabled={isPending}
+              className="underline hover:text-slate-700"
+            >
+              (промени лимита)
+            </button>
           </p>
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_LISTING_LIMIT } from "@/lib/listing-labels";
 import {
   AdminListingsTable,
   type AdminListing,
@@ -24,7 +25,7 @@ type RawListingRow = {
   view_count: number;
   created_at: string;
   updated_at: string;
-  profiles: { name: string | null } | null;
+  profiles: { name: string | null; listing_limit: number | null } | null;
 };
 
 type EditLogRow = {
@@ -42,7 +43,7 @@ export default async function AdminPage() {
   const { data: listings } = await supabase
     .from("listings")
     .select(
-      "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name)",
+      "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name, listing_limit)",
     )
     .order("created_at", { ascending: false });
 
@@ -88,8 +89,17 @@ export default async function AdminPage() {
     );
   }
 
+  const ownerListingCounts = new Map<string, number>();
+  for (const row of rows) {
+    ownerListingCounts.set(
+      row.user_id,
+      (ownerListingCounts.get(row.user_id) ?? 0) + 1,
+    );
+  }
+
   const rowsWithExtras: AdminListing[] = rows.map((row) => ({
     id: row.id,
+    userId: row.user_id,
     title: row.title,
     status: row.status,
     price: row.price,
@@ -100,6 +110,8 @@ export default async function AdminPage() {
     updatedAt: row.updated_at,
     profiles: row.profiles,
     reportCount: reportCounts.get(row.id) ?? 0,
+    ownerListingCount: ownerListingCounts.get(row.user_id) ?? 1,
+    ownerListingLimit: row.profiles?.listing_limit ?? DEFAULT_LISTING_LIMIT,
     editLog: (editLogByListing.get(row.id) ?? []).map((log) => ({
       id: log.id,
       changedAt: log.changed_at,

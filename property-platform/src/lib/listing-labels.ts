@@ -37,6 +37,15 @@ export const HEATING_OPTIONS = [
 export const MIN_LISTING_PHOTOS_HINT = 5;
 export const MAX_LISTING_PHOTOS = 30;
 
+// Съвпада с default-а на profiles.listing_limit в базата (0023_listing_limit.sql) —
+// само fallback, ако полето по някаква причина липсва в отговора.
+export const DEFAULT_LISTING_LIMIT = 3;
+
+// ВРЕМЕННО: смени с реален, наблюдаван адрес след като е настроен приемащ
+// имейл на новия домейн — засега е само placeholder, показван при достигнат
+// лимит на обяви.
+export const SUPPORT_EMAIL = "contact@imotspot.com";
+
 export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   basic: "Free",
   pro: "Pro",
