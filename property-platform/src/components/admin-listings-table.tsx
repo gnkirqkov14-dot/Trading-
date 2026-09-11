@@ -11,13 +11,18 @@ export type AdminListing = {
   title: string;
   status: ListingStatus;
   price: number;
+  phone: string;
   profiles: { name: string | null } | null;
 };
 
 export function AdminListingsTable({
   listings,
+  phoneCounts,
+  suspectedAgencyThreshold,
 }: {
   listings: AdminListing[];
+  phoneCounts: Record<string, number>;
+  suspectedAgencyThreshold: number;
 }) {
   if (listings.length === 0) {
     return <p className="text-slate-500">Няма обяви.</p>;
@@ -26,13 +31,28 @@ export function AdminListingsTable({
   return (
     <ul className="flex flex-col divide-y divide-slate-200 rounded-2xl border border-slate-200">
       {listings.map((listing) => (
-        <AdminListingRow key={listing.id} listing={listing} />
+        <AdminListingRow
+          key={listing.id}
+          listing={listing}
+          phoneCount={phoneCounts[listing.phone] ?? 1}
+          suspectedAgency={
+            (phoneCounts[listing.phone] ?? 1) >= suspectedAgencyThreshold
+          }
+        />
       ))}
     </ul>
   );
 }
 
-function AdminListingRow({ listing }: { listing: AdminListing }) {
+function AdminListingRow({
+  listing,
+  phoneCount,
+  suspectedAgency,
+}: {
+  listing: AdminListing;
+  phoneCount: number;
+  suspectedAgency: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState(listing.status);
   const [error, setError] = useState<string | null>(null);
@@ -63,16 +83,27 @@ function AdminListingRow({ listing }: { listing: AdminListing }) {
   }
 
   return (
-    <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <li
+      className={`flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between ${
+        suspectedAgency ? "bg-amber-50" : ""
+      }`}
+    >
       <div>
-        <Link
-          href={`/listings/${listing.id}`}
-          className="font-medium text-slate-900 hover:underline"
-        >
-          {listing.title}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/listings/${listing.id}`}
+            className="font-medium text-slate-900 hover:underline"
+          >
+            {listing.title}
+          </Link>
+          {suspectedAgency && (
+            <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-900">
+              ⚠ Телефон в {phoneCount} обяви
+            </span>
+          )}
+        </div>
         <p className="text-sm text-slate-500">
-          {listing.profiles?.name ?? "Непознат собственик"} ·{" "}
+          {listing.profiles?.name ?? "Непознат собственик"} · {listing.phone} ·{" "}
           {formatPrice(listing.price)} · {STATUS_LABELS[status]}
         </p>
         {error && <p className="text-sm text-red-600">{error}</p>}
