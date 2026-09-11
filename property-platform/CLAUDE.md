@@ -522,6 +522,41 @@ Google/Facebook OAuth по-долу) — иначе входът с Google от 
   проверен визуално на мобилен viewport. Performance profiling/по-нататъшно
   polish не е правено.
 
+  **SEO batch #2** — допълнителни подобрения:
+  - `app/opengraph-image.tsx` + `twitter-image.tsx` — генерирана по код
+    default OG/Twitter снимка (лого + слоган + `imotspot.com`) за всички
+    страници без собствена снимка (напр. листинги без корица снимка,
+    home, /listings). `lib/og-font.ts` тегли Inter шрифт с кирилски
+    глифи от Google Fonts CSS2 API по време на build/request — **важно**:
+    ImageResponse/satori няма вграден шрифт с кирилица, без това текстът
+    излиза като празни квадратчета; `text=` параметърът на Google Fonts
+    заявката subset-ва шрифта само до нужните символи. При грешка на
+    fetch-а има try/catch fallback към същата картинка без fonts array
+    (никога не чупи route-а). И двата route-а излизат статични (○) при
+    `npm run build` — шрифтът се тегли веднъж по време на build, не на
+    всеки request.
+  - `listings/[id]/page.tsx`: `generateMetadata` вече conditionally
+    добавя `openGraph.images` само когато има корица снимка (spread
+    `...(coverPhoto ? {...} : {})`), НЕ `images: undefined` — иначе
+    Next.js third-party merge логиката третира ключа като изрично зададен
+    (дори празен) и не пада обратно към root `opengraph-image.tsx`.
+    Заглавието вече включва цена+локация (`"... — 85 000 €, Младост,
+    Пловдив"`) за по-добър CTR в Google резултатите, отделно от on-page
+    `<h1>`, който си остава чистото заглавие на собственика.
+  - `alternates.canonical` добавен на root layout (`/`), `/listings`
+    (консолидира всички `?city=`/`?type=`... филтрирани варианти в една
+    канонична страница) и всяка обява (`/listings/[id]`).
+  - Homepage вече носи `Organization` + `WebSite` JSON-LD (`@graph`) за
+    разпознаване на марката в Google — **нарочно без** `SearchAction`
+    (sitelinks searchbox), защото `/listings` няма истинско `?q=`
+    свободно търсене, само структурирани филтри; добавянето му би било
+    подвеждащо structured data.
+  - **Следваща ръчна стъпка (само собственикът)**: регистрация на
+    `imotspot.com` в Google Search Console (Property type "Domain",
+    верификация през DNS TXT запис във Vercel Domains) + подаване на
+    `https://imotspot.com/sitemap.xml`, аналогично в Bing Webmaster
+    Tools. Кодовата част е готова, чака само тази ръчна регистрация.
+
 ### Cron job — важно за deploy
 
 `vercel.json` дефинира daily cron към `/api/cron/expire-listings`.

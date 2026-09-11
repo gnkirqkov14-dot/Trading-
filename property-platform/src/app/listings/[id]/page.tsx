@@ -70,17 +70,24 @@ export async function generateMetadata({
     .filter(Boolean)
     .join(", ");
   const description = `${formatPrice(listing.price)} · ${listing.area_sqm} м²${location ? ` · ${location}` : ""}`;
+  // По-добро CTR в резултатите от търсене — цена/локация направо в
+  // заглавието, не само в описанието.
+  const seoTitle = `${listing.title} — ${formatPrice(listing.price)}${location ? `, ${location}` : ""}`;
   const coverPhoto = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
   )[0];
 
   return {
-    title: listing.title,
+    title: seoTitle,
     description,
+    alternates: { canonical: `/listings/${id}` },
     openGraph: {
-      title: listing.title,
+      title: seoTitle,
       description,
-      images: coverPhoto ? [coverPhoto.url] : undefined,
+      // Ключът се пропуска изцяло (не се задава на undefined), за да не
+      // пречи на fallback-а към root `opengraph-image.tsx`, когато няма
+      // корица.
+      ...(coverPhoto ? { images: [coverPhoto.url] } : {}),
     },
   };
 }

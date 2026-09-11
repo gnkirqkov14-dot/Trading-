@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Имоти без посредници",
   },
   description: "Обяви за имоти директно от собственик — без агенции.",
+  alternates: { canonical: "/" },
   openGraph: {
     title: "Имоти без посредници",
     description: "Обяви за имоти директно от собственик — без агенции.",

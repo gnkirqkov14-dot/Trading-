@@ -25,8 +25,30 @@ export default async function Home() {
   const mapCities = (cities ?? []) as MapCity[];
   const listings = (recentListings ?? []) as unknown as ListingCardData[];
 
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotspot.com";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "Имоти без посредници",
+        url: siteUrl,
+      },
+      {
+        "@type": "WebSite",
+        name: "Имоти без посредници",
+        url: siteUrl,
+      },
+    ],
+  };
+
   return (
     <div className="flex flex-1 flex-col bg-slate-50">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="relative isolate overflow-hidden">
         <HeroBackground />
         <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center">
