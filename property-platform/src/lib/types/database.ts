@@ -199,6 +199,36 @@ export interface Database {
           created_at?: string;
         }
       >;
+      listing_reports: Table<
+        {
+          id: string;
+          listing_id: string;
+          reported_by: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          listing_id: string;
+          reported_by: string;
+          created_at?: string;
+        }
+      >;
+      agency_bans: Table<
+        {
+          id: string;
+          kind: "phone" | "email";
+          value: string;
+          banned_by: string | null;
+          banned_at: string;
+        },
+        {
+          id?: string;
+          kind: "phone" | "email";
+          value: string;
+          banned_by?: string | null;
+          banned_at?: string;
+        }
+      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -217,6 +247,14 @@ export interface Database {
         Returns: { id: string; email: string | null }[];
       };
       increment_listing_view: {
+        Args: { p_listing_id: string };
+        Returns: void;
+      };
+      is_contact_banned: {
+        Args: { p_phone: string | null; p_email: string | null };
+        Returns: boolean;
+      };
+      admin_ban_agency: {
         Args: { p_listing_id: string };
         Returns: void;
       };

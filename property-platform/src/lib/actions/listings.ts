@@ -58,6 +58,16 @@ export async function createListing(input: CreateListingInput) {
 
   const supabase = await createClient();
 
+  const { data: isBanned } = await supabase.rpc("is_contact_banned", {
+    p_phone: input.phone.trim(),
+    p_email: user.email ?? null,
+  });
+  if (isBanned) {
+    throw new Error(
+      "Този телефон или имейл е блокиран за публикуване на обяви.",
+    );
+  }
+
   const { error: listingError } = await supabase.from("listings").insert({
     id: input.id,
     user_id: user.id,
@@ -163,6 +173,16 @@ export async function updateListing(input: UpdateListingInput) {
   }
 
   const supabase = await createClient();
+
+  const { data: isBanned } = await supabase.rpc("is_contact_banned", {
+    p_phone: input.phone.trim(),
+    p_email: user.email ?? null,
+  });
+  if (isBanned) {
+    throw new Error(
+      "Този телефон или имейл е блокиран за публикуване на обяви.",
+    );
+  }
 
   const { data: existing } = await supabase
     .from("listings")
@@ -315,6 +335,23 @@ export async function confirmListingActive(listingId: string) {
 
   revalidatePath("/listings");
   revalidatePath("/dashboard");
+}
+
+export async function reportListingAsAgency(listingId: string) {
+  const user = await getAuthedUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("listing_reports")
+    .insert({ listing_id: listingId, reported_by: user.id });
+
+  // 23505 = unique violation — вече е докладвана от този потребител,
+  // не е грешка от гледна точка на UI-то (бутонът просто остава "докладвано").
+  if (error && error.code !== "23505") {
+    throw new Error(`Грешка при докладване: ${error.message}`);
+  }
+
+  revalidatePath(`/listings/${listingId}`);
 }
 
 export async function deleteListing(listingId: string) {

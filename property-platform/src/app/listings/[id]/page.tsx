@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ReportAgencyButton } from "@/components/report-agency-button";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -324,6 +325,12 @@ export default async function ListingDetailPage({
           </p>
         )}
       </div>
+
+      {user && !isOwner && (
+        <div className="mt-4 text-center">
+          <ReportAgencyButton listingId={listing.id} />
+        </div>
+      )}
     </div>
   );
 }
