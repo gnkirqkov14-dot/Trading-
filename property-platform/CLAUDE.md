@@ -143,7 +143,7 @@ changes спрямо по-старите ти познания. Ключови �
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS 4 | |
 | Backend/DB/Auth/Storage | Supabase | Postgres + Auth + Storage; RLS навсякъде |
 | Карта | Leaflet + OpenStreetMap tiles | Безплатно, без API ключ (виж по-долу) |
-| Хостинг | Vercel | Production URL: `https://property-platform-five.vercel.app` |
+| Хостинг | Vercel | Production URL: `https://imotspot.com` (закупен през Vercel Domains; старият `https://property-platform-five.vercel.app` продължава да работи) |
 
 ### Supabase типове (`src/lib/types/database.ts`)
 
@@ -378,12 +378,14 @@ commit "Скрий бутона за Facebook..."), плюс стъпките п
    "Client Secret (for OAuth)" → Save.
 4. **Критична стъпка, лесно се пропуска**: Supabase Dashboard →
    Authentication → **URL Configuration** → **Site URL** трябва да е
-   `https://property-platform-five.vercel.app` (по подразбиране е
-   `http://localhost:3000`!) и **Redirect URLs** трябва да съдържа
-   `https://property-platform-five.vercel.app/**`. Без това стъпка
-   Supabase успешно автентикира потребителя, но го връща на localhost
-   вместо на живия сайт — точно това се случи първия път, преди да го
-   оправим.
+   `https://imotspot.com` (по подразбиране е `http://localhost:3000`!) и
+   **Redirect URLs** трябва да съдържа `https://imotspot.com/**` (плюс
+   `https://property-platform-five.vercel.app/**`, за да остане достъпен
+   и старият адрес). Без тази стъпка Supabase успешно автентикира
+   потребителя, но го връща на localhost/грешен адрес вместо на живия
+   сайт — точно това се случи първия път, преди да го оправим, и ще се
+   повтори за новия домейн ако тази стъпка не се направи ръчно след
+   смяната на домейна (виж "Собствен домейн" по-долу).
 
 Flow-ът след това: `OAuthButtons` форма → `signInWithOAuth(provider,
 redirectTo)` → Supabase връща consent-screen URL → `/auth/callback`
@@ -424,6 +426,25 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
 Ключът е Supabase's нов "publishable key" формат
 (`sb_publishable_...`) — безопасен за публично споделяне, drop-in заместител
 на старите JWT-based anon keys.
+
+## Собствен домейн (imotspot.com)
+
+Закупен директно през Vercel (Project → Settings → Domains → Buy), което
+автоматично оправя DNS-а — не се налагаше ръчна конфигурация на nameserver
+записи. Свързан към Production environment-а на `property-platform`
+проекта (`www.imotspot.com` + голия `imotspot.com`, редиректва към www).
+`NEXT_PUBLIC_SITE_URL` env var е сменена на `https://imotspot.com` (Config
+тип, не Secret — стойността не е чувствителна) и проектът е redeploy-нат
+след промяната, за да я поеме — тя се ползва в JSON-LD/OG метаданните на
+`/listings/[id]` и в `sitemap.ts`/`robots.ts`.
+
+⚠️ **Все още предстои**: Supabase Dashboard → Authentication → URL
+Configuration трябва да се обнови ръчно (Site URL + Redirect URLs да
+включат `https://imotspot.com`, виж "Критична стъпка" в секцията за
+Google/Facebook OAuth по-долу) — иначе входът с Google от новия домейн
+ще връща потребителя на грешен адрес. Старият `property-platform-five.vercel.app`
+продължава да работи паралелно (Vercel не го маха, само добавя новия
+домейн), така че нищо не се чупи междувременно.
 
 ## Статус по фази (виж docs/PLAN.md за пълния план)
 
