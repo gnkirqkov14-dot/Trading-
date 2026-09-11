@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { adminDeleteListing, adminSetListingStatus } from "@/lib/actions/admin";
+import {
+  adminBanAgencyListing,
+  adminDeleteListing,
+  adminSetListingStatus,
+} from "@/lib/actions/admin";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -77,6 +81,7 @@ export type AdminListing = {
   createdAt: string;
   updatedAt: string;
   profiles: { name: string | null } | null;
+  reportCount: number;
   editLog: AdminEditLogEntry[];
 };
 
@@ -122,6 +127,7 @@ function AdminListingRow({
   const [status, setStatus] = useState(listing.status);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [banned, setBanned] = useState(false);
 
   function toggle() {
     const next: ListingStatus = status === "inactive" ? "active" : "inactive";
@@ -148,6 +154,27 @@ function AdminListingRow({
     });
   }
 
+  function handleBan() {
+    if (
+      !confirm(
+        `Да блокирам ли телефона и имейла на собственика на "${listing.title}"? ` +
+          "Няма да могат да публикуват нови обяви или да се регистрират отново, " +
+          "и всичките им текущи обяви ще бъдат деактивирани. Това е трудно обратимо.",
+      )
+    )
+      return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await adminBanAgencyListing(listing.id);
+        setBanned(true);
+        setStatus("inactive");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Грешка.");
+      }
+    });
+  }
+
   const wasEdited = listing.updatedAt !== listing.createdAt;
 
   return (
@@ -166,6 +193,17 @@ function AdminListingRow({
             {suspectedAgency && (
               <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium text-amber-900">
                 ⚠ Телефон в {phoneCount} обяви
+              </span>
+            )}
+            {listing.reportCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                🚩 {listing.reportCount}{" "}
+                {listing.reportCount === 1 ? "доклад" : "доклада"}
+              </span>
+            )}
+            {banned && (
+              <span className="inline-flex items-center rounded-full bg-slate-800 px-2 py-0.5 text-xs font-medium text-white">
+                Блокирана
               </span>
             )}
           </div>
@@ -199,6 +237,14 @@ function AdminListingRow({
             className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
           >
             Изтрий
+          </button>
+          <button
+            type="button"
+            onClick={handleBan}
+            disabled={isPending || banned}
+            className="rounded-lg border border-red-600 bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {banned ? "Блокирана" : "Блокирай агенция"}
           </button>
         </div>
       </div>

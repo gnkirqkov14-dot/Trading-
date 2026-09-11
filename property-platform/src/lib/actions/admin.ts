@@ -25,6 +25,22 @@ export async function adminSetListingStatus(
   revalidatePath("/listings");
 }
 
+export async function adminBanAgencyListing(listingId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("admin_ban_agency", {
+    p_listing_id: listingId,
+  });
+
+  if (error) {
+    throw new Error(`Грешка: ${error.message}`);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/listings");
+}
+
 export async function adminDeleteListing(listingId: string) {
   await requireAdmin();
   const supabase = await createClient();

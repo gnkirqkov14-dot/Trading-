@@ -42,6 +42,15 @@ export async function signUp(
   }
 
   const supabase = await createClient();
+
+  const { data: isBanned } = await supabase.rpc("is_contact_banned", {
+    p_phone: null,
+    p_email: email,
+  });
+  if (isBanned) {
+    return { error: "Този имейл е блокиран за регистрация." };
+  }
+
   const { error } = await supabase.auth.signUp({
     email,
     password,

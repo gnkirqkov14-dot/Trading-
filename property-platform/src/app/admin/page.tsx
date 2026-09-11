@@ -74,6 +74,20 @@ export default async function AdminPage() {
     editLogByListing.set(log.listing_id, list);
   }
 
+  const { data: reportRows } = listingIds.length
+    ? await supabase
+        .from("listing_reports")
+        .select("listing_id")
+        .in("listing_id", listingIds)
+    : { data: [] as { listing_id: string }[] };
+  const reportCounts = new Map<string, number>();
+  for (const report of reportRows ?? []) {
+    reportCounts.set(
+      report.listing_id,
+      (reportCounts.get(report.listing_id) ?? 0) + 1,
+    );
+  }
+
   const rowsWithExtras: AdminListing[] = rows.map((row) => ({
     id: row.id,
     title: row.title,
@@ -85,6 +99,7 @@ export default async function AdminPage() {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     profiles: row.profiles,
+    reportCount: reportCounts.get(row.id) ?? 0,
     editLog: (editLogByListing.get(row.id) ?? []).map((log) => ({
       id: log.id,
       changedAt: log.changed_at,
@@ -104,6 +119,7 @@ export default async function AdminPage() {
     const countA = phoneCounts.get(a.phone) ?? 1;
     const countB = phoneCounts.get(b.phone) ?? 1;
     if (countA !== countB) return countB - countA;
+    if (a.reportCount !== b.reportCount) return b.reportCount - a.reportCount;
     return a.phone.localeCompare(b.phone);
   });
 
