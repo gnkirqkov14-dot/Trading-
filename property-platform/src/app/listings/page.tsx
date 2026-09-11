@@ -5,7 +5,11 @@ import { ListingFilters } from "@/components/listing-filters";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
 import type { ListingDealType, PropertyType } from "@/lib/types/database";
 
-export const metadata: Metadata = { title: "Обяви" };
+export const metadata: Metadata = {
+  title: "Обяви",
+  description:
+    "Разгледай обяви за апартаменти, къщи и парцели директно от собственици в цяла България — без агентски комисионни.",
+};
 
 type SearchParams = {
   type?: string;
