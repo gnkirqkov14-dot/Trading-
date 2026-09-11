@@ -27,6 +27,7 @@ export interface Database {
           subscription_plan: SubscriptionPlan;
           subscription_expires_at: string | null;
           is_admin: boolean;
+          listing_limit: number;
           created_at: string;
         },
         {
@@ -37,6 +38,7 @@ export interface Database {
           subscription_plan?: SubscriptionPlan;
           subscription_expires_at?: string | null;
           is_admin?: boolean;
+          listing_limit?: number;
           created_at?: string;
         }
       >;
@@ -248,6 +250,10 @@ export interface Database {
       };
       increment_listing_view: {
         Args: { p_listing_id: string };
+        Returns: void;
+      };
+      admin_set_listing_limit: {
+        Args: { target_user_id: string; new_limit: number };
         Returns: void;
       };
       is_contact_banned: {

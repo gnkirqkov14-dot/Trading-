@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/supabase/dal";
-import { MAX_LISTING_PHOTOS } from "@/lib/listing-labels";
+import {
+  DEFAULT_LISTING_LIMIT,
+  MAX_LISTING_PHOTOS,
+  SUPPORT_EMAIL,
+} from "@/lib/listing-labels";
 import type {
   ListingDealType,
   PropertyType,
@@ -13,13 +17,13 @@ import type {
 // Един телефон на потребител, не различен за всяка обява — вижте
 // 0022_single_profile_phone.sql. Обявите вече не приемат телефон от
 // клиента, само от профила на собственика.
-async function getRequiredProfilePhone(
+async function getProfileContactInfo(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ) {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone")
+    .select("phone, listing_limit")
     .eq("id", userId)
     .single();
 
@@ -29,7 +33,10 @@ async function getRequiredProfilePhone(
       "Добави телефон в профила си, преди да публикуваш обява (Моят профил → Телефон).",
     );
   }
-  return phone;
+  return {
+    phone,
+    listingLimit: profile?.listing_limit ?? DEFAULT_LISTING_LIMIT,
+  };
 }
 
 export type CreateListingInput = {
@@ -75,7 +82,10 @@ export async function createListing(input: CreateListingInput) {
   }
 
   const supabase = await createClient();
-  const phone = await getRequiredProfilePhone(supabase, user.id);
+  const { phone, listingLimit } = await getProfileContactInfo(
+    supabase,
+    user.id,
+  );
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
     p_phone: phone,
@@ -84,6 +94,19 @@ export async function createListing(input: CreateListingInput) {
   if (isBanned) {
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
+    );
+  }
+
+  const { count: listingCount } = await supabase
+    .from("listings")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if ((listingCount ?? 0) >= listingLimit) {
+    throw new Error(
+      `Достигна лимита от ${listingLimit} обяви за един акаунт. Ако имаш ` +
+        `нужда от повече (напр. строителна фирма с няколко имота), пиши ни ` +
+        `на ${SUPPORT_EMAIL} и ще вдигнем лимита ти.`,
     );
   }
 
@@ -188,7 +211,7 @@ export async function updateListing(input: UpdateListingInput) {
   }
 
   const supabase = await createClient();
-  const phone = await getRequiredProfilePhone(supabase, user.id);
+  const { phone } = await getProfileContactInfo(supabase, user.id);
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
     p_phone: phone,
