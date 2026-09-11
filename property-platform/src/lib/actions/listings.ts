@@ -10,6 +10,28 @@ import type {
   PropertyType,
 } from "@/lib/types/database";
 
+// Един телефон на потребител, не различен за всяка обява — вижте
+// 0022_single_profile_phone.sql. Обявите вече не приемат телефон от
+// клиента, само от профила на собственика.
+async function getRequiredProfilePhone(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("phone")
+    .eq("id", userId)
+    .single();
+
+  const phone = profile?.phone?.trim();
+  if (!phone) {
+    throw new Error(
+      "Добави телефон в профила си, преди да публикуваш обява (Моят профил → Телефон).",
+    );
+  }
+  return phone;
+}
+
 export type CreateListingInput = {
   id: string;
   type: ListingDealType;
@@ -29,7 +51,6 @@ export type CreateListingInput = {
   title: string;
   description: string | null;
   address: string;
-  phone: string;
   photoUrls: string[];
   videoUrl: string | null;
 };
@@ -43,9 +64,6 @@ export async function createListing(input: CreateListingInput) {
   if (!input.address.trim()) {
     throw new Error("Адресът е задължителен.");
   }
-  if (!input.phone.trim()) {
-    throw new Error("Телефонът за връзка е задължителен.");
-  }
   if (!Number.isFinite(input.price) || input.price <= 0) {
     throw new Error("Въведете валидна цена.");
   }
@@ -57,9 +75,10 @@ export async function createListing(input: CreateListingInput) {
   }
 
   const supabase = await createClient();
+  const phone = await getRequiredProfilePhone(supabase, user.id);
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
-    p_phone: input.phone.trim(),
+    p_phone: phone,
     p_email: user.email ?? null,
   });
   if (isBanned) {
@@ -88,7 +107,7 @@ export async function createListing(input: CreateListingInput) {
     title: input.title.trim(),
     description: input.description?.trim() || null,
     address: input.address.trim(),
-    phone: input.phone.trim(),
+    phone,
   });
 
   if (listingError) {
@@ -137,7 +156,6 @@ export type UpdateListingInput = {
   title: string;
   description: string | null;
   address: string;
-  phone: string;
   videoUrl: string | null;
   keepPhotoUrls: string[];
   newPhotoUrls: string[];
@@ -158,9 +176,6 @@ export async function updateListing(input: UpdateListingInput) {
   if (!input.address.trim()) {
     throw new Error("Адресът е задължителен.");
   }
-  if (!input.phone.trim()) {
-    throw new Error("Телефонът за връзка е задължителен.");
-  }
   if (!Number.isFinite(input.price) || input.price <= 0) {
     throw new Error("Въведете валидна цена.");
   }
@@ -173,9 +188,10 @@ export async function updateListing(input: UpdateListingInput) {
   }
 
   const supabase = await createClient();
+  const phone = await getRequiredProfilePhone(supabase, user.id);
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
-    p_phone: input.phone.trim(),
+    p_phone: phone,
     p_email: user.email ?? null,
   });
   if (isBanned) {
@@ -215,7 +231,7 @@ export async function updateListing(input: UpdateListingInput) {
       title: input.title.trim(),
       description: input.description?.trim() || null,
       address: input.address.trim(),
-      phone: input.phone.trim(),
+      phone,
     })
     .eq("id", input.id)
     .eq("user_id", user.id);

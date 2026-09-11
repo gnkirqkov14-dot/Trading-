@@ -23,7 +23,7 @@ export default async function NewListingPage() {
         userId={user.id}
         cities={cities ?? []}
         neighborhoods={neighborhoods ?? []}
-        initialPhone={profile?.phone ?? ""}
+        profilePhone={profile?.phone ?? ""}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { updateListing } from "@/lib/actions/listings";
@@ -81,7 +82,6 @@ export function EditListingForm({
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description ?? "");
   const [address, setAddress] = useState(initial.address);
-  const [phone, setPhone] = useState(initial.phone);
   const [videoUrl, setVideoUrl] = useState(initial.videoUrl ?? "");
 
   const [keptPhotoUrls, setKeptPhotoUrls] = useState<string[]>(
@@ -142,10 +142,6 @@ export function EditListingForm({
       setError("Въведете адрес на имота.");
       return;
     }
-    if (!phone.trim()) {
-      setError("Въведете телефон за връзка.");
-      return;
-    }
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
       setError("Въведете валидна цена.");
       return;
@@ -201,7 +197,6 @@ export function EditListingForm({
         title,
         description: description || null,
         address,
-        phone,
         videoUrl: videoUrl.trim() || null,
         keepPhotoUrls: keptPhotoUrls,
         newPhotoUrls,
@@ -408,14 +403,18 @@ export function EditListingForm({
         </div>
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Телефон за връзка</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="08xx xxx xxx"
-            className={inputClass}
-            required
-          />
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+            {initial.phone}{" "}
+            <Link
+              href="/dashboard/profile"
+              className="text-sm font-medium text-slate-500 underline hover:text-slate-700"
+            >
+              Промени в профила
+            </Link>
+          </p>
+          <p className="text-xs text-slate-400">
+            Един телефон за всичките ти обяви — не се задава поотделно.
+          </p>
         </div>
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Описание</label>

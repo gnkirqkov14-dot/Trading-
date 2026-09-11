@@ -11,11 +11,15 @@ export async function updateProfile(input: { name: string; phone: string }) {
   if (name.length < 2) {
     throw new Error("Името трябва да е поне 2 символа.");
   }
+  const phone = input.phone.trim();
+  if (!phone) {
+    throw new Error("Телефонът е задължителен.");
+  }
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ name, phone: input.phone.trim() || null })
+    .update({ name, phone })
     .eq("id", user.id);
 
   if (error) {
