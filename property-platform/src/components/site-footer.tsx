@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { SUPPORT_EMAIL } from "@/lib/listing-labels";
 
 export function SiteFooter() {
   return (
@@ -14,6 +15,9 @@ export function SiteFooter() {
           <Link href="/register" className="hover:text-slate-900">
             Публикувай безплатно
           </Link>
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-900">
+            {SUPPORT_EMAIL}
+          </a>
         </nav>
 
         <p className="text-xs text-slate-400">
