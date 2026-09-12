@@ -551,11 +551,14 @@ Google/Facebook OAuth по-долу) — иначе входът с Google от 
     (sitelinks searchbox), защото `/listings` няма истинско `?q=`
     свободно търсене, само структурирани филтри; добавянето му би било
     подвеждащо structured data.
-  - **Следваща ръчна стъпка (само собственикът)**: регистрация на
-    `imotspot.com` в Google Search Console (Property type "Domain",
-    верификация през DNS TXT запис във Vercel Domains) + подаване на
-    `https://imotspot.com/sitemap.xml`, аналогично в Bing Webmaster
-    Tools. Кодовата част е готова, чака само тази ръчна регистрация.
+  - ✅ **Готово**: `imotspot.com` е регистриран и верифициран в Google
+    Search Console (Property type "Domain", верификация през DNS TXT
+    запис `google-site-verification=...`, добавен ръчно във Vercel →
+    Domains → `imotspot.com` → DNS Records — **не** през project-ниво
+    "Domains", а през account-ниво domain settings страницата, единственото
+    място с пълен DNS records editor). `https://imotspot.com/sitemap.xml`
+    е подаден успешно. Bing Webmaster Tools не е направено — по избор,
+    аналогичен процес, по-нисък приоритет от Google.
 
 ### Cron job — важно за deploy
 
