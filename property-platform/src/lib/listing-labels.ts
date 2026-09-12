@@ -2,7 +2,6 @@ import type {
   ListingDealType,
   ListingStatus,
   PropertyType,
-  SubscriptionPlan,
 } from "@/lib/types/database";
 
 export const DEAL_TYPE_LABELS: Record<ListingDealType, string> = {
@@ -43,29 +42,6 @@ export const DEFAULT_LISTING_LIMIT = 3;
 
 // Показван при достигнат лимит на обяви (виж createListing).
 export const SUPPORT_EMAIL = "imotspot.help@gmail.com";
-
-export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
-  basic: "Free",
-  pro: "Pro",
-  unlimited: "Unlimited",
-};
-
-// Примерни (непотвърдени) цени в евро — България премина към еврото.
-export const PLAN_PRICES_EUR: Record<SubscriptionPlan, number> = {
-  basic: 0,
-  pro: 10,
-  unlimited: 20,
-};
-
-// ВРЕМЕННО ЗА СТАРТА: пълен достъп за всички, без абонамент — собственикът
-// поиска да скрием плащанията в началото на маркетинга. Инфраструктурата
-// (subscription_plan, /pricing, RLS) остава непокътната за занапред — само
-// тази проверка е сменена, за да върнем платения достъп занапред, смени
-// обратно на `return plan !== "basic";`.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function hasFullSearchAccess(plan: SubscriptionPlan) {
-  return true;
-}
 
 export function formatPrice(price: number) {
   return `${price.toLocaleString("bg-BG")} €`;

@@ -8,7 +8,6 @@ import {
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
   formatPrice,
-  hasFullSearchAccess,
 } from "@/lib/listing-labels";
 import type {
   ListingDealType,
@@ -118,18 +117,10 @@ export default async function ListingDetailPage({
     });
   }
 
-  let viewerHasSubscription = false;
-  if (user && !isOwner) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_plan")
-      .eq("id", user.id)
-      .single();
-    viewerHasSubscription = hasFullSearchAccess(
-      profile?.subscription_plan ?? "basic",
-    );
-  }
-  const hasFullAccess = isOwner || viewerHasSubscription;
+  // Пълни детайли (снимки, описание, точен квартал, контакти) — само
+  // регистрация е нужна, не абонамент. Виж "Регистрация вместо планове"
+  // в CLAUDE.md.
+  const hasFullAccess = isOwner || Boolean(user);
 
   const photos = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
@@ -290,18 +281,18 @@ export default async function ListingDetailPage({
       {!hasFullAccess && (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
           <p className="font-medium text-slate-900">
-            Абонирай се, за да видиш всички снимки, описанието, точния
-            квартал и данните за връзка.
+            Регистрирай се безплатно, за да видиш всички снимки, описанието,
+            точния квартал и данните за връзка.
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            Публикуването на обяви е безплатно — абонаментът е само за
-            търсещите пълен достъп.
+            Публикуването и разглеждането на обяви са безплатни — само
+            регистрация е нужна за пълните детайли.
           </p>
           <Link
-            href="/pricing"
+            href="/register"
             className="mt-4 inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
           >
-            Разгледай плановете
+            Регистрирай се
           </Link>
         </div>
       )}
@@ -311,25 +302,18 @@ export default async function ListingDetailPage({
           <p className="text-slate-500">Това е твоя обява.</p>
         ) : !user ? (
           <p className="text-slate-500">
-            <Link href="/login" className="font-medium text-slate-900 underline">
-              Влез
+            <Link href="/register" className="font-medium text-slate-900 underline">
+              Регистрирай се
             </Link>{" "}
-            и се абонирай, за да пишеш на {listing.profiles?.name ?? "собственика"}.
+            безплатно, за да пишеш на {listing.profiles?.name ?? "собственика"}.
           </p>
-        ) : hasFullAccess ? (
+        ) : (
           <Link
             href={`/dashboard/messages/${listing.id}/${listing.user_id}`}
             className="inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
           >
             Пиши на {listing.profiles?.name ?? "собственика"}
           </Link>
-        ) : (
-          <p className="text-slate-500">
-            Само с абонамент можеш да пишеш на {listing.profiles?.name ?? "собственика"}.{" "}
-            <Link href="/pricing" className="font-medium text-slate-900 underline">
-              Разгледай плановете
-            </Link>
-          </p>
         )}
       </div>
 
