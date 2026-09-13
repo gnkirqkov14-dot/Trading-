@@ -13,8 +13,8 @@ export type MapCity = {
   id: string;
   name: string;
   region: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
 };
 
 const BULGARIA_CENTER: [number, number] = [42.7339, 25.4858];
@@ -72,7 +72,10 @@ export function BulgariaMap({ cities }: { cities: MapCity[] }) {
         // never appeared, since this dot-tap path never reaches it.
         if (!region) return;
         cities
-          .filter((city) => city.region === region)
+          .filter(
+            (city): city is MapCity & { lat: number; lng: number } =>
+              city.region === region && city.lat != null && city.lng != null,
+          )
           .forEach((city) => {
             // A tiny dot + a separate non-interactive label left a dead
             // zone where the (visually obvious) name wasn't actually
@@ -150,7 +153,9 @@ export function BulgariaMap({ cities }: { cities: MapCity[] }) {
   }, []);
 
   const citiesInRegion = selectedRegion
-    ? cities.filter((c) => c.region === selectedRegion)
+    ? cities
+        .filter((c) => c.region === selectedRegion)
+        .sort((a, b) => a.name.localeCompare(b.name, "bg"))
     : [];
 
   function resetView() {
