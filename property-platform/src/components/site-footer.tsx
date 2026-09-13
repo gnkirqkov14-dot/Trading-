@@ -12,6 +12,9 @@ export function SiteFooter() {
           <Link href="/listings" className="hover:text-slate-900">
             Обяви
           </Link>
+          <Link href="/about" className="hover:text-slate-900">
+            За нас
+          </Link>
           <Link href="/register" className="hover:text-slate-900">
             Публикувай безплатно
           </Link>
