@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { settlementLabel, type Settlement } from "@/components/settlement-search";
 import type L from "leaflet";
 import type {
   Map as LeafletMap,
@@ -20,19 +22,62 @@ export type MapCity = {
 const BULGARIA_CENTER: [number, number] = [42.7339, 25.4858];
 const BULGARIA_ZOOM = 7;
 
+// Областите с най-много села имат над 400 населени места — цял такъв
+// списък от бутони е неизползваем. Показваме всички градове и първите
+// няколко села, а за останалите насочваме към търсачката.
+const VILLAGES_SHOWN = 40;
+
 export function BulgariaMap({ cities }: { cities: MapCity[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const provincesRef = useRef<LeafletGeoJSON | null>(null);
   const markersLayerRef = useRef<LayerGroup | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  // Пази за коя област са заредените селища, за да не се показват стари
+  // резултати при смяна на областта (и без setState в тялото на ефекта).
+  const [loaded, setLoaded] = useState<{
+    region: string;
+    items: Settlement[];
+    total: number;
+  } | null>(null);
   const router = useRouter();
+
+  // Селищата на избраната област се теглят чак при клик върху нея — целият
+  // регистър (5267 реда) не бива да пътува до браузъра предварително.
+  useEffect(() => {
+    if (!selectedRegion) return;
+
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data, count } = await supabase
+        .from("cities")
+        .select("id, name, region, municipality, is_village", {
+          count: "exact",
+        })
+        .eq("region", selectedRegion)
+        .order("is_village")
+        .order("name")
+        .limit(200);
+
+      if (cancelled) return;
+      setLoaded({
+        region: selectedRegion,
+        items: (data ?? []) as Settlement[],
+        total: count ?? 0,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRegion]);
 
   // Директно към ръчния филтър в /listings — премахнахме интерактивната
   // карта с квартали (Voronoi/ръчно пресъздадени форми), собственикът
   // прецени, че опростен филтър е по-надежден от опит за визуално точна
   // карта на кварталите (виж CLAUDE.md).
-  function goToCity(city: MapCity) {
+  function goToCity(city: { id: string }) {
     router.push(`/listings?city=${city.id}`);
   }
 
@@ -152,11 +197,11 @@ export function BulgariaMap({ cities }: { cities: MapCity[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const citiesInRegion = selectedRegion
-    ? cities
-        .filter((c) => c.region === selectedRegion)
-        .sort((a, b) => a.name.localeCompare(b.name, "bg"))
-    : [];
+  const regionData = loaded?.region === selectedRegion ? loaded : null;
+  const towns = (regionData?.items ?? []).filter((s) => !s.is_village);
+  const villages = (regionData?.items ?? []).filter((s) => s.is_village);
+  const shownSettlements = [...towns, ...villages.slice(0, VILLAGES_SHOWN)];
+  const hiddenCount = (regionData?.total ?? 0) - shownSettlements.length;
 
   function resetView() {
     const map = mapRef.current;
@@ -192,18 +237,26 @@ export function BulgariaMap({ cities }: { cities: MapCity[] }) {
         ref={containerRef}
         className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
       />
-      {citiesInRegion.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {citiesInRegion.map((city) => (
-            <button
-              key={city.id}
-              type="button"
-              onClick={() => goToCity(city)}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
-            >
-              {city.name}
-            </button>
-          ))}
+      {shownSettlements.length > 0 && (
+        <div className="mt-3">
+          <div className="flex flex-wrap gap-2">
+            {shownSettlements.map((settlement) => (
+              <button
+                key={settlement.id}
+                type="button"
+                onClick={() => goToCity(settlement)}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
+              >
+                {settlementLabel(settlement)}
+              </button>
+            ))}
+          </div>
+          {hiddenCount > 0 && (
+            <p className="mt-2 text-sm text-slate-500">
+              и още {hiddenCount} села в областта — намери ги с търсачката
+              по-горе.
+            </p>
+          )}
         </div>
       )}
     </div>

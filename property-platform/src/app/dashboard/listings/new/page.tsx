@@ -10,9 +10,11 @@ export default async function NewListingPage() {
   const user = await getAuthedUser();
   const supabase = await createClient();
 
-  const [{ data: cities }, { data: neighborhoods }, profile, { count }] =
+  // Населените места вече са 5267 — не се теглят наготово, а се търсят
+  // динамично в SettlementSearch. Кварталите са само за 4-те големи града
+  // (31 реда), затова остават както са.
+  const [{ data: neighborhoods }, profile, { count }] =
     await Promise.all([
-      supabase.from("cities").select("id, name, region").order("name"),
       supabase.from("neighborhoods").select("id, city_id, name").order("name"),
       getProfile(),
       supabase
@@ -38,7 +40,6 @@ export default async function NewListingPage() {
       ) : (
         <NewListingForm
           userId={user.id}
-          cities={cities ?? []}
           neighborhoods={neighborhoods ?? []}
           profilePhone={profile?.phone ?? ""}
         />

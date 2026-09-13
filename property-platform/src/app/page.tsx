@@ -3,11 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 import { BulgariaMap, type MapCity } from "@/components/bulgaria-map";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
 import { HeroBackground } from "@/components/hero-background";
+import { HomeSettlementSearch } from "@/components/home-settlement-search";
 
 export default async function Home() {
   const supabase = await createClient();
   const [{ data: cities }, { data: recentListings }] = await Promise.all([
-    supabase.from("cities").select("id, name, region, lat, lng"),
+    // Само селищата с координати (областните градове) — те са единствените,
+    // които се рисуват като точки. Останалите 5000+ се търсят динамично,
+    // за да не пътува целият регистър до браузъра при всяко зареждане.
+    supabase
+      .from("cities")
+      .select("id, name, region, lat, lng")
+      .not("lat", "is", null)
+      .not("lng", "is", null),
     supabase
       .from("listings")
       .select(
@@ -76,6 +84,9 @@ export default async function Home() {
           </div>
 
           <div className="mt-10 w-full max-w-3xl">
+            <div className="mb-6">
+              <HomeSettlementSearch />
+            </div>
             <BulgariaMap cities={mapCities} />
           </div>
         </div>

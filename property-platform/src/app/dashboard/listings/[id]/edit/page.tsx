@@ -44,25 +44,31 @@ export default async function EditListingPage({
   const user = await getAuthedUser();
   const supabase = await createClient();
 
-  const [{ data: listingData }, { data: cities }, { data: neighborhoods }] =
-    await Promise.all([
-      supabase
-        .from("listings")
-        .select(
-          "*, listing_photos(url, position), listing_videos(url)",
-        )
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase.from("cities").select("id, name, region").order("name"),
-      supabase.from("neighborhoods").select("id, city_id, name").order("name"),
-    ]);
+  const [{ data: listingData }, { data: neighborhoods }] = await Promise.all([
+    supabase
+      .from("listings")
+      .select("*, listing_photos(url, position), listing_videos(url)")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase.from("neighborhoods").select("id, city_id, name").order("name"),
+  ]);
 
   const listing = listingData as unknown as EditableListing | null;
 
   if (!listing) {
     notFound();
   }
+
+  // Само текущо избраното населено място — останалите се търсят динамично
+  // в SettlementSearch (в базата вече са всичките 5267).
+  const { data: settlement } = listing.city_id
+    ? await supabase
+        .from("cities")
+        .select("id, name, region, municipality, is_village")
+        .eq("id", listing.city_id)
+        .maybeSingle()
+    : { data: null };
 
   const photoUrls = [...listing.listing_photos]
     .sort((a, b) => a.position - b.position)
@@ -74,12 +80,11 @@ export default async function EditListingPage({
       <EditListingForm
         listingId={listing.id}
         userId={user.id}
-        cities={cities ?? []}
         neighborhoods={neighborhoods ?? []}
         initial={{
           type: listing.type,
           propertyType: listing.property_type,
-          cityId: listing.city_id,
+          settlement,
           neighborhoodId: listing.neighborhood_id,
           price: listing.price,
           areaSqm: listing.area_sqm,

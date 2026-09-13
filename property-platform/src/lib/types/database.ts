@@ -47,6 +47,9 @@ export interface Database {
           id: string;
           name: string;
           region: string;
+          municipality: string | null;
+          is_village: boolean;
+          ekatte: string | null;
           lat: number | null;
           lng: number | null;
         },
@@ -54,6 +57,9 @@ export interface Database {
           id?: string;
           name: string;
           region: string;
+          municipality?: string | null;
+          is_village?: boolean;
+          ekatte?: string | null;
           lat?: number | null;
           lng?: number | null;
         }
