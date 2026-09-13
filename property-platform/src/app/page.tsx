@@ -7,11 +7,7 @@ import { HeroBackground } from "@/components/hero-background";
 export default async function Home() {
   const supabase = await createClient();
   const [{ data: cities }, { data: recentListings }] = await Promise.all([
-    supabase
-      .from("cities")
-      .select("id, name, region, lat, lng")
-      .not("lat", "is", null)
-      .not("lng", "is", null),
+    supabase.from("cities").select("id, name, region, lat, lng"),
     supabase
       .from("listings")
       .select(
