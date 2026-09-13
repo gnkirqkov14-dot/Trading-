@@ -40,13 +40,22 @@ export default async function ListingsPage({
   const params = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: cities }, { data: neighborhoods }, listingsQuery] =
+  const [{ data: selectedSettlement }, { data: neighborhoods }, listingsQuery] =
     await Promise.all([
-      supabase.from("cities").select("id, name").order("name"),
-      supabase
-        .from("neighborhoods")
-        .select("id, city_id, name")
-        .order("name"),
+      params.city
+        ? supabase
+            .from("cities")
+            .select("id, name, region, municipality, is_village")
+            .eq("id", params.city)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      params.city
+        ? supabase
+            .from("neighborhoods")
+            .select("id, city_id, name")
+            .eq("city_id", params.city)
+            .order("name")
+        : Promise.resolve({ data: [] }),
       (() => {
         let query = supabase
           .from("listings")
@@ -106,7 +115,10 @@ export default async function ListingsPage({
       </div>
 
       <div className="mb-8">
-        <ListingFilters cities={cities ?? []} neighborhoods={neighborhoods ?? []} />
+        <ListingFilters
+          selectedSettlement={selectedSettlement}
+          neighborhoods={neighborhoods ?? []}
+        />
       </div>
 
       {listings.length === 0 ? (

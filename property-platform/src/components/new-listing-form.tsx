@@ -12,22 +12,23 @@ import {
   MIN_LISTING_PHOTOS_HINT,
   PROPERTY_TYPE_LABELS,
 } from "@/lib/listing-labels";
+import {
+  SettlementSearch,
+  type Settlement,
+} from "@/components/settlement-search";
 import type {
   ListingDealType,
   PropertyType,
 } from "@/lib/types/database";
 
-type City = { id: string; name: string; region: string };
 type Neighborhood = { id: string; city_id: string; name: string };
 
 export function NewListingForm({
   userId,
-  cities,
   neighborhoods,
   profilePhone,
 }: {
   userId: string;
-  cities: City[];
   neighborhoods: Neighborhood[];
   profilePhone: string;
 }) {
@@ -36,8 +37,9 @@ export function NewListingForm({
 
   const [type, setType] = useState<ListingDealType>("rent");
   const [propertyType, setPropertyType] = useState<PropertyType>("apartment");
-  const [cityId, setCityId] = useState("");
+  const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [neighborhoodId, setNeighborhoodId] = useState("");
+  const cityId = settlement?.id ?? "";
   const [price, setPrice] = useState("");
   const [areaSqm, setAreaSqm] = useState("");
   const [rooms, setRooms] = useState("");
@@ -207,22 +209,15 @@ export function NewListingForm({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className={labelClass}>Град</label>
-          <select
-            value={cityId}
-            onChange={(e) => {
-              setCityId(e.target.value);
+          <label className={labelClass}>Населено място</label>
+          <SettlementSearch
+            selected={settlement}
+            placeholder="Започни да пишеш (напр. Вар...)"
+            onSelect={(next) => {
+              setSettlement(next);
               setNeighborhoodId("");
             }}
-            className={inputClass}
-          >
-            <option value="">Изберете град</option>
-            {cities.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="flex flex-col gap-1">

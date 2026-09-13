@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DEAL_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/listing-labels";
+import {
+  SettlementSearch,
+  type Settlement,
+} from "@/components/settlement-search";
 
-type City = { id: string; name: string };
 type Neighborhood = { id: string; city_id: string; name: string };
 
 const AMENITY_FIELDS = [
@@ -15,10 +17,13 @@ const AMENITY_FIELDS = [
 ] as const;
 
 export function ListingFilters({
-  cities,
+  selectedSettlement,
   neighborhoods,
 }: {
-  cities: City[];
+  // Само избраното населено място, не всички — след като в базата влязоха
+  // всички 5267 села, падащ списък с тях би бил стотици килобайта на всяко
+  // зареждане (виж SettlementSearch).
+  selectedSettlement: Settlement | null;
   neighborhoods: Neighborhood[];
 }) {
   const router = useRouter();
@@ -26,10 +31,6 @@ export function ListingFilters({
   const searchParams = useSearchParams();
 
   const selectedCity = searchParams.get("city") ?? "";
-  const filteredNeighborhoods = useMemo(
-    () => neighborhoods.filter((n) => n.city_id === selectedCity),
-    [neighborhoods, selectedCity],
-  );
 
   function updateParams(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -75,29 +76,23 @@ export function ListingFilters({
           ))}
         </select>
 
-        <select
-          className={inputClass}
-          value={selectedCity}
-          onChange={(e) =>
-            updateParams({ city: e.target.value, neighborhood: "" })
+        <SettlementSearch
+          className="w-64"
+          selected={selectedSettlement}
+          placeholder="Всички населени места"
+          onSelect={(settlement) =>
+            updateParams({ city: settlement?.id ?? "", neighborhood: "" })
           }
-        >
-          <option value="">Всички градове</option>
-          {cities.map((city) => (
-            <option key={city.id} value={city.id}>
-              {city.name}
-            </option>
-          ))}
-        </select>
+        />
 
         <select
           className={inputClass}
           value={searchParams.get("neighborhood") ?? ""}
           onChange={(e) => updateParams({ neighborhood: e.target.value })}
-          disabled={!selectedCity}
+          disabled={!selectedCity || neighborhoods.length === 0}
         >
           <option value="">Всички квартали</option>
-          {filteredNeighborhoods.map((n) => (
+          {neighborhoods.map((n) => (
             <option key={n.id} value={n.id}>
               {n.name}
             </option>
