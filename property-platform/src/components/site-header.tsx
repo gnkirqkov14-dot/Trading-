@@ -20,8 +20,14 @@ export async function SiteHeader() {
         </Link>
 
         <nav className="flex flex-wrap items-center gap-2 text-sm">
+          <Link href="/listings?type=sale" className={navLinkClassName}>
+            Продажби
+          </Link>
+          <Link href="/listings?type=rent" className={navLinkClassName}>
+            Наеми
+          </Link>
           <Link href="/listings" className={navLinkClassName}>
-            Обяви
+            Всички обяви
           </Link>
           {user ? (
             <>
