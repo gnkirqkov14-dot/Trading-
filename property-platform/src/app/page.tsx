@@ -30,7 +30,7 @@ export default async function Home() {
   const listings = (recentListings ?? []) as unknown as ListingCardData[];
 
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotspot.com";
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotami.com";
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [

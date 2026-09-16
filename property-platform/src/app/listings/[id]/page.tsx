@@ -154,9 +154,7 @@ export default async function ListingDetailPage({
     ]);
   }
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://property-platform-five.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotami.com";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
