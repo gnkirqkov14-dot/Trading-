@@ -121,7 +121,7 @@ changes спрямо по-старите ти познания. Ключови �
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS 4 | |
 | Backend/DB/Auth/Storage | Supabase | Postgres + Auth + Storage; RLS навсякъде |
 | Карта | Leaflet + OpenStreetMap tiles | Безплатно, без API ключ (виж по-долу) |
-| Хостинг | Vercel | Production URL: `https://imotspot.com` (закупен през Vercel Domains; старият `https://property-platform-five.vercel.app` продължава да работи) |
+| Хостинг | Vercel | Production URL: `https://imotami.com` (закупен през Vercel Domains; `imotspot.com` и `property-platform-five.vercel.app` продължават да работят) |
 
 ### Supabase типове (`src/lib/types/database.ts`)
 
@@ -432,8 +432,8 @@ commit "Скрий бутона за Facebook..."), плюс стъпките п
    "Client Secret (for OAuth)" → Save.
 4. **Критична стъпка, лесно се пропуска**: Supabase Dashboard →
    Authentication → **URL Configuration** → **Site URL** трябва да е
-   `https://imotspot.com` (по подразбиране е `http://localhost:3000`!) и
-   **Redirect URLs** трябва да съдържа `https://imotspot.com/**` (плюс
+   `https://imotami.com` (по подразбиране е `http://localhost:3000`!) и
+   **Redirect URLs** трябва да съдържа `https://imotami.com/**` (плюс `https://imotspot.com/**`, плюс
    `https://property-platform-five.vercel.app/**`, за да остане достъпен
    и старият адрес). Без тази стъпка Supabase успешно автентикира
    потребителя, но го връща на localhost/грешен адрес вместо на живия
@@ -481,24 +481,43 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
 (`sb_publishable_...`) — безопасен за публично споделяне, drop-in заместител
 на старите JWT-based anon keys.
 
-## Собствен домейн (imotspot.com)
+## Собствен домейн (imotami.com)
 
-Закупен директно през Vercel (Project → Settings → Domains → Buy), което
-автоматично оправя DNS-а — не се налагаше ръчна конфигурация на nameserver
-записи. Свързан към Production environment-а на `property-platform`
-проекта (`www.imotspot.com` + голия `imotspot.com`, редиректва към www).
-`NEXT_PUBLIC_SITE_URL` env var е сменена на `https://imotspot.com` (Config
-тип, не Secret — стойността не е чувствителна) и проектът е redeploy-нат
-след промяната, за да я поеме — тя се ползва в JSON-LD/OG метаданните на
-`/listings/[id]` и в `sitemap.ts`/`robots.ts`.
+**Текущият домейн е `imotami.com`** (сменен от `imotspot.com` на
+16.09.2026 по решение на собственика — старото име не му хареса).
+Закупен директно през Vercel Domains, което автоматично оправя DNS-а —
+не се налага ръчна конфигурация на nameserver записи.
 
-⚠️ **Все още предстои**: Supabase Dashboard → Authentication → URL
-Configuration трябва да се обнови ръчно (Site URL + Redirect URLs да
-включат `https://imotspot.com`, виж "Критична стъпка" в секцията за
-Google/Facebook OAuth по-долу) — иначе входът с Google от новия домейн
-ще връща потребителя на грешен адрес. Старият `property-platform-five.vercel.app`
-продължава да работи паралелно (Vercel не го маха, само добавя новия
-домейн), така че нищо не се чупи междувременно.
+⚠️ **Гоча при покупка през Vercel**: домейнът се купува на **ниво акаунт**
+и НЕ се закача сам за проекта. След покупката: акаунт → Domains → отвори
+домейна → секция "Connected Projects" → бутон **Connect** → празно поле
+(за голия домейн) → избираш проекта. Иначе сайтът продължава да работи
+само на стария адрес и изглежда, че покупката "не е свършила работа".
+
+`NEXT_PUBLIC_SITE_URL` env var сочи към `https://imotami.com` (Config тип,
+не Secret — стойността не е чувствителна). Използва се в JSON-LD/OG
+метаданните, `sitemap.ts`, `robots.ts` и в имейлите (`lib/email.ts`).
+Всички fallback стойности в кода вече са `https://imotami.com` (преди
+сочеха към стария vercel.app адрес, което беше подвеждащо).
+
+`imotspot.com` е **запазен** (платен е до 2027) и остава насочен към
+проекта като пренасочване — по него има раздадени рекламни материали и
+стари линкове, които не бива да умират.
+
+### Списък за смяна на домейн (научен от тази смяна)
+
+Смяната пипа 7 места. Кодът е най-малката част:
+
+1. Vercel: купуване + **Connect** към проекта (виж гочата по-горе)
+2. Vercel: `NEXT_PUBLIC_SITE_URL` env var
+3. Код: `opengraph-image.tsx` (`DOMAIN` константата), текстът в
+   `about/page.tsx`, fallback-ите в `layout.tsx`/`sitemap.ts`/`robots.ts`/
+   `listings/[id]/page.tsx`/`lib/email.ts`
+4. Supabase → Authentication → URL Configuration (Site URL + Redirect
+   URLs) — **иначе входът с Google се чупи**
+5. Resend: нова верификация на домейна + `RESEND_FROM_EMAIL`
+6. Google Search Console: ново property + верификация + sitemap
+7. Рекламни материали: FB корица/профилна снимка, био текстове, TikTok
 
 ## Статус по фази (виж docs/PLAN.md за пълния план)
 
@@ -561,6 +580,7 @@ Google/Facebook OAuth по-долу) — иначе входът с Google от 
   показва верния статус независимо дали имейл е настроен.
 
   ✅ **Активирано в production**: `imotspot.com` е верифициран в Resend
+  (⚠️ при смяната към `imotami.com` трябва нова верификация)
   (DNS записите — MX + 2x TXT за SPF/DKIM — добавени автоматично във
   Vercel през интеграцията Resend↔Vercel, "Auto configure" бутонът при
   добавяне на домейн в Resend, вместо ръчно копиране на записи).
@@ -578,7 +598,7 @@ Google/Facebook OAuth по-долу) — иначе входът с Google от 
 
   **SEO batch #2** — допълнителни подобрения:
   - `app/opengraph-image.tsx` + `twitter-image.tsx` — генерирана по код
-    default OG/Twitter снимка (лого + слоган + `imotspot.com`) за всички
+    default OG/Twitter снимка (лого + слоган + домейна) за всички
     страници без собствена снимка (напр. листинги без корица снимка,
     home, /listings). `lib/og-font.ts` тегли Inter шрифт с кирилски
     глифи от Google Fonts CSS2 API по време на build/request — **важно**:
@@ -605,7 +625,7 @@ Google/Facebook OAuth по-долу) — иначе входът с Google от 
     (sitelinks searchbox), защото `/listings` няма истинско `?q=`
     свободно търсене, само структурирани филтри; добавянето му би било
     подвеждащо structured data.
-  - ✅ **Готово**: `imotspot.com` е регистриран и верифициран в Google
+  - ✅ **Готово за `imotspot.com`** (за `imotami.com` предстои наново): домейнът е регистриран и верифициран в Google
     Search Console (Property type "Domain", верификация през DNS TXT
     запис `google-site-verification=...`, добавен ръчно във Vercel →
     Domains → `imotspot.com` → DNS Records — **не** през project-ниво
