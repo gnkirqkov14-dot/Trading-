@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
 import { HeroSearch, type PopularCity } from "@/components/home/hero-search";
 import { HeroDeck } from "@/components/home/hero-deck";
+import { HeroMark3D } from "@/components/home/hero-mark-3d";
 import {
   CostComparison,
   HomeCta,
@@ -72,6 +73,11 @@ export default async function Home() {
           aria-hidden
           className="absolute inset-0 bg-[radial-gradient(#c9d9e6_1.1px,transparent_1.1px)] [background-size:27px_27px] [mask-image:radial-gradient(72%_62%_at_46%_42%,#000,transparent_76%)]"
         />
+
+        {/* 3D знакът плава зад съдържанието. Само от lg нагоре: на телефон
+            WebGL яде батерия и бави първото зареждане, а точно телефонът е
+            откъдето идват хората от социалните мрежи. */}
+        <HeroMark3D className="pointer-events-none absolute bottom-6 right-[2%] hidden h-[21rem] w-[21rem] lg:block xl:bottom-8 xl:right-[6%] xl:h-[24rem] xl:w-[24rem]" />
 
         <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-4 lg:grid-cols-[1.06fr_0.94fr] lg:gap-12">
           <div>
