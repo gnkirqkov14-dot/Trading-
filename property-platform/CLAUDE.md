@@ -433,9 +433,10 @@ commit "Скрий бутона за Facebook..."), плюс стъпките п
 4. **Критична стъпка, лесно се пропуска**: Supabase Dashboard →
    Authentication → **URL Configuration** → **Site URL** трябва да е
    `https://imotpoint.com` (по подразбиране е `http://localhost:3000`!) и
-   **Redirect URLs** трябва да съдържа `https://imotpoint.com/**` (плюс `https://imotspot.com/**`, плюс
-   `https://property-platform-five.vercel.app/**`, за да остане достъпен
-   и старият адрес). Без тази стъпка Supabase успешно автентикира
+   **Redirect URLs** трябва да съдържа `https://imotpoint.com/**` (плюс
+   `https://property-platform-five.vercel.app/**`, за да работят и
+   preview deploy-ите). `imotspot.com` е махнат — домейнът вече не е
+   закачен за проекта. Без тази стъпка Supabase успешно автентикира
    потребителя, но го връща на localhost/грешен адрес вместо на живия
    сайт — точно това се случи първия път, преди да го оправим, и ще се
    повтори за новия домейн ако тази стъпка не се направи ръчно след
@@ -633,14 +634,17 @@ OG таговете и имейлите, докато не се направи �
   `RESEND_API_KEY`**, банерът в `/dashboard` (`my-listings.tsx`) винаги
   показва верния статус независимо дали имейл е настроен.
 
-  ✅ **Активирано в production**: `imotspot.com` е верифициран в Resend
-  (⚠️ при смяната към `imotpoint.com` трябва нова верификация)
-  (DNS записите — MX + 2x TXT за SPF/DKIM — добавени автоматично във
-  Vercel през интеграцията Resend↔Vercel, "Auto configure" бутонът при
-  добавяне на домейн в Resend, вместо ръчно копиране на записи).
+  ✅ **Активирано в production.** DNS записите (MX + 2x TXT за SPF/DKIM)
+  се добавят автоматично във Vercel през бутона **"Auto configure"** в
+  Resend → Domains → домейна — Resend сам разпознава, че DNS-ът е във
+  Vercel, и не се налага ръчно копиране на записи.
   `RESEND_API_KEY` (Secret) и `RESEND_FROM_EMAIL=Имоти без посредници
-  <notifications@imotspot.com>` (Config) са зададени в Vercel → Project →
-  Settings → Environments → Production. Реалните имейли за
+  <notifications@imotpoint.com>` (Config) са зададени в Vercel → Project →
+  Settings → Environments → Production.
+  🟡 При смяната към `imotpoint.com` домейнът беше добавен наново в
+  Resend и "Auto configure" е натиснат; верификацията отнема от 10 мин
+  до няколко часа. Докато STATUS не е **Verified**, Resend отказва
+  изпращането — провери преди да смяташ напомнянията за живи. Реалните имейли за
   седмичните напомняния (виж по-горе) вече стигат до собствениците на
   обявите, не само тестово до акаунта на Resend.
 - 🟡 **Фаза 6 (частично)** — SEO metadata (title template, OG за
@@ -679,13 +683,16 @@ OG таговете и имейлите, докато не се направи �
     (sitelinks searchbox), защото `/listings` няма истинско `?q=`
     свободно търсене, само структурирани филтри; добавянето му би било
     подвеждащо structured data.
-  - ✅ **Готово за `imotspot.com`** (за `imotpoint.com` предстои наново): домейнът е регистриран и верифициран в Google
+  - ✅ **Готово за `imotpoint.com`**: домейнът е регистриран и верифициран в Google
     Search Console (Property type "Domain", верификация през DNS TXT
     запис `google-site-verification=...`, добавен ръчно във Vercel →
-    Domains → `imotspot.com` → DNS Records — **не** през project-ниво
+    Domains → домейна → DNS Records — **не** през project-ниво
     "Domains", а през account-ниво domain settings страницата, единственото
-    място с пълен DNS records editor). `https://imotspot.com/sitemap.xml`
-    е подаден успешно. Bing Webmaster Tools не е направено — по избор,
+    място с пълен DNS records editor). `https://imotpoint.com/sitemap.xml`
+    е подаден успешно.
+    ⚠️ При **Domain** property Search Console не приема съкратен път
+    (`sitemap.xml`) — връща "Невалиден адрес на Sitemap". Подава се
+    пълният адрес `https://imotpoint.com/sitemap.xml`. Bing Webmaster Tools не е направено — по избор,
     аналогичен процес, по-нисък приоритет от Google.
 
 ### Cron job — важно за deploy
@@ -793,7 +800,7 @@ admin може да го променя — колоната умишлено н
 0010, единственият път е `admin_set_listing_limit()` RPC). `createListing`
 брои текущите обяви на потребителя и хвърля грешка при достигнат лимит,
 сочейки към `SUPPORT_EMAIL` (`listing-labels.ts` —
-`imotspot.help@gmail.com`, отделен Gmail акаунт, не личния имейл на
+`imotpoint@gmail.com`, отделен Gmail акаунт, не личния имейл на
 собственика). `/dashboard/listings/new` проверява лимита предварително и
 показва банер вместо формата, ако е достигнат — потребителят не пълни
 цялата форма само за да гръмне накрая.

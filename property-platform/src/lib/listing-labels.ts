@@ -41,7 +41,7 @@ export const MAX_LISTING_PHOTOS = 30;
 export const DEFAULT_LISTING_LIMIT = 3;
 
 // Показван при достигнат лимит на обяви (виж createListing).
-export const SUPPORT_EMAIL = "imotspot.help@gmail.com";
+export const SUPPORT_EMAIL = "imotpoint@gmail.com";
 
 export function formatPrice(price: number) {
   return `${price.toLocaleString("bg-BG")} €`;
