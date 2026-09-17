@@ -74,11 +74,6 @@ export default async function Home() {
           className="absolute inset-0 bg-[radial-gradient(#c9d9e6_1.1px,transparent_1.1px)] [background-size:27px_27px] [mask-image:radial-gradient(72%_62%_at_46%_42%,#000,transparent_76%)]"
         />
 
-        {/* 3D знакът плава зад съдържанието. Само от lg нагоре: на телефон
-            WebGL яде батерия и бави първото зареждане, а точно телефонът е
-            откъдето идват хората от социалните мрежи. */}
-        <HeroMark3D className="pointer-events-none absolute bottom-6 right-[2%] hidden h-[21rem] w-[21rem] lg:block xl:bottom-8 xl:right-[6%] xl:h-[24rem] xl:w-[24rem]" />
-
         <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-4 lg:grid-cols-[1.06fr_0.94fr] lg:gap-12">
           <div>
             <span className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white/85 py-1.5 pl-1.5 pr-4 text-[0.8rem] font-bold text-[#41607c] shadow-[0_6px_18px_-10px_rgba(15,36,56,0.35)] backdrop-blur">
@@ -106,6 +101,11 @@ export default async function Home() {
 
           <HeroDeck listings={listings} />
         </div>
+
+        {/* На телефон стои в потока под картата; от lg нагоре излиза от
+            потока и плава долу вдясно. Затова е след решетката в DOM-а —
+            при absolute позицията не зависи от реда. */}
+        <HeroMark3D className="pointer-events-none relative z-10 mx-auto mt-1 h-56 w-full max-w-[19rem] lg:absolute lg:bottom-6 lg:right-[2%] lg:mt-0 lg:h-[21rem] lg:w-[21rem] lg:max-w-none xl:bottom-8 xl:right-[6%] xl:h-[24rem] xl:w-[24rem]" />
       </section>
 
       <Wave fill="#17344d" />
