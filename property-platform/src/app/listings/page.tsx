@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ListingFilters } from "@/components/listing-filters";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
+import { RegionMapPanel } from "@/components/region-map-panel";
+import type { MapCity } from "@/components/bulgaria-map";
 import type { ListingDealType, PropertyType } from "@/lib/types/database";
 
 export const metadata: Metadata = {
@@ -40,8 +42,12 @@ export default async function ListingsPage({
   const params = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: selectedSettlement }, { data: neighborhoods }, listingsQuery] =
-    await Promise.all([
+  const [
+    { data: selectedSettlement },
+    { data: neighborhoods },
+    { data: mapCities },
+    listingsQuery,
+  ] = await Promise.all([
       params.city
         ? supabase
             .from("cities")
@@ -56,6 +62,11 @@ export default async function ListingsPage({
             .eq("city_id", params.city)
             .order("name")
         : Promise.resolve({ data: [] }),
+      supabase
+        .from("cities")
+        .select("id, name, region, lat, lng")
+        .not("lat", "is", null)
+        .not("lng", "is", null),
       (() => {
         let query = supabase
           .from("listings")
@@ -113,6 +124,8 @@ export default async function ListingsPage({
           Публикувай обява
         </Link>
       </div>
+
+      <RegionMapPanel cities={(mapCities ?? []) as MapCity[]} />
 
       <div className="mb-8">
         <ListingFilters

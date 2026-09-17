@@ -1,21 +1,33 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { BulgariaMap, type MapCity } from "@/components/bulgaria-map";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
-import { HeroBackground } from "@/components/hero-background";
-import { HomeSettlementSearch } from "@/components/home-settlement-search";
+import { HeroSearch, type PopularCity } from "@/components/home/hero-search";
+import { HeroDeck } from "@/components/home/hero-deck";
+import {
+  CostComparison,
+  HomeCta,
+  HowItWorks,
+  StatBand,
+  Wave,
+} from "@/components/home/sections";
+
+// Чиповете "Популярни" под търсачката. Търсят се по име сред градовете
+// (не селата) — има и села със същите имена, виж бележката за 527-те
+// повтарящи се имена в CLAUDE.md.
+const POPULAR_CITY_NAMES = ["София", "Пловдив", "Варна", "Бургас"];
+
+// Под този брой активни обяви секцията "Последни обяви" се скрива изцяло —
+// три празни кутийки изглеждат по-зле от липсваща секция.
+const MIN_LISTINGS_FOR_FEED = 3;
 
 export default async function Home() {
   const supabase = await createClient();
-  const [{ data: cities }, { data: recentListings }] = await Promise.all([
-    // Само селищата с координати (областните градове) — те са единствените,
-    // които се рисуват като точки. Останалите 5000+ се търсят динамично,
-    // за да не пътува целият регистър до браузъра при всяко зареждане.
+  const [{ data: popularRows }, { data: recentListings }] = await Promise.all([
     supabase
       .from("cities")
-      .select("id, name, region, lat, lng")
-      .not("lat", "is", null)
-      .not("lng", "is", null),
+      .select("id, name")
+      .eq("is_village", false)
+      .in("name", POPULAR_CITY_NAMES),
     supabase
       .from("listings")
       .select(
@@ -26,82 +38,87 @@ export default async function Home() {
       .limit(6),
   ]);
 
-  const mapCities = (cities ?? []) as MapCity[];
-  const listings = (recentListings ?? []) as unknown as ListingCardData[];
+  const byName = new Map((popularRows ?? []).map((row) => [row.name, row]));
+  const popular = POPULAR_CITY_NAMES.map((name) => byName.get(name)).filter(
+    Boolean,
+  ) as PopularCity[];
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
+  const listings = (recentListings ?? []) as unknown as ListingCardData[];
+  const hasFeed = listings.length >= MIN_LISTINGS_FOR_FEED;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      {
-        "@type": "Organization",
-        name: "Имоти без посредници",
-        url: siteUrl,
-      },
-      {
-        "@type": "WebSite",
-        name: "Имоти без посредници",
-        url: siteUrl,
-      },
+      { "@type": "Organization", name: "Имоти без посредници", url: siteUrl },
+      { "@type": "WebSite", name: "Имоти без посредници", url: siteUrl },
     ],
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-slate-50">
+    <div className="flex flex-1 flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <section className="relative isolate overflow-hidden">
-        <HeroBackground />
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-3 py-1 text-sm font-medium text-accent-700 ring-1 ring-accent-600/20">
-            Публикуването е винаги безплатно
-          </span>
 
-          <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-            Имоти директно от собственик — без посредници
-          </h1>
-          <p className="max-w-xl text-lg text-slate-600">
-            Публикувай или намери апартамент, къща или парцел без агентски
-            комисионни. Свържи се директно със собственика.
-          </p>
+      <section className="relative overflow-hidden pb-24 pt-10 sm:pb-[8.75rem] sm:pt-[4.75rem]">
+        {/* Меки цветни петна + точкова мрежа, избледняваща към ръбовете. */}
+        <span
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(880px_600px_at_80%_4%,rgba(43,185,140,0.2),transparent_62%),radial-gradient(760px_620px_at_6%_96%,rgba(26,81,128,0.16),transparent_64%),linear-gradient(168deg,#ffffff_0%,#f2f7fa_55%,#eaf1f6_100%)]"
+        />
+        <span
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(#c9d9e6_1.1px,transparent_1.1px)] [background-size:27px_27px] [mask-image:radial-gradient(72%_62%_at_46%_42%,#000,transparent_76%)]"
+        />
 
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/register"
-              className="rounded-lg bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
-            >
-              Публикувай обява
-            </Link>
-            <Link
-              href="/listings"
-              className="rounded-lg border border-slate-300 bg-white px-5 py-3 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-            >
-              Разгледай обяви
-            </Link>
-          </div>
+        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-4 lg:grid-cols-[1.06fr_0.94fr] lg:gap-12">
+          <div>
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white/85 py-1.5 pl-1.5 pr-4 text-[0.8rem] font-bold text-[#41607c] shadow-[0_6px_18px_-10px_rgba(15,36,56,0.35)] backdrop-blur">
+              <b className="rounded-full bg-gradient-to-br from-accent-400 to-accent-500 px-2.5 py-1 text-[0.75rem] text-[#04231a]">
+                0 лв.
+              </b>
+              комисионна · 5267 населени места
+            </span>
 
-          <div className="mt-10 w-full max-w-3xl">
-            <div className="mb-6">
-              <HomeSettlementSearch />
+            <h1 className="mt-6 font-display text-[2.6rem] font-semibold leading-[1.05] text-slate-900 sm:text-[4.375rem]">
+              Имоти директно
+              <br />
+              от <em className="not-italic font-display italic text-accent-600">собственика</em>
+            </h1>
+
+            <p className="mt-6 max-w-md text-[1.05rem] font-medium leading-relaxed text-slate-500 sm:text-[1.15rem]">
+              Без агенции по средата, без комисионна при сделка. Обявата е на
+              собственика — и телефонът също.
+            </p>
+
+            <div className="mt-8 max-w-xl">
+              <HeroSearch popular={popular} />
             </div>
-            <BulgariaMap cities={mapCities} />
           </div>
+
+          <HeroDeck listings={listings} />
         </div>
       </section>
 
-      {listings.length > 0 && (
-        <section className="border-t border-slate-200 bg-white py-16">
+      <Wave fill="#17344d" />
+      <StatBand />
+      <Wave fill="#faf7f1" />
+      <HowItWorks />
+      <Wave fill="#faf7f1" flip />
+      <CostComparison />
+
+      {hasFeed && (
+        <section className="border-t border-slate-200 bg-slate-50 py-16">
           <div className="mx-auto max-w-6xl px-4">
-            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold text-slate-900">
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <h2 className="font-display text-3xl font-semibold text-slate-900 sm:text-4xl">
                 Последни обяви
               </h2>
               <Link
                 href="/listings"
-                className="text-sm font-medium text-slate-700 underline hover:text-slate-900"
+                className="text-sm font-semibold text-slate-600 underline underline-offset-4 hover:text-slate-900"
               >
                 Виж всички обяви →
               </Link>
@@ -115,6 +132,8 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      <HomeCta />
     </div>
   );
 }

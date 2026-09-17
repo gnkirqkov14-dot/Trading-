@@ -1,18 +1,28 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Geist няма кирилица — досега целият български текст падаше на
+// системния шрифт на браузъра и се разминаваше между Windows и Mac.
+//
+// ⚠️ Първо опитахме Manrope, но неговата кирилица е с българските
+// ръкописни форми (`д` като `g`, `и` като `u`, `т` като `m`). Те са
+// исторически коректни, но в дълъг текст на екран са необичайни за
+// повечето читатели. Inter изписва обичайните изправени форми.
+const inter = Inter({
+  variable: "--font-sans-brand",
+  subsets: ["latin", "cyrillic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+// Само за едрите заглавия (`font-display` в Tailwind) — серифът дава
+// характера, който отличава сайта от стандартните шаблони.
+const playfair = Playfair_Display({
+  variable: "--font-display-brand",
+  subsets: ["latin", "cyrillic"],
+  style: ["normal", "italic"],
 });
 
 const siteUrl =
@@ -38,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="bg"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <SiteHeader />
