@@ -32,10 +32,11 @@ export function HeroMark3D({ className }: { className?: string }) {
     // статична картинка — анимацията не тръгва изобщо.
     const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // ⚠️ Скриването с CSS (`hidden lg:block`) НЕ спира този effect — без
-    // проверката тук телефоните тегляха целия three.js за елемент, който
-    // никога не се вижда. Затова breakpoint-ът се проверява и в кода.
-    const wide = window.matchMedia("(min-width: 1024px)");
+    // Телефонът получава същия знак, но олекотен: без bevel, с по-груба
+    // геометрия, по-евтин материал и половин резолюция. На малък екран
+    // разликата почти не се вижда, а сметката за процесора е чувствително
+    // по-малка — а точно оттам идват хората от социалните мрежи.
+    const lite = !window.matchMedia("(min-width: 1024px)").matches;
 
     let disposed = false;
     let booted = false;
@@ -58,7 +59,7 @@ export function HeroMark3D({ className }: { className?: string }) {
         alpha: true,
         antialias: true,
       });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, lite ? 1.5 : 2));
       renderer.setClearAlpha(0);
       element.appendChild(renderer.domElement);
       renderer.domElement.style.width = "100%";
@@ -68,15 +69,30 @@ export function HeroMark3D({ className }: { className?: string }) {
       const group = new THREE.Group();
       scene.add(group);
 
-      const navyMaterial = new THREE.MeshPhysicalMaterial({
-        color: NAVY,
-        roughness: 0.28,
-        metalness: 0.12,
-        clearcoat: 1,
-        clearcoatRoughness: 0.18,
-      });
+      const navyMaterial = lite
+        ? new THREE.MeshStandardMaterial({
+            color: NAVY,
+            roughness: 0.34,
+            metalness: 0.14,
+          })
+        : new THREE.MeshPhysicalMaterial({
+            color: NAVY,
+            roughness: 0.28,
+            metalness: 0.12,
+            clearcoat: 1,
+            clearcoatRoughness: 0.18,
+          });
 
-      const extrude = { depth: 0.52, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 4, curveSegments: 24 };
+      const extrude = lite
+        ? { depth: 0.52, bevelEnabled: false, curveSegments: 10 }
+        : {
+            depth: 0.52,
+            bevelEnabled: true,
+            bevelSize: 0.05,
+            bevelThickness: 0.05,
+            bevelSegments: 4,
+            curveSegments: 24,
+          };
 
       // --- Карфицата: контурът от SVG-то, с кръгъл отвор в средата ---
       const pin = new THREE.Shape();
@@ -110,15 +126,22 @@ export function HeroMark3D({ className }: { className?: string }) {
 
       // --- Зелената точка: топка, която леко свети ---
       const dot = new THREE.Mesh(
-        new THREE.SphereGeometry(8.5 * SCALE, 48, 32),
-        new THREE.MeshPhysicalMaterial({
-          color: MINT,
-          roughness: 0.15,
-          metalness: 0.05,
-          clearcoat: 1,
-          emissive: MINT,
-          emissiveIntensity: 0.28,
-        }),
+        new THREE.SphereGeometry(8.5 * SCALE, lite ? 20 : 48, lite ? 14 : 32),
+        lite
+          ? new THREE.MeshStandardMaterial({
+              color: MINT,
+              roughness: 0.22,
+              emissive: MINT,
+              emissiveIntensity: 0.28,
+            })
+          : new THREE.MeshPhysicalMaterial({
+              color: MINT,
+              roughness: 0.15,
+              metalness: 0.05,
+              clearcoat: 1,
+              emissive: MINT,
+              emissiveIntensity: 0.28,
+            }),
       );
       dot.position.set(toX(41), toY(53), extrude.depth / 2);
       group.add(dot);
@@ -127,9 +150,11 @@ export function HeroMark3D({ className }: { className?: string }) {
       const key = new THREE.DirectionalLight(0xffffff, 2.4);
       key.position.set(4, 6, 8);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0x8fd9c0, 1.5);
-      rim.position.set(-6, -2, 4);
-      scene.add(rim);
+      if (!lite) {
+        const rim = new THREE.DirectionalLight(0x8fd9c0, 1.5);
+        rim.position.set(-6, -2, 4);
+        scene.add(rim);
+      }
 
       const resize = () => {
         const { clientWidth: w, clientHeight: h } = element;
@@ -149,7 +174,9 @@ export function HeroMark3D({ className }: { className?: string }) {
         target.y = (event.clientX / window.innerWidth - 0.5) * 1.1;
         target.x = (event.clientY / window.innerHeight - 0.5) * 0.7;
       }
-      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      if (!lite) {
+        window.addEventListener("pointermove", onPointerMove, { passive: true });
+      }
 
       let scrollSpin = 0;
       function onScroll() {
@@ -190,7 +217,7 @@ export function HeroMark3D({ className }: { className?: string }) {
         cancelAnimationFrame(frame);
         resizeObserver.disconnect();
         intersectionObserver.disconnect();
-        window.removeEventListener("pointermove", onPointerMove);
+        if (!lite) window.removeEventListener("pointermove", onPointerMove);
         window.removeEventListener("scroll", onScroll);
         renderer.domElement.remove();
         renderer.dispose();
@@ -205,16 +232,10 @@ export function HeroMark3D({ className }: { className?: string }) {
       };
     }
 
-    if (wide.matches) void boot();
-    // Ако някой разшири прозореца от тесен към широк, знакът се появява.
-    const onWidthChange = () => {
-      if (wide.matches) void boot();
-    };
-    wide.addEventListener("change", onWidthChange);
+    void boot();
 
     return () => {
       disposed = true;
-      wide.removeEventListener("change", onWidthChange);
       cleanup();
     };
   }, []);
