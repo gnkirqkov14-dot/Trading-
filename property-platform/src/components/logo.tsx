@@ -39,14 +39,14 @@ export function Logo({
   wordmarkClassName = "inline",
 }: {
   className?: string;
-  /** Tailwind visibility classes for the wordmark, e.g. "hidden sm:inline" to collapse to icon-only on small screens. */
+  /** Допълнителни Tailwind класове за надписа (напр. за скриване в тесен контекст). */
   wordmarkClassName?: string;
 }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className ?? ""}`}>
-      <BrandMark className="h-9 w-auto shrink-0" />
+      <BrandMark className="h-8 w-auto shrink-0 sm:h-9" />
       <span
-        className={`text-xl font-bold leading-none whitespace-nowrap text-brand-600 ${wordmarkClassName}`}
+        className={`whitespace-nowrap text-lg font-bold leading-none text-brand-600 sm:text-xl ${wordmarkClassName}`}
       >
         imotpoint<span className="text-accent-500">.com</span>
       </span>
