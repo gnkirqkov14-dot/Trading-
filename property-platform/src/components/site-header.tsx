@@ -31,7 +31,7 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
       <div className="relative mx-auto flex h-[4.75rem] max-w-6xl items-center justify-between gap-3 px-4">
         <Link href="/" className="flex shrink-0 items-center">
-          <Logo wordmarkClassName="hidden sm:inline" />
+          <Logo />
         </Link>
 
         {/* Широк екран: всичко е на един ред. */}
@@ -72,7 +72,7 @@ export async function SiteHeader() {
           {!user && (
             <Link
               href="/register"
-              className="whitespace-nowrap rounded-full bg-slate-900 px-4 py-2.5 text-sm font-bold text-white"
+              className="whitespace-nowrap rounded-full bg-slate-900 px-3.5 py-2.5 text-[0.82rem] font-bold text-white"
             >
               Публикувай
             </Link>
