@@ -77,7 +77,7 @@ export default async function Home() {
           <div>
             <span className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white/85 py-1.5 pl-1.5 pr-4 text-[0.8rem] font-bold text-[#41607c] shadow-[0_6px_18px_-10px_rgba(15,36,56,0.35)] backdrop-blur">
               <b className="rounded-full bg-gradient-to-br from-accent-400 to-accent-500 px-2.5 py-1 text-[0.75rem] text-[#04231a]">
-                0 лв.
+                0 €
               </b>
               комисионна · 5267 населени места
             </span>
