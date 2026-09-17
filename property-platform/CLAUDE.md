@@ -696,6 +696,23 @@ OG таговете и имейлите, докато не се направи �
     пълният адрес `https://imotpoint.com/sitemap.xml`. Bing Webmaster Tools не е направено — по избор,
     аналогичен процес, по-нисък приоритет от Google.
 
+### Web Analytics
+
+`@vercel/analytics` е добавен в `app/layout.tsx` (`<Analytics />` най-долу
+в `<body>`). Брои **реални посетители** — уникални хора, най-гледани
+страници, откъде идват (Facebook, Google, директно) — за разлика от
+таблото Observability във Vercel, което брои технически заявки (edge
+requests, function invocations) и не казва нищо за хората.
+
+Избран е пред Google Analytics нарочно: Vercel Analytics не пуска
+бисквитки и не събира лични данни, така че сайтът няма нужда от cookie
+банер по GDPR. За български сайт това спестява и правен риск, и един
+досаден popup на всяко отваряне.
+
+Кодът сам по себе си не е достатъчно — трябва и **Vercel → Project →
+Analytics → Enable**. Без това скриптът се зарежда, но данни не се
+записват.
+
 ### Cron job — важно за deploy
 
 `vercel.json` дефинира daily cron към `/api/cron/expire-listings`.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
@@ -43,6 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
         <SiteFooter />
+        {/* Vercel Web Analytics — брои реални посетители (кои страници,
+            откъде идват), за разлика от Observability таблото, което
+            брои технически заявки. Без бисквитки и без лични данни, за
+            да не се налага cookie банер по GDPR. Скриптът се зарежда
+            само в production; в dev компонентът не прави нищо. */}
+        <Analytics />
       </body>
     </html>
   );
