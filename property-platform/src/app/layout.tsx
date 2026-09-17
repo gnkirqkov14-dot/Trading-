@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotami.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

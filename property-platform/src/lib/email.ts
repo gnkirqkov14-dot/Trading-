@@ -12,7 +12,7 @@ export type ListingReminderRow = {
   stage: number;
 };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotami.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "Имоти без посредници <onboarding@resend.dev>";

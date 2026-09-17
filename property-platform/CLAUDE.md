@@ -121,7 +121,7 @@ changes спрямо по-старите ти познания. Ключови �
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS 4 | |
 | Backend/DB/Auth/Storage | Supabase | Postgres + Auth + Storage; RLS навсякъде |
 | Карта | Leaflet + OpenStreetMap tiles | Безплатно, без API ключ (виж по-долу) |
-| Хостинг | Vercel | Production URL: `https://imotami.com` (закупен през Vercel Domains; `imotspot.com` и `property-platform-five.vercel.app` продължават да работят) |
+| Хостинг | Vercel | Production URL: `https://imotpoint.com` (закупен през Vercel Domains; `property-platform-five.vercel.app` също продължава да работи) |
 
 ### Supabase типове (`src/lib/types/database.ts`)
 
@@ -432,8 +432,8 @@ commit "Скрий бутона за Facebook..."), плюс стъпките п
    "Client Secret (for OAuth)" → Save.
 4. **Критична стъпка, лесно се пропуска**: Supabase Dashboard →
    Authentication → **URL Configuration** → **Site URL** трябва да е
-   `https://imotami.com` (по подразбиране е `http://localhost:3000`!) и
-   **Redirect URLs** трябва да съдържа `https://imotami.com/**` (плюс `https://imotspot.com/**`, плюс
+   `https://imotpoint.com` (по подразбиране е `http://localhost:3000`!) и
+   **Redirect URLs** трябва да съдържа `https://imotpoint.com/**` (плюс `https://imotspot.com/**`, плюс
    `https://property-platform-five.vercel.app/**`, за да остане достъпен
    и старият адрес). Без тази стъпка Supabase успешно автентикира
    потребителя, но го връща на localhost/грешен адрес вместо на живия
@@ -481,10 +481,23 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
 (`sb_publishable_...`) — безопасен за публично споделяне, drop-in заместител
 на старите JWT-based anon keys.
 
-## Собствен домейн (imotami.com)
+## Собствен домейн (imotpoint.com)
 
-**Текущият домейн е `imotami.com`** (сменен от `imotspot.com` на
-16.09.2026 по решение на собственика — старото име не му хареса).
+**Текущият домейн е `imotpoint.com`.** Историята: `imotspot.com` →
+`imotami.com` (16.09.2026) → `imotpoint.com` (17.09.2026).
+
+⚠️ **Скъпо научен урок**: `imotami.com` беше купен и настроен докрай, но
+Chrome го показа с червен екран **"Опасен сайт"** — домейнът носеше
+наказание от Google Safe Browsing, наследено от предишен собственик,
+който го е ползвал за нещо зловредно. Купеният домейн беше загубен.
+**Преди всяка бъдеща покупка на домейн провери историята му** с тези две
+проверки (те не са достъпни от сесията — прави ги собственикът в
+браузъра си):
+1. `https://transparencyreport.google.com/safe-browsing/search?url=ДОМЕЙН`
+   — трябва да върне "Няма налични данни"
+2. `https://web.archive.org/web/2020*/ДОМЕЙН` — трябва да върне "has not
+   archived that URL" (т.е. на домейна никога не е имало сайт)
+`imotpoint.com` мина и двете чисто.
 Закупен директно през Vercel Domains, което автоматично оправя DNS-а —
 не се налага ръчна конфигурация на nameserver записи.
 
@@ -494,10 +507,10 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
 (за голия домейн) → избираш проекта. Иначе сайтът продължава да работи
 само на стария адрес и изглежда, че покупката "не е свършила работа".
 
-`NEXT_PUBLIC_SITE_URL` env var сочи към `https://imotami.com` (Config тип,
+`NEXT_PUBLIC_SITE_URL` env var сочи към `https://imotpoint.com` (Config тип,
 не Secret — стойността не е чувствителна). Използва се в JSON-LD/OG
 метаданните, `sitemap.ts`, `robots.ts` и в имейлите (`lib/email.ts`).
-Всички fallback стойности в кода вече са `https://imotami.com` (преди
+Всички fallback стойности в кода вече са `https://imotpoint.com` (преди
 сочеха към стария vercel.app адрес, което беше подвеждащо).
 
 `imotspot.com` е **запазен** (платен е до 2027) и остава насочен към
@@ -580,7 +593,7 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
   показва верния статус независимо дали имейл е настроен.
 
   ✅ **Активирано в production**: `imotspot.com` е верифициран в Resend
-  (⚠️ при смяната към `imotami.com` трябва нова верификация)
+  (⚠️ при смяната към `imotpoint.com` трябва нова верификация)
   (DNS записите — MX + 2x TXT за SPF/DKIM — добавени автоматично във
   Vercel през интеграцията Resend↔Vercel, "Auto configure" бутонът при
   добавяне на домейн в Resend, вместо ръчно копиране на записи).
@@ -625,7 +638,7 @@ sm:inline"` в `site-header.tsx`) — с пълния текст навигац�
     (sitelinks searchbox), защото `/listings` няма истинско `?q=`
     свободно търсене, само структурирани филтри; добавянето му би било
     подвеждащо structured data.
-  - ✅ **Готово за `imotspot.com`** (за `imotami.com` предстои наново): домейнът е регистриран и верифициран в Google
+  - ✅ **Готово за `imotspot.com`** (за `imotpoint.com` предстои наново): домейнът е регистриран и верифициран в Google
     Search Console (Property type "Domain", верификация през DNS TXT
     запис `google-site-verification=...`, добавен ръчно във Vercel →
     Domains → `imotspot.com` → DNS Records — **не** през project-ниво
