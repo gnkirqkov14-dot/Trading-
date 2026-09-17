@@ -128,7 +128,7 @@ function MyListingRow({ listing }: { listing: MyListing }) {
           <span
             className={
               status === "active"
-                ? "text-emerald-600"
+                ? "text-accent-600"
                 : status === "archived"
                   ? "text-red-600"
                   : "text-amber-600"
@@ -179,7 +179,7 @@ function MyListingRow({ listing }: { listing: MyListing }) {
             type="button"
             onClick={handleConfirm}
             disabled={isPending}
-            className="rounded-lg border border-emerald-300 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+            className="rounded-lg border border-accent-300 px-3 py-1.5 text-sm font-medium text-accent-700 hover:bg-accent-50 disabled:opacity-50"
           >
             Обявата е още активна
           </button>

@@ -10,24 +10,33 @@ const TITLE_BG = "Имоти";
 const TITLE_LIGHT = "без посредници";
 const TAGLINE = "Директно от собственик — без агентски комисионни";
 const DOMAIN = "imotpoint.com";
+const NAVY = "#1A5180";
+const MINT = "#2BB98C";
+const MINT_TEXT = "#1D9A73";
 
-function HouseIcon() {
+// Същият знак като в components/logo.tsx и icon.svg — тук е преписан,
+// защото satori рисува собствено SVG дърво и не може да импортира
+// клиентски компонент с Tailwind класове.
+function BrandMark() {
   return (
-    <svg width="88" height="88" viewBox="0 0 24 24" fill="none">
+    <svg width="125" height="140" viewBox="0 0 82 92" fill="none">
       <path
-        d="M3 11.5L12 4l9 7.5"
-        stroke="white"
-        strokeWidth="2"
+        d="M6 41 41 6l35 35"
+        stroke={NAVY}
+        strokeWidth="8.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M5 10v9a1 1 0 0 0 1 1h3v-5h6v5h3a1 1 0 0 0 1-1v-9"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M54.5 12.5C54.5 11.67 55.17 11 56 11h9c.83 0 1.5.67 1.5 1.5V35L54.5 23Z"
+        fill={NAVY}
       />
+      <path
+        d="M41 29c13.25 0 24 10.75 24 24 0 13.5-13.5 22-24 35-10.5-13-24-21.5-24-35 0-13.25 10.75-24 24-24Z"
+        fill={NAVY}
+      />
+      <circle cx="41" cy="53" r="13.5" fill="#fff" />
+      <circle cx="41" cy="53" r="8.5" fill={MINT} />
     </svg>
   );
 }
@@ -48,21 +57,9 @@ function Card({ fonts }: { fonts: { name: string; data: ArrayBuffer; weight: 400
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 140,
-              height: 140,
-              borderRadius: 32,
-              backgroundColor: "#059669",
-            }}
-          >
-            <HouseIcon />
-          </div>
+          <BrandMark />
           <div style={{ display: "flex", fontSize: 76, fontWeight: 700 }}>
-            <span style={{ color: "#0f172a" }}>{TITLE_BG}</span>
+            <span style={{ color: NAVY }}>{TITLE_BG}</span>
             <span>&nbsp;</span>
             <span style={{ color: "#64748b", fontWeight: 400 }}>
               {TITLE_LIGHT}
@@ -85,7 +82,7 @@ function Card({ fonts }: { fonts: { name: string; data: ArrayBuffer; weight: 400
             marginTop: 56,
             fontSize: 28,
             fontWeight: 700,
-            color: "#059669",
+            color: MINT_TEXT,
           }}
         >
           {DOMAIN}

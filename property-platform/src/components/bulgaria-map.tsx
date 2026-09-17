@@ -245,7 +245,7 @@ export function BulgariaMap({ cities }: { cities: MapCity[] }) {
                 key={settlement.id}
                 type="button"
                 onClick={() => goToCity(settlement)}
-                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-accent-600 hover:text-accent-700"
               >
                 {settlementLabel(settlement)}
               </button>

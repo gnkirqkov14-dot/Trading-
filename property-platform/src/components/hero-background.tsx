@@ -15,10 +15,10 @@ export function HeroBackground() {
       aria-hidden
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
-      <HouseShape className="absolute -left-12 -top-12 h-56 w-56 rotate-[-12deg] text-emerald-400 opacity-40 blur-xl" />
-      <HouseShape className="absolute -right-16 top-0 h-72 w-72 rotate-[10deg] text-emerald-500 opacity-30 blur-2xl" />
+      <HouseShape className="absolute -left-12 -top-12 h-56 w-56 rotate-[-12deg] text-accent-400 opacity-40 blur-xl" />
+      <HouseShape className="absolute -right-16 top-0 h-72 w-72 rotate-[10deg] text-brand-400 opacity-25 blur-2xl" />
       <HouseShape className="absolute -bottom-16 left-[12%] h-64 w-64 rotate-[6deg] text-slate-400 opacity-30 blur-xl" />
-      <HouseShape className="absolute -bottom-10 right-[8%] h-48 w-48 rotate-[-8deg] text-emerald-400 opacity-35 blur-xl" />
+      <HouseShape className="absolute -bottom-10 right-[8%] h-48 w-48 rotate-[-8deg] text-accent-400 opacity-35 blur-xl" />
     </div>
   );
 }

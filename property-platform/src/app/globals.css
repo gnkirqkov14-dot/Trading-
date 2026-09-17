@@ -13,6 +13,36 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Цветовете на логото (imotpoint.com): тъмносиньо за знака и текста,
+   тюркоазено зелено за точката и за ".com". Скалите са построени около
+   тези две стойности — brand-600 и accent-500 са точните цветове от
+   логото, останалите степени са за фонове, рамки и hover състояния.
+   Виж components/logo.tsx, където същите две стойности са изписани
+   буквално за SVG-то. */
+@theme {
+  --color-brand-50: #eef4f9;
+  --color-brand-100: #d9e7f1;
+  --color-brand-200: #b7d1e4;
+  --color-brand-300: #8ab3d2;
+  --color-brand-400: #5690b9;
+  --color-brand-500: #2f6f9c;
+  --color-brand-600: #1a5180;
+  --color-brand-700: #164368;
+  --color-brand-800: #143756;
+  --color-brand-900: #132f49;
+
+  --color-accent-50: #ecfaf4;
+  --color-accent-100: #d0f3e6;
+  --color-accent-200: #a4e7cf;
+  --color-accent-300: #6dd6b3;
+  --color-accent-400: #3fc49b;
+  --color-accent-500: #2bb98c;
+  --color-accent-600: #1d9a73;
+  --color-accent-700: #197b5d;
+  --color-accent-800: #17614b;
+  --color-accent-900: #14503f;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -52,7 +82,7 @@ body {
   gap: 5px;
   padding: 5px 10px 5px 7px;
   background: #ffffff;
-  border: 1.5px solid #059669;
+  border: 1.5px solid #1a5180;
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
@@ -65,6 +95,6 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 9999px;
-  background: #059669;
+  background: #2bb98c;
   flex-shrink: 0;
 }
