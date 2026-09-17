@@ -48,7 +48,7 @@ export default function AboutPage() {
     <div className="flex flex-1 flex-col bg-slate-50">
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-3xl px-4 py-16">
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 ring-1 ring-emerald-600/20">
+          <span className="inline-flex items-center rounded-full bg-accent-50 px-3 py-1 text-sm font-medium text-accent-700 ring-1 ring-accent-600/20">
             За платформата
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
@@ -102,7 +102,7 @@ export default function AboutPage() {
                 key={step.title}
                 className="flex gap-4 rounded-xl border border-slate-200 bg-white p-5"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold text-white">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-600 text-sm font-semibold text-white">
                   {index + 1}
                 </span>
                 <div>
@@ -225,7 +225,7 @@ export default function AboutPage() {
             Въпрос, проблем с обява или сигнал за агенция — пиши на{" "}
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className="font-medium text-emerald-700 underline hover:text-emerald-800"
+              className="font-medium text-accent-700 underline hover:text-accent-800"
             >
               {SUPPORT_EMAIL}
             </a>

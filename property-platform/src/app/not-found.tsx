@@ -6,7 +6,7 @@ export default function NotFound() {
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-24 text-center">
       <Logo />
       <div>
-        <p className="text-sm font-medium text-emerald-600">404</p>
+        <p className="text-sm font-medium text-accent-600">404</p>
         <h1 className="mt-2 text-2xl font-semibold text-slate-900">
           Тази страница не съществува
         </h1>

@@ -56,7 +56,7 @@ export default async function Home() {
       <section className="relative isolate overflow-hidden">
         <HeroBackground />
         <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 ring-1 ring-emerald-600/20">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-3 py-1 text-sm font-medium text-accent-700 ring-1 ring-accent-600/20">
             Публикуването е винаги безплатно
           </span>
 
