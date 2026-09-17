@@ -9,7 +9,7 @@ export const contentType = "image/png";
 const TITLE_BG = "Имоти";
 const TITLE_LIGHT = "без посредници";
 const TAGLINE = "Директно от собственик — без агентски комисионни";
-const DOMAIN = "imotami.com";
+const DOMAIN = "imotpoint.com";
 
 function HouseIcon() {
   return (

@@ -154,7 +154,7 @@ export default async function ListingDetailPage({
     ]);
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotami.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
