@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { AiAssistant } from "@/components/assistant/ai-assistant";
 import "./globals.css";
 
 // Geist няма кирилица — досега целият български текст падаше на
@@ -54,6 +55,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         <main className="flex flex-1 flex-col">{children}</main>
         <SiteFooter />
+        {/* Плаващият 3D помощник върви с посетителя по всяка страница.
+            Ключът за AI-я стои само на сървъра — тук пращаме единствено
+            дали изобщо е настроен, за да не показваме поле за въпроси,
+            което няма как да отговори. */}
+        <AiAssistant aiEnabled={Boolean(process.env.ANTHROPIC_API_KEY)} />
         {/* Vercel Web Analytics — брои реални посетители (кои страници,
             откъде идват), за разлика от Observability таблото, което
             брои технически заявки. Без бисквитки и без лични данни, за
