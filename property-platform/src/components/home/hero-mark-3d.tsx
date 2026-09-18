@@ -24,7 +24,18 @@ const SCALE = 1 / 20;
 const toX = (x: number) => (x - 41) * SCALE;
 const toY = (y: number) => (47 - y) * SCALE;
 
-export function HeroMark3D({ className }: { className?: string }) {
+export function HeroMark3D({
+  className,
+  /**
+   * Знакът като малко копче (плаващият помощник), а не като герой на
+   * секцията: винаги олекотено качество — на 4-5 рем на екрана скъпият
+   * материал не се вижда, а платката работи два пъти.
+   */
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +47,10 @@ export function HeroMark3D({ className }: { className?: string }) {
     // геометрия, по-евтин материал и половин резолюция. На малък екран
     // разликата почти не се вижда, а сметката за процесора е чувствително
     // по-малка — а точно оттам идват хората от социалните мрежи.
-    const lite = !window.matchMedia("(min-width: 1024px)").matches;
+    const small = !window.matchMedia("(min-width: 1024px)").matches;
+    const lite = small || compact;
+    // Курсорът се следи само там, където изобщо има курсор.
+    const followPointer = !small;
 
     let disposed = false;
     let booted = false;
@@ -174,7 +188,7 @@ export function HeroMark3D({ className }: { className?: string }) {
         target.y = (event.clientX / window.innerWidth - 0.5) * 1.1;
         target.x = (event.clientY / window.innerHeight - 0.5) * 0.7;
       }
-      if (!lite) {
+      if (followPointer) {
         window.addEventListener("pointermove", onPointerMove, { passive: true });
       }
 
@@ -203,7 +217,7 @@ export function HeroMark3D({ className }: { className?: string }) {
         const seconds = (performance.now() - startedAt) / 1000;
         group.rotation.y += (target.y + scrollSpin - group.rotation.y) * 0.06;
         group.rotation.x += (target.x - group.rotation.x) * 0.06;
-        group.position.y = Math.sin(seconds * 0.9) * 0.12;
+        group.position.y = Math.sin(seconds * 0.9) * (compact ? 0.07 : 0.12);
         renderer.render(scene, camera);
       }
 
@@ -217,7 +231,7 @@ export function HeroMark3D({ className }: { className?: string }) {
         cancelAnimationFrame(frame);
         resizeObserver.disconnect();
         intersectionObserver.disconnect();
-        if (!lite) window.removeEventListener("pointermove", onPointerMove);
+        if (followPointer) window.removeEventListener("pointermove", onPointerMove);
         window.removeEventListener("scroll", onScroll);
         renderer.domElement.remove();
         renderer.dispose();
@@ -238,7 +252,17 @@ export function HeroMark3D({ className }: { className?: string }) {
       disposed = true;
       cleanup();
     };
-  }, []);
+  }, [compact]);
 
-  return <div ref={hostRef} aria-hidden className={className} />;
+  // Плаващият помощник (`components/assistant/ai-assistant.tsx`) търси
+  // точно този атрибут, за да разбере кога големият знак е излязъл от
+  // екрана — чак тогава показва своето копче, за да не се дублират.
+  return (
+    <div
+      ref={hostRef}
+      aria-hidden
+      data-hero-mark={compact ? undefined : ""}
+      className={className}
+    />
+  );
 }

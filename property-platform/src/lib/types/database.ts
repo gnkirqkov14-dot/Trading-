@@ -270,6 +270,11 @@ export interface Database {
         Args: { p_listing_id: string };
         Returns: void;
       };
+      assistant_consume_quota: {
+        Args: { visitor: string; daily_limit: number };
+        /** Оставащи въпроси за деня; -1 = лимитът е изчерпан. */
+        Returns: number;
+      };
     };
     Enums: {
       subscription_plan: SubscriptionPlan;
