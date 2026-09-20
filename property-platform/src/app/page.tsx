@@ -8,7 +8,6 @@ import { PhoneHero } from "@/components/home/phone-hero";
 import { GoalTiles } from "@/components/home/goal-tiles";
 import { StoryScroll } from "@/components/home/story-scroll";
 import { STORY_FRAMES } from "@/components/home/story-frames";
-import { StoryStrip } from "@/components/home/story-strip";
 import {
   CostComparison,
   HomeCta,
@@ -22,10 +21,10 @@ import {
 // повтарящи се имена в CLAUDE.md.
 const POPULAR_CITY_NAMES = ["София", "Пловдив", "Варна", "Бургас"];
 
-// Пали/гаси кадрите от скрол сцената (`components/home/story-scroll.tsx`,
-// `story-strip.tsx`) и снимката в началото на телефон. При false остава
-// само градиент, а на широк екран се връща досегашният hero — това е
-// аварийният изход с един ред, ако нещо със снимките се счупи.
+// Пали/гаси кадрите от скрол сцената (`components/home/story-scroll.tsx`)
+// и снимката в началото на телефон. При false остава само градиент, а
+// на широк екран се връща досегашният hero — това е аварийният изход с
+// един ред, ако нещо със снимките се счупи.
 const STORY_FRAMES_READY = true;
 
 // Под този брой активни обяви към решетката се добавя покана „Тук ще е
@@ -182,10 +181,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Историята остава и на телефон, но свита до три кадъра и чак тук,
-          след търсенето и обявите. */}
-      {STORY_FRAMES_READY && <StoryStrip />}
 
       <Wave fill="#17344d" />
       <StatBand />
