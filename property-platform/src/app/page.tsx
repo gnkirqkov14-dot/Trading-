@@ -4,6 +4,7 @@ import { ListingCard, type ListingCardData } from "@/components/listing-card";
 import { HeroSearch, type PopularCity } from "@/components/home/hero-search";
 import { HeroDeck } from "@/components/home/hero-deck";
 import { HeroMark3D } from "@/components/home/hero-mark-3d";
+import { StoryScroll } from "@/components/home/story-scroll";
 import {
   CostComparison,
   HomeCta,
@@ -16,6 +17,13 @@ import {
 // (не селата) — има и села със същите имена, виж бележката за 527-те
 // повтарящи се имена в CLAUDE.md.
 const POPULAR_CITY_NAMES = ["София", "Пловдив", "Варна", "Бургас"];
+
+// Новата скрол сцена (`components/home/story-scroll.tsx`) влиза в действие
+// чак когато петте кадъра са качени в `public/hero/01.png` … `05.png`.
+// Дотогава стои досегашният hero — по-добре старият вид, отколкото пет
+// счупени картинки на началната страница. Обърни на true в мига, в който
+// файловете са в repo-то.
+const STORY_FRAMES_READY = false;
 
 // Под този брой активни обяви секцията "Последни обяви" се скрива изцяло —
 // три празни кутийки изглеждат по-зле от липсваща секция.
@@ -63,6 +71,9 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      {STORY_FRAMES_READY ? (
+        <StoryScroll popular={popular} />
+      ) : (
       <section className="relative overflow-hidden pb-24 pt-10 sm:pb-[8.75rem] sm:pt-[4.75rem]">
         {/* Меки цветни петна + точкова мрежа, избледняваща към ръбовете. */}
         <span
@@ -107,6 +118,7 @@ export default async function Home() {
             при absolute позицията не зависи от реда. */}
         <HeroMark3D className="pointer-events-none relative z-10 mx-auto mt-1 h-56 w-full max-w-[19rem] lg:absolute lg:bottom-6 lg:right-[2%] lg:mt-0 lg:h-[21rem] lg:w-[21rem] lg:max-w-none xl:bottom-8 xl:right-[6%] xl:h-[24rem] xl:w-[24rem]" />
       </section>
+      )}
 
       <Wave fill="#17344d" />
       <StatBand />

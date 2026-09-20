@@ -57,16 +57,18 @@ export function AiAssistant({ aiEnabled }: { aiEnabled: boolean }) {
   // появява чак когато той излезе от екрана, за да не се дублират.
   // Навсякъде другаде няма какво да чака.
   useEffect(() => {
-    // Пресмята се при скрол (а не еднократно), защото знакът в hero-а се
-    // мести с потока на страницата — точно затова копчето изглежда все
-    // едно иконката е дошла с посетителя, вместо да изскочи отникъде.
+    // Пресмята се при скрол (а не еднократно), защото началната картина
+    // се мести с потока на страницата — точно затова копчето изглежда
+    // все едно е дошло с посетителя, вместо да изскочи отникъде. И още
+    // нещо: докато hero-ът е на екрана, копчето стои скрито, за да не
+    // ляга върху търсачката на телефон.
     const update = () => {
-      const heroMark = document.querySelector("[data-hero-mark]");
-      if (!heroMark) {
+      const heroScene = document.querySelector("[data-hero-scene]");
+      if (!heroScene) {
         setDocked(true);
         return;
       }
-      setDocked(heroMark.getBoundingClientRect().bottom <= 24);
+      setDocked(heroScene.getBoundingClientRect().bottom <= 24);
     };
 
     let ticking = false;

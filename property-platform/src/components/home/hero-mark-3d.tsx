@@ -255,13 +255,14 @@ export function HeroMark3D({
   }, [compact]);
 
   // Плаващият помощник (`components/assistant/ai-assistant.tsx`) търси
-  // точно този атрибут, за да разбере кога големият знак е излязъл от
-  // екрана — чак тогава показва своето копче, за да не се дублират.
+  // точно този атрибут, за да разбере кога голямата картина в началото е
+  // излязла от екрана — чак тогава показва своето копче. Същият атрибут
+  // носи и скрол сцената (`story-scroll.tsx`).
   return (
     <div
       ref={hostRef}
       aria-hidden
-      data-hero-mark={compact ? undefined : ""}
+      data-hero-scene={compact ? undefined : ""}
       className={className}
     />
   );
