@@ -210,11 +210,15 @@ export default async function ListingDetailPage({
         }}
       />
       {/* Собственикът току-що е публикувал тази обява (пренасочване от
-          `createListing` с `?published=1`) — това е най-ценното
-          действие на сайта и по него се оптимизират рекламите. */}
+          `createListing` с `?published=1`).
+
+          ⚠️ Нарочно НЕ е `Lead` — `Lead` е запазено за контакт с
+          обявителя (виж `components/phone-link.tsx`). Ако и двете са
+          `Lead`, в Events Manager се смесват двете съвсем различни
+          публики: тези, които търсят имот, и тези, които предлагат. */}
       {published === "1" && isOwner && (
         <PixelEvent
-          name="Lead"
+          name="SubmitApplication"
           params={{
             content_type: "product",
             content_ids: [listing.id],
