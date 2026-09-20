@@ -1104,7 +1104,7 @@ Vercel Analytics беше избран нарочно, защото не сла�
 events** показва събитията на живо. Преди старт на реклами: домейнът
 да е верифициран в Business Settings → Brand Safety → Domains, и в
 Aggregated Event Measurement да са подредени до 8 събития по приоритет
-(най-горе `Lead`). Виж docs/РЪЧНИ-СТЪПКИ.md, раздел A7.
+(най-горе `Lead`). Виж docs/РЪЧНИ-СТЪПКИ.md, раздел A5.
 
 ### Cron job — важно за deploy
 
