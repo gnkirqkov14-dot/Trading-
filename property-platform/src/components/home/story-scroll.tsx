@@ -4,22 +4,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { HeroSearch, type PopularCity } from "@/components/home/hero-search";
+import { HeroMark3D } from "@/components/home/hero-mark-3d";
 
 /**
  * Началната сцена: едно и също място, снимано отвисоко, през времето.
- *
- * Целта е усещане за **камера, която върви навътре**, не за слайдшоу.
- * Затова две неща работят заедно: всеки кадър приближава непрекъснато
- * (1.0 → 1.36), а преливането е стеснено, за да пада в момента на
- * най-бързото движение. Следващият кадър тръгва пак от 1.0, докато
- * предишният е най-навътре — окото свързва двете в едно вървене
- * напред. Широкото преливане беше първата версия и се четеше точно
- * като избледняване между снимки.
+ * Докато посетителят скролва, петте кадъра се преливат един в друг и
+ * бавно се приближават — движението е като видео, но видео няма.
  *
  * ⚠️ Нарочно НЕ е видео файл и НЕ е поредица от кадри:
  * - Safari на iPhone не превърта видео по скрол надеждно — заеква или
  *   замръзва, а оттам идва голяма част от трафика;
  * - пет снимки тежат около мегабайт, а видеото — десет.
+ *
+ * Над пейзажа обикаля 3D знакът от логото — по елипса, вързана за
+ * скрола, така че прелита над града, докато той се застроява.
  *
  * Снимките минават през `next/image`, затова могат да са тежки PNG-та:
  * Vercel ги сервира преоразмерени и в webp/avif според браузъра, и
@@ -89,16 +87,27 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 export function StoryScroll({ popular }: { popular: PopularCity[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
+  const [wide, setWide] = useState(false);
   const [calm, setCalm] = useState(false);
 
-  // Хората, заявили "по-малко движение", получават само преливане, без
-  // приближаване. Inline style бие Tailwind класа, затова се пита тук.
+  // Орбитата на знака и приближаването на снимките се задават с inline
+  // style, а той бие Tailwind класа — затова и двете се питат тук, в JS.
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setCalm(query.matches);
+    const queries = {
+      wide: window.matchMedia("(min-width: 1024px)"),
+      calm: window.matchMedia("(prefers-reduced-motion: reduce)"),
+    };
+    const sync = () => {
+      setWide(queries.wide.matches);
+      setCalm(queries.calm.matches);
+    };
     sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
+    queries.wide.addEventListener("change", sync);
+    queries.calm.addEventListener("change", sync);
+    return () => {
+      queries.wide.removeEventListener("change", sync);
+      queries.calm.removeEventListener("change", sync);
+    };
   }, []);
 
   useEffect(() => {
@@ -152,24 +161,8 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
       <div className="sticky top-0 h-screen overflow-hidden">
         <div className="absolute inset-0 bg-[#e9eef3]">
           {STORY_FRAMES.map((frame, index) => {
-            const offset = cursor - index;
-
-            // Преливането е нарочно СТЕСНЕНО. При широко застъпване две
-            // снимки стоят полупрозрачни една върху друга и окото чете
-            // "избледняване". При тясно — всеки кадър държи пълна
-            // плътност, докато върви навътре, и се сменя бързо.
-            const visible = clamp01(1 - Math.abs(offset) * 1.85);
-            const opacity = visible * visible * (3 - 2 * visible);
-
-            // Сърцевината на движението: кадърът приближава НЕПРЕКЪСНАТО,
-            // от 1.0 при влизане до 1.36 при излизане. Следващият тръгва
-            // отново от 1.0 точно докато този е най-навътре — смяната
-            // пада в момента на най-бързото движение и не се забелязва.
-            // Окото свързва двете в едно вървене напред.
-            const push = 1 + 0.18 * clamp01(offset + 1);
-            // Лек спад надолу, все едно се снишаваме към града.
-            const drift = -1.6 + 3.2 * clamp01(offset + 1);
-
+            const distance = Math.abs(cursor - index);
+            const visible = clamp01(1 - distance);
             return (
               <Image
                 key={frame.src}
@@ -181,11 +174,13 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
                 quality={78}
                 className="object-cover"
                 style={{
-                  opacity,
+                  opacity: visible,
+                  // Бавно приближаване, докато кадърът е на екран —
+                  // това е разликата между слайдшоу и движеща се картина.
                   transform: calm
                     ? undefined
-                    : `scale(${push.toFixed(4)}) translateY(${drift.toFixed(2)}%)`,
-                  transition: "opacity 90ms linear",
+                    : `scale(${(1.11 - 0.07 * visible).toFixed(4)})`,
+                  transition: "opacity 120ms linear",
                 }}
               />
             );
@@ -203,6 +198,41 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
           aria-hidden
           className="absolute inset-0 opacity-[0.045] [background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>&quot;)]"
         />
+
+        {/* Знакът от логото обикаля над пейзажа по елипса, вързана за
+            скрола: тръгва малък и далече горе, излиза най-едър отпред
+            към средата, после се отдалечава. Самият знак се върти и
+            плава сам (виж `hero-mark-3d.tsx`) — тук се мести само
+            мястото му. `compact` го държи на олекотено качество; на
+            тези размери разликата не се вижда, а платката работи
+            наполовина. Стои НАД снимките, но ПОД текста, за да не го
+            закрива, и не лови кликове. */}
+        {(() => {
+          // Започва отгоре на елипсата (най-далече) и обикаля веднъж
+          // за целия скрол.
+          const angle = progress * Math.PI * 2 - Math.PI / 2;
+          const orbit = wide
+            ? { x: 71, y: 45, rx: 15, ry: 25, size: "9.5rem" }
+            : { x: 50, y: 24, rx: 25, ry: 10, size: "6rem" };
+          // По-едър, когато е в предната част на елипсата — това дава
+          // усещането, че наистина обикаля, а не се плъзга настрани.
+          const depth = 1 + 0.24 * Math.sin(angle);
+          return (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute"
+              style={{
+                left: `${(orbit.x + orbit.rx * Math.cos(angle)).toFixed(2)}%`,
+                top: `${(orbit.y + orbit.ry * Math.sin(angle)).toFixed(2)}%`,
+                width: orbit.size,
+                height: orbit.size,
+                transform: `translate(-50%, -50%) scale(${depth.toFixed(3)})`,
+              }}
+            >
+              <HeroMark3D compact className="h-full w-full" />
+            </div>
+          );
+        })()}
 
         <div className="absolute inset-0 flex items-end pb-[9vh] lg:items-center lg:pb-0">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -246,17 +276,6 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
                       <div className="mt-8 max-w-xl">
                         <HeroSearch popular={popular} />
                       </div>
-                    )}
-                    {index === 0 && !calm && (
-                      <p
-                        aria-hidden
-                        className="mt-9 flex items-center gap-2.5 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-slate-500"
-                      >
-                        <span className="inline-flex h-7 w-[1.1rem] items-start justify-center rounded-full border border-slate-400/70 pt-1.5">
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500" />
-                        </span>
-                        Скролни надолу
-                      </p>
                     )}
                     {index === STORY_FRAMES.length - 1 && (
                       <Link
