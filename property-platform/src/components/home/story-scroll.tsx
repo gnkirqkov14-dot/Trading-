@@ -7,8 +7,14 @@ import { HeroSearch, type PopularCity } from "@/components/home/hero-search";
 
 /**
  * Началната сцена: едно и също място, снимано отвисоко, през времето.
- * Докато посетителят скролва, петте кадъра се преливат един в друг и
- * бавно се приближават — движението е като видео, но видео няма.
+ *
+ * Целта е усещане за **камера, която върви навътре**, не за слайдшоу.
+ * Затова две неща работят заедно: всеки кадър приближава непрекъснато
+ * (1.0 → 1.36), а преливането е стеснено, за да пада в момента на
+ * най-бързото движение. Следващият кадър тръгва пак от 1.0, докато
+ * предишният е най-навътре — окото свързва двете в едно вървене
+ * напред. Широкото преливане беше първата версия и се четеше точно
+ * като избледняване между снимки.
  *
  * ⚠️ Нарочно НЕ е видео файл и НЕ е поредица от кадри:
  * - Safari на iPhone не превърта видео по скрол надеждно — заеква или
@@ -83,6 +89,17 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 export function StoryScroll({ popular }: { popular: PopularCity[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
+  const [calm, setCalm] = useState(false);
+
+  // Хората, заявили "по-малко движение", получават само преливане, без
+  // приближаване. Inline style бие Tailwind класа, затова се пита тук.
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setCalm(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     // Изчислява се спрямо самата секция, а не спрямо scrollY на цялата
@@ -135,8 +152,24 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
       <div className="sticky top-0 h-screen overflow-hidden">
         <div className="absolute inset-0 bg-[#e9eef3]">
           {STORY_FRAMES.map((frame, index) => {
-            const distance = Math.abs(cursor - index);
-            const visible = clamp01(1 - distance);
+            const offset = cursor - index;
+
+            // Преливането е нарочно СТЕСНЕНО. При широко застъпване две
+            // снимки стоят полупрозрачни една върху друга и окото чете
+            // "избледняване". При тясно — всеки кадър държи пълна
+            // плътност, докато върви навътре, и се сменя бързо.
+            const visible = clamp01(1 - Math.abs(offset) * 1.85);
+            const opacity = visible * visible * (3 - 2 * visible);
+
+            // Сърцевината на движението: кадърът приближава НЕПРЕКЪСНАТО,
+            // от 1.0 при влизане до 1.36 при излизане. Следващият тръгва
+            // отново от 1.0 точно докато този е най-навътре — смяната
+            // пада в момента на най-бързото движение и не се забелязва.
+            // Окото свързва двете в едно вървене напред.
+            const push = 1 + 0.18 * clamp01(offset + 1);
+            // Лек спад надолу, все едно се снишаваме към града.
+            const drift = -1.6 + 3.2 * clamp01(offset + 1);
+
             return (
               <Image
                 key={frame.src}
@@ -146,13 +179,13 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
                 priority={index === 0}
                 sizes="100vw"
                 quality={78}
-                className="object-cover motion-reduce:!scale-100"
+                className="object-cover"
                 style={{
-                  opacity: visible,
-                  // Бавно приближаване, докато кадърът е на екран —
-                  // това е разликата между слайдшоу и движеща се картина.
-                  transform: `scale(${1.11 - 0.07 * visible})`,
-                  transition: "opacity 120ms linear",
+                  opacity,
+                  transform: calm
+                    ? undefined
+                    : `scale(${push.toFixed(4)}) translateY(${drift.toFixed(2)}%)`,
+                  transition: "opacity 90ms linear",
                 }}
               />
             );
@@ -213,6 +246,17 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
                       <div className="mt-8 max-w-xl">
                         <HeroSearch popular={popular} />
                       </div>
+                    )}
+                    {index === 0 && !calm && (
+                      <p
+                        aria-hidden
+                        className="mt-9 flex items-center gap-2.5 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-slate-500"
+                      >
+                        <span className="inline-flex h-7 w-[1.1rem] items-start justify-center rounded-full border border-slate-400/70 pt-1.5">
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-500" />
+                        </span>
+                        Скролни надолу
+                      </p>
                     )}
                     {index === STORY_FRAMES.length - 1 && (
                       <Link
