@@ -4,8 +4,11 @@ import { ListingCard, type ListingCardData } from "@/components/listing-card";
 import { HeroSearch, type PopularCity } from "@/components/home/hero-search";
 import { HeroDeck } from "@/components/home/hero-deck";
 import { HeroMark3D } from "@/components/home/hero-mark-3d";
+import { PhoneHero } from "@/components/home/phone-hero";
 import { GoalTiles } from "@/components/home/goal-tiles";
 import { StoryScroll } from "@/components/home/story-scroll";
+import { STORY_FRAMES } from "@/components/home/story-frames";
+import { StoryStrip } from "@/components/home/story-strip";
 import {
   CostComparison,
   HomeCta,
@@ -19,9 +22,10 @@ import {
 // повтарящи се имена в CLAUDE.md.
 const POPULAR_CITY_NAMES = ["София", "Пловдив", "Варна", "Бургас"];
 
-// Пали/гаси скрол сцената (`components/home/story-scroll.tsx`). При
-// false се връща досегашният hero — аварийният изход с един ред, ако
-// нещо със снимките се счупи.
+// Пали/гаси кадрите от скрол сцената (`components/home/story-scroll.tsx`,
+// `story-strip.tsx`) и снимката в началото на телефон. При false остава
+// само градиент, а на широк екран се връща досегашният hero — това е
+// аварийният изход с един ред, ако нещо със снимките се счупи.
 const STORY_FRAMES_READY = true;
 
 // Под този брой активни обяви към решетката се добавя покана „Тук ще е
@@ -71,12 +75,18 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Сцената „едно място през времето" — и на телефон, и на
-          компютър. Виж бележката в CLAUDE.md защо стои така. */}
+      {/* Телефон: един екран, търсачката е най-важното и не се движи.
+          Виж бележката в `phone-hero.tsx` защо не е същото като сцената. */}
+      <PhoneHero
+        popular={popular}
+        photo={STORY_FRAMES_READY ? STORY_FRAMES[4] : null}
+      />
+
+      {/* Широк екран: сцената „едно място през времето". */}
       {STORY_FRAMES_READY ? (
         <StoryScroll popular={popular} />
       ) : (
-      <section className="relative overflow-hidden pb-24 pt-10 sm:pb-[8.75rem] sm:pt-[4.75rem]">
+      <section className="relative hidden overflow-hidden pb-24 pt-10 sm:pb-[8.75rem] sm:pt-[4.75rem] lg:block">
         {/* Меки цветни петна + точкова мрежа, избледняваща към ръбовете. */}
         <span
           aria-hidden
@@ -172,6 +182,10 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Историята остава и на телефон, но свита до три кадъра и чак тук,
+          след търсенето и обявите. */}
+      {STORY_FRAMES_READY && <StoryStrip />}
 
       <Wave fill="#17344d" />
       <StatBand />
