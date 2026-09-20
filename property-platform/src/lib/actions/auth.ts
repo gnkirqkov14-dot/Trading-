@@ -62,7 +62,11 @@ export async function signUp(
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  // `?registered=1` казва на таблото да отчете `CompleteRegistration`
+  // към Meta Pixel. ⚠️ Регистрацията през Google минава по друг път
+  // (`auth/callback`) и оттам не се различава нов потребител от
+  // връщащ се — тези регистрации не се броят. Виж CLAUDE.md.
+  redirect("/dashboard?registered=1");
 }
 
 export async function signIn(

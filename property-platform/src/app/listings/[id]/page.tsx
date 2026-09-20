@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReportAgencyButton } from "@/components/report-agency-button";
+import { PhoneLink } from "@/components/phone-link";
+import { PixelEvent } from "@/components/pixel-event";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -93,10 +95,15 @@ export async function generateMetadata({
 
 export default async function ListingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  // `?published=1` слага `createListing` при пренасочването след
+  // успешно публикуване — само тогава се праща `Lead` към Meta Pixel.
+  searchParams: Promise<{ published?: string }>;
 }) {
   const { id } = await params;
+  const { published } = await searchParams;
   const listing = await getListing(id);
 
   if (!listing) {
@@ -187,6 +194,37 @@ export default async function ListingDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+      {/* Meta Pixel: разглеждане на имот. Праща се id, тип сделка,
+          град и цена — нищо лично. Виж `lib/fpixel.ts`. */}
+      <PixelEvent
+        name="ViewContent"
+        params={{
+          content_type: "product",
+          content_ids: [listing.id],
+          content_name: listing.title,
+          content_category: DEAL_TYPE_LABELS[listing.type],
+          ...(listing.cities?.name ? { city: listing.cities.name } : {}),
+          value: listing.price,
+          currency: "EUR",
+        }}
+      />
+      {/* Собственикът току-що е публикувал тази обява (пренасочване от
+          `createListing` с `?published=1`) — това е най-ценното
+          действие на сайта и по него се оптимизират рекламите. */}
+      {published === "1" && isOwner && (
+        <PixelEvent
+          name="Lead"
+          params={{
+            content_type: "product",
+            content_ids: [listing.id],
+            content_category: DEAL_TYPE_LABELS[listing.type],
+            value: listing.price,
+            currency: "EUR",
+          }}
+        />
+      )}
+
       {listing.status !== "active" && (
         <p className="mb-4 inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
           {STATUS_LABELS[listing.status]}
@@ -267,9 +305,11 @@ export default async function ListingDetailPage({
                 Телефон
               </dt>
               <dd className="font-medium text-slate-900">
-                <a href={`tel:${listing.phone}`} className="hover:underline">
-                  {listing.phone}
-                </a>
+                <PhoneLink
+                  phone={listing.phone}
+                  listingId={listing.id}
+                  city={listing.cities?.name}
+                />
               </dd>
             </div>
           </dl>
