@@ -63,12 +63,27 @@ export function AiAssistant({ aiEnabled }: { aiEnabled: boolean }) {
     // нещо: докато hero-ът е на екрана, копчето стои скрито, за да не
     // ляга върху търсачката на телефон.
     const update = () => {
-      const heroScene = document.querySelector("[data-hero-scene]");
-      if (!heroScene) {
+      // Началната страница носи атрибута на две места — сцената за
+      // широк екран (`story-scroll.tsx`) и началото за телефон
+      // (`phone-hero.tsx`) — и винаги едното от двете е `display:none`.
+      // Скритото има височина 0, тоест изглежда „вече подминато“;
+      // затова търсим първото, което наистина се вижда.
+      const scenes = Array.from(
+        document.querySelectorAll("[data-hero-scene]"),
+      );
+      if (scenes.length === 0) {
         setDocked(true);
         return;
       }
-      setDocked(heroScene.getBoundingClientRect().bottom <= 24);
+      const heroScene = scenes
+        .map((element) => element.getBoundingClientRect())
+        .find((rect) => rect.height > 0);
+      // Има начална картина, но още няма размери (стиловете или
+      // снимката не са дошли). Оставяме както е — ако тук се реши
+      // „подминато е“, копчето изскача върху търсачката и остава там
+      // до първия скрол.
+      if (!heroScene) return;
+      setDocked(heroScene.bottom <= 24);
     };
 
     let ticking = false;
@@ -84,8 +99,14 @@ export function AiAssistant({ aiEnabled }: { aiEnabled: boolean }) {
     const frame = requestAnimationFrame(update);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    // Височината на страницата се мени и без скрол — шрифтът идва,
+    // снимката се зарежда, клавиатурата се отваря. Без това първото
+    // измерване може да хване страницата още неподредена.
+    const resizeObserver = new ResizeObserver(onScroll);
+    resizeObserver.observe(document.body);
     return () => {
       cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
