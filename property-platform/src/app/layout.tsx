@@ -38,6 +38,17 @@ export const metadata: Metadata = {
   },
   description: "Обяви за имоти директно от собственик — без агенции.",
   alternates: { canonical: "/" },
+  // Верификация на домейна пред Meta (Business Settings → Brand Safety →
+  // Domains). Нужна е, преди да тръгнат реклами — иначе Meta не
+  // позволява да се настройват събитията на пиксела за този домейн.
+  // Стои в кода, а не като DNS запис, за да се вижда и да не се загуби
+  // при смяна на домейн. Излиза като
+  // `<meta name="facebook-domain-verification" content="...">`.
+  verification: {
+    other: {
+      "facebook-domain-verification": "h8hgvqzzlhh3l44bzhj578384fer6r",
+    },
+  },
   openGraph: {
     title: "Имоти без посредници",
     description: "Обяви за имоти директно от собственик — без агенции.",
