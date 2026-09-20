@@ -157,7 +157,10 @@ export async function createListing(input: CreateListingInput) {
 
   revalidatePath("/listings");
   revalidatePath("/dashboard");
-  redirect(`/listings/${input.id}`);
+  // `?published=1` казва на детайлната страница да отчете `Lead` към
+  // Meta Pixel. Флагът се вижда само при това пренасочване; каноничният
+  // адрес в metadata-та остава чистият.
+  redirect(`/listings/${input.id}?published=1`);
 }
 
 export type UpdateListingInput = {

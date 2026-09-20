@@ -6,6 +6,8 @@ import {
   SettlementSearch,
   type Settlement,
 } from "@/components/settlement-search";
+import { pixelEvent } from "@/lib/fpixel";
+import type { ListingDealType } from "@/lib/types/database";
 
 type Neighborhood = { id: string; city_id: string; name: string };
 
@@ -41,6 +43,14 @@ export function ListingFilters({
         params.delete(key);
       }
     }
+    // Meta Pixel: всяка промяна на филтър е ново търсене. Праща се само
+    // какво се търси — вид сделка и населено място, нищо лично.
+    pixelEvent("Search", {
+      ...(params.get("type")
+        ? { content_category: DEAL_TYPE_LABELS[params.get("type") as ListingDealType] }
+        : {}),
+      ...(selectedSettlement ? { search_string: selectedSettlement.name } : {}),
+    });
     router.push(`${pathname}?${params.toString()}`);
   }
 

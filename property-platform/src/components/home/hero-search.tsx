@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SettlementSearch } from "@/components/settlement-search";
+import { pixelEvent } from "@/lib/fpixel";
 
 export type PopularCity = { id: string; name: string };
 
@@ -32,7 +33,13 @@ export function HeroSearch({
   const [dealType, setDealType] = useState<DealType>("sale");
   const solid = variant === "solid";
 
-  function go(params: Record<string, string>) {
+  function go(params: Record<string, string>, placeName?: string) {
+    // Meta Pixel: търсене. Праща се само какво се търси — населено
+    // място и вид сделка. Виж `lib/fpixel.ts`.
+    pixelEvent("Search", {
+      content_category: dealType === "rent" ? "Наем" : "Продажба",
+      ...(placeName ? { search_string: placeName } : {}),
+    });
     const query = new URLSearchParams({ type: dealType, ...params });
     router.push(`/listings?${query}`);
   }
@@ -89,7 +96,7 @@ export function HeroSearch({
             selected={null}
             placeholder="Град или село…"
             onSelect={(settlement) => {
-              if (settlement) go({ city: settlement.id });
+              if (settlement) go({ city: settlement.id }, settlement.name);
             }}
           />
           <button
@@ -116,7 +123,7 @@ export function HeroSearch({
               <button
                 key={city.id}
                 type="button"
-                onClick={() => go({ city: city.id })}
+                onClick={() => go({ city: city.id }, city.name)}
                 className="shrink-0 rounded-full bg-slate-100 px-3.5 py-2 text-sm font-semibold text-brand-600"
               >
                 {city.name}
@@ -130,7 +137,7 @@ export function HeroSearch({
               <button
                 key={city.id}
                 type="button"
-                onClick={() => go({ city: city.id })}
+                onClick={() => go({ city: city.id }, city.name)}
                 className="rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-slate-600 transition hover:border-slate-300 hover:bg-white"
               >
                 {city.name}

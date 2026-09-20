@@ -3,10 +3,18 @@ import Link from "next/link";
 import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { MyListings, type MyListing } from "@/components/my-listings";
+import { PixelEvent } from "@/components/pixel-event";
 
 export const metadata: Metadata = { title: "Моят профил" };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  // `?registered=1` слага `signUp` веднага след успешна регистрация —
+  // само тогава се праща `CompleteRegistration` към Meta Pixel.
+  searchParams: Promise<{ registered?: string }>;
+}) {
+  const { registered } = await searchParams;
   const user = await getAuthedUser();
   const profile = await getProfile();
   const supabase = await createClient();
@@ -25,6 +33,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
+      {registered === "1" && <PixelEvent name="CompleteRegistration" />}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
