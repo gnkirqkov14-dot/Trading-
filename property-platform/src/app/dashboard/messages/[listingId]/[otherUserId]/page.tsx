@@ -95,7 +95,17 @@ export default async function MessageThreadPage({
       </div>
 
       <div className="mt-6">
-        <MessageThreadForm listingId={listingId} toUserId={otherUserId} />
+        <MessageThreadForm
+          listingId={listingId}
+          toUserId={otherUserId}
+          // Първо съобщение в този разговор от този потребител — само
+          // тогава се праща `Lead` към Meta Pixel.
+          isFirstContact={
+            !(messages ?? []).some(
+              (message) => message.from_user_id === user.id,
+            )
+          }
+        />
       </div>
     </div>
   );
