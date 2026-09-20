@@ -187,10 +187,17 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
           })}
         </div>
 
-        {/* Воал: вляво на широк екран (текстът е там), отдолу на телефон. */}
+        {/* Воал за четимост на текста: вляво на широк екран, съвсем леко
+            отдолу на телефон.
+
+            ⚠️ Първата мобилна версия беше почти плътно бяло от 58%
+            надолу и изяждаше точно долната част на кадъра — а при тези
+            въздушни снимки градът е точно там. Сега воалът е слаб и
+            стига чак в самото дъно; текстът се държи с бял ореол
+            (`.story-halo` по-долу), а не със заливане на снимката. */}
         <div
           aria-hidden
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(252,250,246,0)_18%,rgba(252,250,246,0.88)_58%,rgba(252,250,246,0.97)_76%)] lg:bg-[radial-gradient(72%_92%_at_10%_50%,rgba(252,250,246,0.97)_0%,rgba(252,250,246,0.86)_36%,rgba(252,250,246,0)_70%),linear-gradient(180deg,rgba(252,250,246,0.5)_0%,rgba(252,250,246,0)_24%)]"
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(252,250,246,0.4)_0%,rgba(252,250,246,0)_22%,rgba(252,250,246,0)_58%,rgba(252,250,246,0.34)_80%,rgba(252,250,246,0.62)_100%)] lg:bg-[radial-gradient(72%_92%_at_10%_50%,rgba(252,250,246,0.97)_0%,rgba(252,250,246,0.86)_36%,rgba(252,250,246,0)_70%),linear-gradient(180deg,rgba(252,250,246,0.5)_0%,rgba(252,250,246,0)_24%)]"
         />
 
         {/* Зърно — окото чете лек шум като фотография, не като рендер. */}
@@ -257,10 +264,10 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
                     }}
                     aria-hidden={eased < 0.5}
                   >
-                    <p className="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-brand-600">
+                    <p className="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-brand-600 [text-shadow:0_1px_16px_rgba(252,250,246,0.95),0_1px_3px_rgba(252,250,246,0.9)] lg:[text-shadow:none]">
                       {frame.eyebrow}
                     </p>
-                    <h2 className="mt-4 font-display text-[2.4rem] font-semibold leading-[0.95] tracking-tight text-slate-900 sm:text-[3.4rem] lg:text-[4rem]">
+                    <h2 className="mt-4 font-display text-[2.4rem] font-semibold leading-[0.95] tracking-tight text-slate-900 sm:text-[3.4rem] lg:text-[4rem] [text-shadow:0_1px_16px_rgba(252,250,246,0.95),0_1px_3px_rgba(252,250,246,0.9)] lg:[text-shadow:none]">
                       {frame.title[0]}
                       <br />
                       <em className="not-italic text-accent-600">
@@ -268,7 +275,7 @@ export function StoryScroll({ popular }: { popular: PopularCity[] }) {
                       </em>
                     </h2>
                     {frame.lead && (
-                      <p className="mt-5 max-w-md text-[1rem] leading-relaxed text-slate-600 sm:text-[1.08rem]">
+                      <p className="mt-5 max-w-md text-[1rem] leading-relaxed text-slate-700 sm:text-[1.08rem] lg:text-slate-600 [text-shadow:0_1px_16px_rgba(252,250,246,0.95),0_1px_3px_rgba(252,250,246,0.9)] lg:[text-shadow:none]">
                         {frame.lead}
                       </p>
                     )}
