@@ -17,11 +17,13 @@ set -uo pipefail
 SQLITE_MAGIC='SQLite format 3'
 found_any_db=0
 found_readable_db=0
+main_db_readable=0
+main_db_encrypted=0
 schema_ok=0
 permission_denied=0
 
 # Скрива потребителското име от изхода, за да може да се споделя.
-short_path() { printf '%s' "${1/#$HOME/\~}"; }
+short_path() { local t='~'; printf '%s' "${1/#$HOME/$t}"; }
 
 hr()      { printf '%s\n' '────────────────────────────────────────────────────────'; }
 section() { printf '\n'; hr; printf '  %s\n' "$1"; hr; }
@@ -147,13 +149,19 @@ for db in ${db_files[@]+"${db_files[@]}"}; do
   fi
 
   header="$(head -c 15 "$db" 2>/dev/null | LC_ALL=C tr -d '\0')"
+  # Само viber.db съдържа съобщенията. config.db и data.db са настройки —
+  # четимостта им не значи нищо за проекта.
+  is_main=0
+  case "$(basename "$db")" in viber.db) is_main=1 ;; esac
+  [ $is_main -eq 1 ] && info 'Това е базата със СЪОБЩЕНИЯТА — тя решава.'
+
   if [ "$header" = "$SQLITE_MAGIC" ]; then
-    ok 'ОБИКНОВЕН SQLite — чете се директно. Това е добрата новина.'
+    ok 'ОБИКНОВЕН SQLite — чете се директно.'
     found_readable_db=1
+    [ $is_main -eq 1 ] && main_db_readable=1
   else
     bad 'НЕ е обикновен SQLite — най-вероятно криптирана (SQLCipher).'
-    info 'Ако всички бази излязат такива, вариант A отпада и минаваме на'
-    info 'Viber Business акаунт (вариант C).'
+    [ $is_main -eq 1 ] && main_db_encrypted=1
   fi
 done
 
@@ -217,17 +225,20 @@ fi
 
 section '5. Заключение'
 
-if [ $found_readable_db -eq 1 ]; then
-  if [ $schema_ok -eq 1 ]; then
-    ok 'ВАРИАНТ A Е ВЪЗМОЖЕН — базата се чете и схемата е видима.'
-    info 'Следваща стъпка: агент на този Mac, който следи базата и подава към Supabase.'
-  else
-    warn 'Базата е обикновен SQLite, но схемата не се прочете.'
-    info 'Форматът е обнадеждаващ. Пусни скрипта пак при затворен Viber.'
-  fi
+if [ $main_db_readable -eq 1 ] && [ $schema_ok -eq 1 ]; then
+  ok 'ВАРИАНТ A Е ВЪЗМОЖЕН — viber.db се чете и схемата е видима.'
+  info 'Следваща стъпка: агент на този Mac, който следи базата и подава към Supabase.'
+elif [ $main_db_readable -eq 1 ]; then
+  warn 'viber.db е обикновен SQLite, но схемата не се прочете.'
+  info 'Пусни скрипта пак при затворен Viber.'
+elif [ $main_db_encrypted -eq 1 ]; then
+  bad 'ВАРИАНТ A ОТПАДА — viber.db (съобщенията) е КРИПТИРАНА.'
+  info 'Че config.db или data.db се четат няма значение: в тях има само'
+  info 'настройки и акаунт, не съобщения.'
+  info 'Следваща стъпка: четене от екрана или Viber Business (вариант C).'
 elif [ $found_any_db -eq 1 ]; then
-  bad 'ВАРИАНТ A ОТПАДА — базите съществуват, но са криптирани.'
-  info 'Следваща стъпка: Viber Business акаунт (вариант C).'
+  warn 'Намерени са бази, но не и viber.db със съобщенията.'
+  info 'Изчакай Viber Desktop да си свали чатовете и пробвай пак.'
 elif [ $permission_denied -eq 1 ]; then
   warn 'НЕЯСНО — липсват права за четене.'
   info 'Дай Full Disk Access на Терминала и пусни скрипта пак:'
