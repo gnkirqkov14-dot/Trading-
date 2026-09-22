@@ -43,12 +43,17 @@ export default async function DashboardPage({
             {activeCount} активни обяви (публикуването е безплатно и
             неограничено)
           </p>
-          <Link
-            href="/dashboard/profile"
-            className="mt-1 inline-block text-sm text-slate-500 underline hover:text-slate-900"
-          >
-            Настройки на профила
-          </Link>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+            <Link
+              href="/dashboard/profile"
+              className="underline hover:text-slate-900"
+            >
+              Настройки на профила
+            </Link>
+            <Link href="/dashboard/viber" className="underline hover:text-slate-900">
+              Viber — кой чака отговор
+            </Link>
+          </div>
         </div>
         <Link
           href="/dashboard/listings/new"
