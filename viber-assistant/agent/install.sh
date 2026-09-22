@@ -2,13 +2,22 @@
 #
 # Слага робота на този Mac и го пуска да върви сам.
 #
-# ⚠️ Роботът се опакова като приложение (ViberRobot.app), а не се пуска
-# направо като скрипт. Причината е научена от живо: macOS дава разрешението
-# за запис на екрана на КОНКРЕТНА програма. Когато launchd пуска скрипта,
-# програмата за системата е /bin/bash — а на него разрешение не се дава.
-# Затова разрешението, дадено на Терминала, не важи за автоматично пуснатия
-# робот и снимките излизаха празни. Приложението има собствено име и иконка
-# в списъка с разрешения, тоест може да получи своето.
+# ⚠️ Две неща тук са научени на живо и не бива да се "опростяват" обратно:
+#
+# 1. Роботът се опакова като приложение (ViberRobot.app), а не се пуска
+#    направо като скрипт. macOS дава разрешението за запис на екрана на
+#    КОНКРЕТНА програма. Когато launchd пуска скрипта, програмата за
+#    системата е /bin/bash — на него разрешение не се дава. Затова
+#    разрешението, дадено на Терминала, не важеше и снимките излизаха празни.
+#
+# 2. В приложението стои САМО мъничък стартер, който никога не се променя.
+#    Самият робот живее ОТВЪН, в ~/.viber-agent/viber-agent.sh.
+#    Причината е скъпо платена: macOS помни разрешението по подписа на
+#    приложението. Докато роботът беше вътре, всяко обновяване сменяше
+#    подписа, системата го смяташе за друга програма и разрешението тихо
+#    спираше да важи — ключето в настройките си стоеше включено, а снимките
+#    пак излизаха празни. Сега обновяванията не пипат приложението и
+#    разрешението се дава веднъж завинаги.
 #
 # Употреба:
 #   bash install.sh https://имотсайт.com/api/viber/ingest ТОКЕН
@@ -19,8 +28,11 @@ set -uo pipefail
 LABEL="com.imotpoint.viber-robot"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 CONFIG="$HOME/.viber-agent.conf"
+STATE_DIR="$HOME/.viber-agent"
+AGENT_DEST="$STATE_DIR/viber-agent.sh"
 APP="$HOME/Applications/ViberRobot.app"
 EXEC="$APP/Contents/MacOS/ViberRobot"
+STAMP="$APP/Contents/Resources/launcher-version"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AGENT="$HERE/viber-agent.sh"
 
@@ -38,6 +50,7 @@ if [ "${1:-}" = "--махни" ] || [ "${1:-}" = "--remove" ]; then
   launchctl bootout "gui/$(id -u)/com.imotpoint.viber-agent" 2>/dev/null
   rm -f "$PLIST" "$HOME/Library/LaunchAgents/com.imotpoint.viber-agent.plist"
   rm -rf "$APP"
+  rm -f "$AGENT_DEST"
   ok 'Роботът е спрян, махнат от автоматичното пускане и изтрит.'
   info "Настройките остават в $CONFIG — изтрий ги ръчно, ако искаш."
   info 'Разрешенията му остават в System Settings; махни ги оттам при нужда.'
@@ -72,6 +85,8 @@ if [ ! -f "$AGENT" ]; then
   exit 1
 fi
 
+mkdir -p "$STATE_DIR" "$HOME/Library/LaunchAgents" "$HOME/Applications"
+
 # Настройките съдържат токен — четими само от собственика.
 umask 077
 cat > "$CONFIG" <<CONF
@@ -86,17 +101,38 @@ chmod 600 "$CONFIG"
 umask 022
 ok "Настройките са записани в $CONFIG"
 
-# ── Приложението ───────────────────────────────────────────────────────
+# ── Самият робот (ИЗВЪН приложението) ──────────────────────────────────
 
-# Спираме стария робот (под двете имена), преди да пипаме файловете му.
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null
 launchctl bootout "gui/$(id -u)/com.imotpoint.viber-agent" 2>/dev/null
 rm -f "$HOME/Library/LaunchAgents/com.imotpoint.viber-agent.plist"
 
-rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+cp "$AGENT" "$AGENT_DEST"
+chmod +x "$AGENT_DEST"
+ok "Роботът е обновен: $AGENT_DEST"
 
-cat > "$APP/Contents/Info.plist" <<'PLIST_EOF'
+# ── Приложението (стартерът — променя се почти никога) ─────────────────
+
+# Версията на стартера. Пипа се САМО когато самият стартер трябва да се
+# смени. Всяка смяна на това число значи ново разрешение от собственика,
+# затова не се пипа при обикновени поправки в робота.
+#
+# Нарочно се пази само числото, без кой вариант е използван (компилиран или
+# скрипт). Инак се получава капан: ако компилирането веднъж не стане и се
+# запише "скрипт", следващото пускане пак ще иска компилиран, ще пресъздаде
+# приложението и ще поиска ново разрешение — при всяко обновяване, завинаги.
+WANT="3"
+HAVE="$(cat "$STAMP" 2>/dev/null || true)"
+
+if [ "$HAVE" = "$WANT" ] && [ -x "$EXEC" ]; then
+  REBUILT=0
+  ok 'Приложението остава непокътнато — разрешението му важи и занапред.'
+else
+  REBUILT=1
+  rm -rf "$APP"
+  mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+
+  cat > "$APP/Contents/Info.plist" <<'PLIST_EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -105,7 +141,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST_EOF'
   <key>CFBundleName</key>
   <string>ViberRobot</string>
   <key>CFBundleDisplayName</key>
-  <string>Viber робот</string>
+  <string>ViberRobot</string>
   <key>CFBundleIdentifier</key>
   <string>com.imotpoint.viber-robot</string>
   <key>CFBundleExecutable</key>
@@ -113,40 +149,87 @@ cat > "$APP/Contents/Info.plist" <<'PLIST_EOF'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>3</string>
   <key>CFBundleShortVersionString</key>
-  <string>1.0</string>
-  <!-- Без иконка в Dock и без прозорец: роботът работи мълчаливо. -->
+  <string>3.0</string>
   <key>LSBackgroundOnly</key>
   <true/>
-  <!-- Текстът, който macOS показва, когато поиска разрешение. -->
-  <key>NSCameraUsageDescription</key>
-  <string>Роботът снима прозореца на Viber, за да види кой чака отговор.</string>
 </dict>
 PLIST_EOF
-printf '</plist>\n' >> "$APP/Contents/Info.plist"
+  printf '</plist>\n' >> "$APP/Contents/Info.plist"
 
-cp "$AGENT" "$EXEC"
-chmod +x "$EXEC"
+  BUILT=''
+  if command -v swiftc >/dev/null 2>&1; then
+    # Истинска програма, а не скрипт. Причината е в разрешението: скриптът
+    # се изпълнява от /bin/bash и за системата програмата е bash.
+    # Компилираната програма си има собствена самоличност, а роботът, който
+    # тя пуска, наследява нейното разрешение — точно както screencapture
+    # работи от Терминала, защото Терминалът има разрешението.
+    WORK="$(mktemp -d "${TMPDIR:-/tmp}/viberlaunch.XXXXXX")"
+    # Файлът се казва main.swift нарочно: Swift позволява код направо в
+    # тялото на файла само там. С друго име компилаторът отказва.
+    SRC="$WORK/main.swift"
+    cat > "$SRC" <<'SWIFT_EOF'
+import Foundation
 
-# Подпис "на място": без него по-новите macOS не задържат разрешението и
-# то се губи при всяко пускане. Не е истински сертификат — достатъчно е
-# системата да разпознава приложението като едно и също.
-if command -v codesign >/dev/null 2>&1; then
-  if codesign --force --deep --sign - "$APP" 2>/dev/null; then
-    ok 'Приложението е подписано (за да не се губи разрешението).'
-  else
-    warn 'Подписването не стана — разрешението може да се иска повторно.'
+// Стартерът не прави нищо сам. Пуска робота и чака. Така остава
+// непроменен между обновяванията и разрешението му не се губи.
+let script = NSHomeDirectory() + "/.viber-agent/viber-agent.sh"
+
+guard FileManager.default.isReadableFile(atPath: script) else {
+    FileHandle.standardError.write(Data("няма робот на \(script)\n".utf8))
+    exit(66)
+}
+
+let robot = Process()
+robot.executableURL = URL(fileURLWithPath: "/bin/bash")
+robot.arguments = [script]
+
+do {
+    try robot.run()
+} catch {
+    FileHandle.standardError.write(Data("роботът не тръгна: \(error)\n".utf8))
+    exit(70)
+}
+
+robot.waitUntilExit()
+exit(robot.terminationStatus)
+SWIFT_EOF
+    if swiftc -O -o "$EXEC" "$SRC" >/dev/null 2>&1; then
+      BUILT='swift'
+      ok 'Стартерът е компилиран.'
+    else
+      warn 'Компилирането не стана — минавам на резервния вариант.'
+    fi
+    rm -rf "$WORK"
   fi
+
+  if [ -z "$BUILT" ]; then
+    cat > "$EXEC" <<'SHELL_EOF'
+#!/bin/bash
+# Стартер. Не се променя — робота го пази ~/.viber-agent/viber-agent.sh.
+exec /bin/bash "$HOME/.viber-agent/viber-agent.sh"
+SHELL_EOF
+  fi
+
+  chmod +x "$EXEC"
+  printf '%s' "$WANT" > "$STAMP"
+
+  # Подпис "на място": без него по-новите macOS не задържат разрешението.
+  # Не е истински сертификат — достатъчно е системата да разпознава
+  # приложението като едно и също при всяко пускане.
+  if command -v codesign >/dev/null 2>&1; then
+    if codesign --force --deep --sign - "$APP" 2>/dev/null; then
+      ok 'Приложението е подписано.'
+    else
+      warn 'Подписването не стана — разрешението може да се иска повторно.'
+    fi
+  fi
+  ok "Приложението е създадено: $APP"
 fi
-ok "Приложението е създадено: $APP"
 
 # ── Автоматичното пускане ──────────────────────────────────────────────
 
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.viber-agent"
-
-# Пуска се ИЗПЪЛНИМИЯТ ФАЙЛ НА ПРИЛОЖЕНИЕТО, не bash със скрипт като аргумент.
-# Така macOS вижда ViberRobot, а не /bin/bash, и разрешението важи.
 cat > "$PLIST" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -164,7 +247,7 @@ cat > "$PLIST" <<PLIST_EOF
   <key>KeepAlive</key>
   <true/>
   <key>StandardErrorPath</key>
-  <string>$HOME/.viber-agent/launchd.log</string>
+  <string>$STATE_DIR/launchd.log</string>
 </dict>
 </plist>
 PLIST_EOF
@@ -176,25 +259,29 @@ if launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null \
   ok 'Роботът работи.'
 else
   bad 'Роботът не тръгна.'
-  info "Виж $HOME/.viber-agent/launchd.log"
+  info "Виж $STATE_DIR/launchd.log"
   exit 1
 fi
 
 printf '\n'
-printf '  ━━━ ОСТАВА ЕДНО РАЗРЕШЕНИЕ ━━━\n\n'
-info 'Дай го на "ViberRobot" — НЕ на Терминала. Разрешението важи за'
-info 'програмата, която снима, а вече това е роботът.'
-info ''
-info 'System Settings → Privacy & Security → Screen & System Audio Recording'
-info '  → бутон "+" → папката Applications в твоята домашна папка'
-info '  → избери ViberRobot → включи ключето'
-info ''
-info 'Ако не се вижда в прозореца за избор, натисни ⌘⇧G и напиши:'
-info "  $APP"
-info ''
-info 'Accessibility НЕ му трябва — роботът вече намира прозореца другояче.'
-info 'Ако си добавил "bash" някъде в разрешенията, можеш да го махнеш.'
+if [ "$REBUILT" = "1" ]; then
+  printf '  ━━━ ОСТАВА ЕДНО РАЗРЕШЕНИЕ (ПОСЛЕДЕН ПЪТ) ━━━\n\n'
+  info 'Приложението е ново, затова macOS иска разрешението наново.'
+  info 'Оттук нататък обновяванията НЕ го пипат и това няма да се повтаря.'
+  info ''
+  info 'System Settings → Privacy & Security → Screen & System Audio Recording'
+  info '  1. ако там вече пише ViberRobot — махни го с бутона "−"'
+  info '  2. бутон "+" → ⌘⇧G → залепи:'
+  info "       $APP"
+  info '  3. избери ViberRobot → включи ключето'
+  info ''
+  info 'После:'
+  info "  launchctl kickstart -k gui/\$(id -u)/$LABEL"
+else
+  printf '  ━━━ ГОТОВО ━━━\n\n'
+  info 'Приложението не е пипано, значи разрешението му важи.'
+fi
 printf '\n'
-info "Какво прави:  tail -20 ~/.viber-agent/agent.log"
+info "Какво прави:  tail -20 $STATE_DIR/agent.log"
 info 'Спиране:      bash install.sh --махни'
 printf '\n'
