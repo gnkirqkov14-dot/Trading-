@@ -275,6 +275,21 @@ export interface Database {
         /** Оставащи въпроси за деня; -1 = лимитът е изчерпан. */
         Returns: number;
       };
+      viber_ingest: {
+        Args: {
+          agent_token_hash: string;
+          chats: Array<{
+            name: string;
+            preview: string;
+            time_label: string;
+            last_from_me: boolean;
+            unread_count: number;
+          }>;
+          min_interval_seconds?: number;
+        };
+        /** Брой приети разговора; -1 = наблюдението е твърде скоро след предишното. */
+        Returns: number;
+      };
     };
     Enums: {
       subscription_plan: SubscriptionPlan;
