@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ViberAsk } from "@/components/viber-ask";
 import { getAuthedUser } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 
@@ -129,6 +130,8 @@ export default async function ViberPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <h1 className="font-display text-3xl text-brand-600">Viber</h1>
+
+      {chats.length > 0 && <ViberAsk />}
 
       {chats.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-slate-300 p-6 text-slate-600">

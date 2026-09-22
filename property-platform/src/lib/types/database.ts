@@ -341,6 +341,19 @@ export interface Database {
         /** 2 = може + прагът за разход е прекрачен сега; 1 = може. */
         Returns: number;
       };
+      /**
+       * Иска разрешение за въпрос ПРЕДИ извикването на модела.
+       * 2 = може + прагът за разход е прекрачен сега; 1 = може; -1 = дневният
+       * брой е изчерпан. Работи по `auth.uid()`, затова не приема собственик.
+       */
+      viber_claim_question: {
+        Args: {
+          max_per_day?: number;
+          cost_micro_eur?: number;
+          alert_at_micro_eur?: number;
+        };
+        Returns: number;
+      };
       /** Данните за писмото при прекрачен праг. Единственият път до имейла. */
       viber_spend_alert: {
         Args: { agent_token_hash: string };
