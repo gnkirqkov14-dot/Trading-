@@ -45,9 +45,10 @@ log() {
 }
 
 # Записва причина за бездействие, но само когато се СМЕНИ. Роботът върви
-# денонощно: един и същи ред, повтарян хиляди пъти, е същото като мълчание. А пълното мълчание е още по-лошо — точно то направи първата
-# диагностика невъзможна: нито грешка, нито успех, и няма как да се разбере
-# дали Viber е затворен, или нещо се е счупило.
+# денонощно: един и същи ред, повтарян хиляди пъти, е същото като мълчание.
+# А пълното мълчание е още по-лошо — точно то направи първата диагностика
+# невъзможна: нито грешка, нито успех, и няма как да се разбере дали Viber е
+# затворен, или нещо се е счупило.
 note() {
   local previous
   previous="$(cat "$REASON_FILE" 2>/dev/null || true)"
@@ -70,23 +71,37 @@ fi
 # недопустимо за поверителността. `screencapture -l` взема съдържанието на
 # самия прозорец, дори когато е отзад.
 viber_window_id() {
-  osascript -l JavaScript 2>/dev/null <<'JXA'
+  osascript -l JavaScript 2>&1 <<'JXA'
 ObjC.import('CoreGraphics');
 function run() {
-  // 1 = само видими прозорци, 16 = без елементите на работния плот.
-  // Числата са изписани нарочно: имената на тези константи не се
-  // намират надеждно през ObjC моста.
-  var windows = ObjC.deepUnwrap($.CGWindowListCopyWindowInfo(1 | 16, 0));
-  if (!windows) return '';
+  // 0 = ВСИЧКИ прозорци, не само тези на текущото работно пространство.
+  //
+  // Тук имаше дефект, открит чак на живо: с опция 1 (само видимите) целият
+  // списък се ограничава до текущия Space. Пуснат на цял екран, Viber е на
+  // СВОЙ Space — щом собственикът работи другаде, прозорецът му не се води
+  // видим и роботът не го намираше. Тоест виждаше Viber само докато човекът
+  // гледа Viber, което е безполезно.
+  //
+  // 16 = без елементите на работния плот. Числата са изписани нарочно:
+  // имената на тези константи не се намират надеждно през ObjC моста.
+  var list = $.CGWindowListCopyWindowInfo(0 | 16, 0);
+  if (!list) return 'ГРЕШКА: няма списък с прозорци';
+  var windows = ObjC.deepUnwrap(list);
+  if (!windows) return 'ГРЕШКА: списъкът не се разчита';
+
+  var best = '';
   for (var i = 0; i < windows.length; i++) {
     var w = windows[i];
     if (w.kCGWindowOwnerName !== 'Viber') continue;
     if (w.kCGWindowLayer !== 0) continue;          // панели и подсказки
     var b = w.kCGWindowBounds;
     if (!b || b.Width < 400 || b.Height < 300) continue;  // не е главният
-    return String(w.kCGWindowNumber);
+    // Видимият прозорец е за предпочитане: свитият в Dock може да върне
+    // остаряло съдържание. Но ако друг няма, по-добре остарял от никакъв.
+    if (w.kCGWindowIsOnscreen) return String(w.kCGWindowNumber);
+    if (!best) best = String(w.kCGWindowNumber);
   }
-  return '';
+  return best;
 }
 JXA
 }
@@ -98,7 +113,15 @@ one_round() {
   fi
 
   local winid
-  winid="$(viber_window_id | tr -d '[:space:]')"
+  winid="$(viber_window_id)"
+  case "$winid" in
+    *ГРЕШКА*|*error*|*Error*)
+      # Скриването на тези грешки (2>/dev/null) ме остави сляп при първата
+      # диагностика: счупен JXA изглеждаше точно като затворен прозорец.
+      note "търсенето на прозореца гръмна: $(printf '%s' "$winid" | head -c 160)"
+      return 0 ;;
+  esac
+  winid="$(printf '%s' "$winid" | tr -d '[:space:]')"
   case "$winid" in
     [0-9]*) ;;
     *)
