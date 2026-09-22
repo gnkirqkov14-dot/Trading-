@@ -237,56 +237,6 @@ export interface Database {
           banned_at?: string;
         }
       >;
-      // Състояние на разговорите във Viber — пълни се от робота през
-      // `viber_ingest`, чете се само от собственика (виж 0027).
-      viber_chats: Table<
-        {
-          id: string;
-          owner_id: string;
-          chat_key: string;
-          display_name: string;
-          last_preview: string | null;
-          last_time_label: string | null;
-          /** NULL = роботът не е разпознал кой е писал последен (виж 0030). */
-          last_from_me: boolean | null;
-          kind: "person" | "group";
-          unread_count: number;
-          waiting_since: string | null;
-          first_seen_at: string;
-          updated_at: string;
-        },
-        {
-          owner_id: string;
-          chat_key: string;
-          display_name: string;
-          last_preview?: string | null;
-          last_time_label?: string | null;
-          last_from_me?: boolean | null;
-          kind?: "person" | "group";
-          unread_count?: number;
-          waiting_since?: string | null;
-        }
-      >;
-      viber_observations: Table<
-        {
-          id: number;
-          owner_id: string;
-          chat_key: string;
-          observed_at: string;
-          preview: string | null;
-          time_label: string | null;
-          last_from_me: boolean | null;
-          unread_count: number | null;
-        },
-        {
-          owner_id: string;
-          chat_key: string;
-          preview?: string | null;
-          time_label?: string | null;
-          last_from_me?: boolean | null;
-          unread_count?: number | null;
-        }
-      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -323,60 +273,6 @@ export interface Database {
       assistant_consume_quota: {
         Args: { visitor: string; daily_limit: number };
         /** Оставащи въпроси за деня; -1 = лимитът е изчерпан. */
-        Returns: number;
-      };
-      /**
-       * Иска разрешение за разход ПРЕДИ извикването на модела.
-       * 1 = може; -1 твърде рано; -2 часови таван; -3 дневен таван.
-       */
-      viber_claim_slot: {
-        Args: {
-          agent_token_hash: string;
-          min_interval_seconds?: number;
-          max_calls_per_hour?: number;
-          max_calls_per_day?: number;
-          cost_micro_eur?: number;
-          alert_at_micro_eur?: number;
-        };
-        /** 2 = може + прагът за разход е прекрачен сега; 1 = може. */
-        Returns: number;
-      };
-      /**
-       * Иска разрешение за въпрос ПРЕДИ извикването на модела.
-       * 2 = може + прагът за разход е прекрачен сега; 1 = може; -1 = дневният
-       * брой е изчерпан. Работи по `auth.uid()`, затова не приема собственик.
-       */
-      viber_claim_question: {
-        Args: {
-          max_per_day?: number;
-          cost_micro_eur?: number;
-          alert_at_micro_eur?: number;
-        };
-        Returns: number;
-      };
-      /** Данните за писмото при прекрачен праг. Единственият път до имейла. */
-      viber_spend_alert: {
-        Args: { agent_token_hash: string };
-        Returns: Array<{
-          owner_email: string | null;
-          spend_eur: number;
-          calls_today: number;
-        }>;
-      };
-      viber_ingest: {
-        Args: {
-          agent_token_hash: string;
-          chats: Array<{
-            name: string;
-            preview: string;
-            time_label: string;
-            /** 'me' | 'them' | 'unclear' — три стойности, не две (виж 0030). */
-            last_sender: "me" | "them" | "unclear";
-            kind: "person" | "group";
-            unread_count: number;
-          }>;
-        };
-        /** Брой записани разговора. */
         Returns: number;
       };
     };

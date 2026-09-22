@@ -50,9 +50,6 @@ export default async function DashboardPage({
             >
               Настройки на профила
             </Link>
-            <Link href="/dashboard/viber" className="underline hover:text-slate-900">
-              Viber — кой чака отговор
-            </Link>
           </div>
         </div>
         <Link
