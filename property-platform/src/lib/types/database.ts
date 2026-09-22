@@ -237,6 +237,53 @@ export interface Database {
           banned_at?: string;
         }
       >;
+      // Състояние на разговорите във Viber — пълни се от робота през
+      // `viber_ingest`, чете се само от собственика (виж 0027).
+      viber_chats: Table<
+        {
+          id: string;
+          owner_id: string;
+          chat_key: string;
+          display_name: string;
+          last_preview: string | null;
+          last_time_label: string | null;
+          last_from_me: boolean;
+          unread_count: number;
+          waiting_since: string | null;
+          first_seen_at: string;
+          updated_at: string;
+        },
+        {
+          owner_id: string;
+          chat_key: string;
+          display_name: string;
+          last_preview?: string | null;
+          last_time_label?: string | null;
+          last_from_me?: boolean;
+          unread_count?: number;
+          waiting_since?: string | null;
+        }
+      >;
+      viber_observations: Table<
+        {
+          id: number;
+          owner_id: string;
+          chat_key: string;
+          observed_at: string;
+          preview: string | null;
+          time_label: string | null;
+          last_from_me: boolean | null;
+          unread_count: number | null;
+        },
+        {
+          owner_id: string;
+          chat_key: string;
+          preview?: string | null;
+          time_label?: string | null;
+          last_from_me?: boolean | null;
+          unread_count?: number | null;
+        }
+      >;
     };
     Views: Record<string, never>;
     Functions: {
