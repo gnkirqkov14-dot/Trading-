@@ -84,11 +84,11 @@ alter table public.viber_agents enable row level security;
 alter table public.viber_chats enable row level security;
 alter table public.viber_observations enable row level security;
 
-create policy "Собственикът вижда своите разговори"
+create policy "Собственикът чете разговорите"
   on public.viber_chats for select
   using (auth.uid() = owner_id);
 
-create policy "Собственикът вижда своите наблюдения"
+create policy "Собственикът чете наблюденията"
   on public.viber_observations for select
   using (auth.uid() = owner_id);
 
@@ -120,7 +120,6 @@ declare
   accepted integer := 0;
   key text;
   from_me boolean;
-  previous_from_me boolean;
 begin
   -- Хешът идва от сървъра; всичко друго значи или бъг, или чужда заявка.
   if agent_token_hash is null or agent_token_hash !~ '^[0-9a-f]{64}$' then
@@ -157,10 +156,6 @@ begin
     continue when key = '';
 
     from_me := coalesce((item ->> 'last_from_me')::boolean, false);
-
-    select c.last_from_me into previous_from_me
-      from public.viber_chats c
-      where c.owner_id = owner and c.chat_key = key;
 
     insert into public.viber_chats as c (
       owner_id, chat_key, display_name, last_preview, last_time_label,
