@@ -30,6 +30,7 @@ VIBER_INTERVAL="${VIBER_INTERVAL:-120}"
 
 STATE_DIR="$HOME/.viber-agent"
 LAST_HASH_FILE="$STATE_DIR/last-hash"
+REASON_FILE="$STATE_DIR/last-reason"
 LOG="$STATE_DIR/agent.log"
 
 mkdir -p "$STATE_DIR"
@@ -40,6 +41,20 @@ log() {
   # докато нещо не се счупи.
   if [ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 5000 ]; then
     tail -n 2000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+  fi
+}
+
+# Записва причина за бездействие, но само когато се СМЕНИ. Роботът върви на
+# всеки две минути, денонощно: един и същи ред, повтарян хиляди пъти, е същото
+# като мълчание. А пълното мълчание е още по-лошо — точно то направи първата
+# диагностика невъзможна: нито грешка, нито успех, и няма как да се разбере
+# дали Viber е затворен, или нещо се е счупило.
+note() {
+  local previous
+  previous="$(cat "$REASON_FILE" 2>/dev/null || true)"
+  if [ "$previous" != "$1" ]; then
+    printf '%s' "$1" > "$REASON_FILE"
+    [ -n "$1" ] && log "$1"
   fi
 }
 
@@ -66,14 +81,20 @@ APPLESCRIPT
 
 one_round() {
   if ! pgrep -qx 'Viber' 2>/dev/null; then
-    return 0   # Viber е затворен — нормално състояние, не грешка.
+    note 'Viber е затворен — чакам да го отвориш'
+    return 0
   fi
 
   local bounds
   bounds="$(viber_window_bounds)"
   case "$bounds" in
     [0-9-]*,*,*,*) ;;
-    *) return 0 ;;   # няма отворен прозорец
+    *'not allowed'*|*-25211*)
+      note 'няма разрешение за достъпност (Accessibility) за ViberRobot'
+      return 0 ;;
+    *)
+      note 'Viber работи, но няма отворен прозорец'
+      return 0 ;;
   esac
 
   local shot="$STATE_DIR/shot.png"
@@ -82,12 +103,15 @@ one_round() {
   screencapture -x -R "$bounds" "$shot" 2>/dev/null
 
   if [ ! -s "$shot" ]; then
-    log "снимката не се получи — липсва ли разрешение за запис на екрана?"
+    note 'снимката излиза празна — няма разрешение за запис на екрана (Screen Recording) за ViberRobot'
     return 0
   fi
 
   # Най-важната спирачка за сметката: непроменен екран = нищо не се праща.
   # Повечето цикли през деня свършват точно тук и не струват нищо.
+  # Снимката стана — каквото и да е спирало преди, вече не спира.
+  note ''
+
   local hash previous
   hash="$(shasum -a 256 "$shot" | cut -d' ' -f1)"
   previous="$(cat "$LAST_HASH_FILE" 2>/dev/null || true)"
