@@ -332,8 +332,20 @@ export interface Database {
           min_interval_seconds?: number;
           max_calls_per_hour?: number;
           max_calls_per_day?: number;
+          cost_micro_eur?: number;
+          alert_at_micro_eur?: number;
         };
+        /** 2 = може + прагът за разход е прекрачен сега; 1 = може. */
         Returns: number;
+      };
+      /** Данните за писмото при прекрачен праг. Единственият път до имейла. */
+      viber_spend_alert: {
+        Args: { agent_token_hash: string };
+        Returns: Array<{
+          owner_email: string | null;
+          spend_eur: number;
+          calls_today: number;
+        }>;
       };
       viber_ingest: {
         Args: {

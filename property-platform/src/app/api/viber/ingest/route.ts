@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import { sendViberSpendAlertEmail } from "@/lib/email";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -34,6 +35,12 @@ import { createClient } from "@/lib/supabase/server";
 // Онова се вика, когато собственикът попита нещо — рядко, и там си струва
 // по-силен модел. Двете задачи нарочно не делят един избор.
 const MODEL = "claude-haiku-4-5";
+
+/** `viber_claim_slot` връща това, когато прагът за разход е прекрачен сега. */
+const SLOT_CROSSED_ALERT = 2;
+
+/** Прагът, при който собственикът иска писмо. Трябва да съвпада с 0029. */
+const SPEND_ALERT_EUR = 5;
 
 /** Списъкът е десетина реда; повече изход значи сгрешено разчитане. */
 const MAX_OUTPUT_TOKENS = 4096;
@@ -187,6 +194,28 @@ export async function POST(request: Request) {
   };
   if (typeof slot === "number" && slot < 1) {
     return Response.json({ accepted: 0, skipped: BRAKES[slot] ?? "спряно" });
+  }
+
+  // 2 = разрешено И прагът за разход току-що беше прекрачен. Базата вече е
+  // отбелязала, че сигналът е пратен за този месец, затова писмото тръгва
+  // само тук и само веднъж.
+  if (slot === SLOT_CROSSED_ALERT) {
+    const { data: rows } = await supabase.rpc("viber_spend_alert", {
+      agent_token_hash: createHash("sha256").update(token).digest("hex"),
+    });
+    const alert = rows?.[0];
+    if (alert) {
+      // Писмото не бива да проваля наблюдението: снимката вече е платена и
+      // заслужава да бъде записана, дори Resend да не отговори.
+      await sendViberSpendAlertEmail({
+        ownerEmail: alert.owner_email,
+        spentEur: Number(alert.spend_eur),
+        callsToday: alert.calls_today,
+        thresholdEur: SPEND_ALERT_EUR,
+      }).catch((error) => {
+        console.error("viber/ingest: сигналът за разход не беше изпратен", error);
+      });
+    }
   }
 
   const anthropic = new Anthropic();

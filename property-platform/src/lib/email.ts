@@ -60,3 +60,52 @@ export async function sendListingReminderEmail(row: ListingReminderRow) {
     throw new Error(`Resend error ${res.status}: ${await res.text()}`);
   }
 }
+
+/**
+ * Сигнал, че Viber роботът е похарчил над прага за месеца.
+ *
+ * ⚠️ Това НЕ е сметка, а оценка: Anthropic връща изразходваните токени, но
+ * базата не ги вижда, затова разходът се брои по приблизителна цена на
+ * разчитане. Писмото го казва изрично, за да не се чете като фактура.
+ *
+ * Праща се веднъж на календарен месец (базата пази кога) — иначе всяко
+ * следващо разчитане над прага праща ново писмо и собственикът спира да
+ * ги чете точно когато не трябва.
+ */
+export async function sendViberSpendAlertEmail(alert: {
+  ownerEmail: string | null;
+  spentEur: number;
+  callsToday: number;
+  thresholdEur: number;
+}) {
+  if (!process.env.RESEND_API_KEY || !alert.ownerEmail) return;
+
+  const html = `
+    <p>Viber роботът е похарчил около <strong>${alert.spentEur.toFixed(2)} €</strong>
+    този месец — прагът, който зададе, е ${alert.thresholdEur} €.</p>
+    <p>Днес е направил <strong>${alert.callsToday}</strong> разчитания на екрана.</p>
+    <p>Това е <em>оценка</em>, не сметка. Истинският разход виж в
+    <a href="https://console.anthropic.com/settings/usage">console.anthropic.com</a>.</p>
+    <p>Роботът продължава да работи — таванът (3 разчитания на час, 40 на ден)
+    не е достигнат. Ако искаш да спре или да чете по-рядко, кажи.</p>
+    <p><a href="${SITE_URL}/dashboard/viber">Виж кой чака отговор</a></p>
+  `;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: alert.ownerEmail,
+      subject: `Viber роботът стигна ${alert.thresholdEur} € този месец`,
+      html,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+  }
+}
