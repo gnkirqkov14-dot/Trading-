@@ -181,18 +181,19 @@ else
 fi
 
 printf '\n'
-printf '  ━━━ ОСТАВА ЕДНО, И Е ВАЖНО ━━━\n\n'
-info 'Дай разрешения на "ViberRobot" — НЕ на Терминала.'
-info 'Разрешението важи за програмата, която снима, а вече това е роботът.'
+printf '  ━━━ ОСТАВА ЕДНО РАЗРЕШЕНИЕ ━━━\n\n'
+info 'Дай го на "ViberRobot" — НЕ на Терминала. Разрешението важи за'
+info 'програмата, която снима, а вече това е роботът.'
 info ''
 info 'System Settings → Privacy & Security → Screen & System Audio Recording'
-info '  → бутон "+" → отвори папката Applications в твоята домашна папка'
-info "  → избери ViberRobot → включи ключето"
+info '  → бутон "+" → папката Applications в твоята домашна папка'
+info '  → избери ViberRobot → включи ключето'
 info ''
-info 'Същото и в Accessibility.'
-info ''
-info 'Ако ViberRobot не се вижда в прозореца за избор, натисни ⌘⇧G и напиши:'
+info 'Ако не се вижда в прозореца за избор, натисни ⌘⇧G и напиши:'
 info "  $APP"
+info ''
+info 'Accessibility НЕ му трябва — роботът вече намира прозореца другояче.'
+info 'Ако си добавил "bash" някъде в разрешенията, можеш да го махнеш.'
 printf '\n'
 info "Какво прави:  tail -20 ~/.viber-agent/agent.log"
 info 'Спиране:      bash install.sh --махни'

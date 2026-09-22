@@ -63,20 +63,33 @@ if [ -z "$VIBER_INGEST_URL" ] || [ -z "$VIBER_AGENT_TOKEN" ]; then
   exit 1
 fi
 
-# Връща "x,y,w,h" на прозореца на Viber, или празно, ако го няма.
-viber_window_bounds() {
-  osascript 2>/dev/null <<'APPLESCRIPT'
-tell application "System Events"
-	if not (exists process "Viber") then return ""
-	tell process "Viber"
-		if (count of windows) is 0 then return ""
-		set p to position of window 1
-		set s to size of window 1
-		return (item 1 of p as text) & "," & (item 2 of p as text) & "," & ¬
-		       (item 1 of s as text) & "," & (item 2 of s as text)
-	end tell
-end tell
-APPLESCRIPT
+# Връща номера на прозореца на Viber, или празно, ако го няма.
+#
+# Защо номер на прозорец, а не правоъгълник от екрана: `screencapture -R`
+# снима КАКВОТО Е НА ТОВА МЯСТО, а не конкретния прозорец. Работи ли човекът
+# нещо върху Viber, роботът би изпратил чуждия прозорец — и грешно, и
+# недопустимо за поверителността. `screencapture -l` взема съдържанието на
+# самия прозорец, дори когато е отзад.
+viber_window_id() {
+  osascript -l JavaScript 2>/dev/null <<'JXA'
+ObjC.import('CoreGraphics');
+function run() {
+  // 1 = само видими прозорци, 16 = без елементите на работния плот.
+  // Числата са изписани нарочно: имената на тези константи не се
+  // намират надеждно през ObjC моста.
+  var windows = ObjC.deepUnwrap($.CGWindowListCopyWindowInfo(1 | 16, 0));
+  if (!windows) return '';
+  for (var i = 0; i < windows.length; i++) {
+    var w = windows[i];
+    if (w.kCGWindowOwnerName !== 'Viber') continue;
+    if (w.kCGWindowLayer !== 0) continue;          // панели и подсказки
+    var b = w.kCGWindowBounds;
+    if (!b || b.Width < 400 || b.Height < 300) continue;  // не е главният
+    return String(w.kCGWindowNumber);
+  }
+  return '';
+}
+JXA
 }
 
 one_round() {
@@ -85,22 +98,22 @@ one_round() {
     return 0
   fi
 
-  local bounds
-  bounds="$(viber_window_bounds)"
-  case "$bounds" in
-    [0-9-]*,*,*,*) ;;
-    *'not allowed'*|*-25211*)
-      note 'няма разрешение за достъпност (Accessibility) за ViberRobot'
-      return 0 ;;
+  local winid
+  winid="$(viber_window_id | tr -d '[:space:]')"
+  case "$winid" in
+    [0-9]*) ;;
     *)
-      note 'Viber работи, но няма отворен прозорец'
+      note 'Viber работи, но прозорецът му не се вижда (свит в Dock?)'
       return 0 ;;
   esac
 
   local shot="$STATE_DIR/shot.png"
   rm -f "$shot"
-  # -x: без звук и без трепване на екрана. Човекът не бива да усеща робота.
-  screencapture -x -R "$bounds" "$shot" 2>/dev/null
+  # -x: без звук и без трепване — човекът не бива да усеща робота.
+  # -l: точно този прозорец, а не мястото му на екрана, за да може
+  #     собственикът да работи върху Viber, без роботът да снима него.
+  # -o: без сянката около прозореца.
+  screencapture -x -o -l "$winid" "$shot" 2>/dev/null
 
   if [ ! -s "$shot" ]; then
     note 'снимката излиза празна — няма разрешение за запис на екрана (Screen Recording) за ViberRobot'
