@@ -20,6 +20,7 @@ import type {
   ListingDealType,
   PropertyType,
 } from "@/lib/types/database";
+import type { ListingDraft } from "@/lib/listing-draft";
 
 type Neighborhood = { id: string; city_id: string; name: string };
 
@@ -27,34 +28,49 @@ export function NewListingForm({
   userId,
   neighborhoods,
   profilePhone,
+  draft = null,
+  initialPhotos = [],
 }: {
   userId: string;
   neighborhoods: Neighborhood[];
   profilePhone: string;
+  /**
+   * Черновата от въпросника (`ai-listing-wizard.tsx`). Формата е същата —
+   * само полетата идват попълнени и човекът ги поправя, вместо да ги
+   * пише от нулата.
+   */
+  draft?: ListingDraft | null;
+  initialPhotos?: File[];
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [type, setType] = useState<ListingDealType>("rent");
-  const [propertyType, setPropertyType] = useState<PropertyType>("apartment");
-  const [settlement, setSettlement] = useState<Settlement | null>(null);
-  const [neighborhoodId, setNeighborhoodId] = useState("");
+  const [type, setType] = useState<ListingDealType>(draft?.type ?? "rent");
+  const [propertyType, setPropertyType] = useState<PropertyType>(
+    draft?.propertyType ?? "apartment",
+  );
+  const [settlement, setSettlement] = useState<Settlement | null>(
+    draft?.settlement ?? null,
+  );
+  const [neighborhoodId, setNeighborhoodId] = useState(
+    draft?.neighborhoodId ?? "",
+  );
   const cityId = settlement?.id ?? "";
-  const [price, setPrice] = useState("");
-  const [areaSqm, setAreaSqm] = useState("");
-  const [rooms, setRooms] = useState("");
-  const [floor, setFloor] = useState("");
-  const [yearBuilt, setYearBuilt] = useState("");
-  const [heating, setHeating] = useState("");
-  const [hasParking, setHasParking] = useState(false);
-  const [hasElevator, setHasElevator] = useState(false);
-  const [hasTerrace, setHasTerrace] = useState(false);
-  const [isFurnished, setIsFurnished] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [address, setAddress] = useState("");
+  const [price, setPrice] = useState(draft?.price ?? "");
+  const [areaSqm, setAreaSqm] = useState(draft?.areaSqm ?? "");
+  const [rooms, setRooms] = useState(draft?.rooms ?? "");
+  const [floor, setFloor] = useState(draft?.floor ?? "");
+  const [yearBuilt, setYearBuilt] = useState(draft?.yearBuilt ?? "");
+  const [heating, setHeating] = useState(draft?.heating ?? "");
+  const [hasParking, setHasParking] = useState(draft?.hasParking ?? false);
+  const [hasElevator, setHasElevator] = useState(draft?.hasElevator ?? false);
+  const [hasTerrace, setHasTerrace] = useState(draft?.hasTerrace ?? false);
+  const [isFurnished, setIsFurnished] = useState(draft?.isFurnished ?? false);
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [address, setAddress] = useState(draft?.address ?? "");
   const [videoUrl, setVideoUrl] = useState("");
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<File[]>(initialPhotos);
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -177,6 +193,24 @@ export function NewListingForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+      {draft && (
+        // Черновата е предложение, не готова обява — казваме го ясно и
+        // изброяваме какво помощникът не е успял да разбере, за да знае
+        // човекът къде точно да погледне.
+        <section className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <p className="font-medium">
+            Попълних каквото разбрах. Провери и поправи, преди да публикуваш.
+          </p>
+          {draft.notes.length > 0 && (
+            <ul className="mt-2 list-inside list-disc text-emerald-800">
+              {draft.notes.map((note, index) => (
+                <li key={index}>{note}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Тип сделка</label>

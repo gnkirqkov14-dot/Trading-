@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_LISTING_LIMIT, SUPPORT_EMAIL } from "@/lib/listing-labels";
-import { NewListingForm } from "@/components/new-listing-form";
+import { NewListingMode } from "@/components/new-listing-mode";
 
 export const metadata: Metadata = { title: "Нова обява" };
 
@@ -28,7 +28,7 @@ export default async function NewListingPage() {
   const atLimit = listingCount >= listingLimit;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-semibold">Нова обява</h1>
       {atLimit ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
@@ -38,10 +38,13 @@ export default async function NewListingPage() {
           лимита ти.
         </p>
       ) : (
-        <NewListingForm
+        <NewListingMode
           userId={user.id}
           neighborhoods={neighborhoods ?? []}
           profilePhone={profile?.phone ?? ""}
+          // Ключът никога не стига до браузъра — оттук тръгва само дали
+          // въпросникът изобщо да се показва.
+          aiEnabled={Boolean(process.env.ANTHROPIC_API_KEY)}
         />
       )}
     </div>
