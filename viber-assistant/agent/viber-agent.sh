@@ -86,13 +86,23 @@ function run() {
   // имената на тези константи не се намират надеждно през ObjC моста.
   var list = $.CGWindowListCopyWindowInfo(0 | 16, 0);
   if (!list) return 'ГРЕШКА: няма списък с прозорци';
-  var windows = ObjC.deepUnwrap(list);
-  if (!windows) return 'ГРЕШКА: списъкът не се разчита';
+  // castRefToObject е задължителен: CGWindowListCopyWindowInfo връща
+  // CF-указател, а deepUnwrap сам не го разпознава и дава undefined.
+  // Проверено на живата машина — без него целият списък е невидим.
+  var windows = ObjC.deepUnwrap(ObjC.castRefToObject(list));
+  if (!windows || windows.length === undefined) {
+    return 'ГРЕШКА: списъкът не се разчита';
+  }
 
   var best = '';
   for (var i = 0; i < windows.length; i++) {
     var w = windows[i];
-    if (w.kCGWindowOwnerName !== 'Viber') continue;
+    // Програмата се води "Rakuten Viber", не "Viber" — точното сравнение
+    // никога не съвпадаше. Процесът обаче е "Viber", затова pgrep го
+    // намираше и изглеждаше, че всичко е наред. Два различни низа за едно
+    // и също нещо; затова тук се търси съвпадение по част от името.
+    var owner = w.kCGWindowOwnerName;
+    if (!owner || owner.indexOf('Viber') === -1) continue;
     if (w.kCGWindowLayer !== 0) continue;          // панели и подсказки
     var b = w.kCGWindowBounds;
     if (!b || b.Width < 400 || b.Height < 300) continue;  // не е главният
