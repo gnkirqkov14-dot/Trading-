@@ -78,7 +78,7 @@ cat > "$CONFIG" <<CONF
 # Настройки на Viber робота. Съдържа таен токен — не споделяй този файл.
 VIBER_INGEST_URL="$URL"
 VIBER_AGENT_TOKEN="$TOKEN"
-VIBER_INTERVAL="120"
+VIBER_INTERVAL="1200"
 CONF
 chmod 600 "$CONFIG"
 # Стеснената маска важеше само за файла с токена. Приложението отдолу трябва

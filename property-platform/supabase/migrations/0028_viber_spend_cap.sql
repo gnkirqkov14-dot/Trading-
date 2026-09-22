@@ -39,8 +39,8 @@ comment on column public.viber_agents.calls_today is
 create or replace function public.viber_claim_slot(
   agent_token_hash text,
   min_interval_seconds integer default 45,
-  max_calls_per_hour integer default 6,
-  max_calls_per_day integer default 60
+  max_calls_per_hour integer default 3,
+  max_calls_per_day integer default 40
 )
 returns integer
 language plpgsql
