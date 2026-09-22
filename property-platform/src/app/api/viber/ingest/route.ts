@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import { sendViberSpendAlertEmail } from "@/lib/email";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -11,17 +12,35 @@ import { createClient } from "@/lib/supabase/server";
  * Viber е на Qt и не излага съдържанието си за достъпност. Остава само това,
  * което приложението рисува на екрана.
  *
- * ⚠️ Второто място в проекта, което харчи пари — като помощника. Спирачките са
- * три: роботът НЕ качва непроменена снимка (сравнява хеш преди изпращане),
- * `viber_ingest` отказва по-често от веднъж на 45 секунди, и размерът на
- * снимката е ограничен тук. Плюс `effort: "low"` — разчитането на списък с
- * имена и часове не изисква дълбоко мислене.
+ * ⚠️ Второто място в проекта, което харчи пари — като помощника. Спирачките
+ * са подредени от евтина към скъпа:
+ *   1. роботът не качва непроменена снимка (сравнява хеш на своята машина);
+ *   2. `viber_claim_slot` решава МОЖЕ ЛИ ДА СЕ ХАРЧИ — и се вика ПРЕДИ модела;
+ *   3. размерът на снимката е ограничен тук.
+ *
+ * Първата версия проверяваше тавана след извикването на модела: парите вече
+ * бяха похарчени, а заявката се отхвърляше след това. Редът е същността на
+ * спирачката, не самото число.
  *
  * `ANTHROPIC_API_KEY` никога не напуска сървъра — затова роботът праща
- * снимката насам, вместо да говори с Anthropic сам.
+ * снимката насам, вместо да говори с Anthropic сам. Този ключ се плаща
+ * отделно, на токен; абонаментът на собственика за Claude не го покрива.
  */
 
-const MODEL = "claude-opus-5";
+// Разчитането на списък с чатове е механична работа: имена, часове, числа
+// от ясна картинка. Не изисква дълбоко мислене, а върви десетки пъти на ден,
+// тоест цената се умножава. Затова тук е най-евтиният годен модел.
+//
+// ⚠️ Това НЕ е моделът за отговаряне на въпроси върху кореспонденцията.
+// Онова се вика, когато собственикът попита нещо — рядко, и там си струва
+// по-силен модел. Двете задачи нарочно не делят един избор.
+const MODEL = "claude-haiku-4-5";
+
+/** `viber_claim_slot` връща това, когато прагът за разход е прекрачен сега. */
+const SLOT_CROSSED_ALERT = 2;
+
+/** Прагът, при който собственикът иска писмо. Трябва да съвпада с 0029. */
+const SPEND_ALERT_EUR = 5;
 
 /** Списъкът е десетина реда; повече изход значи сгрешено разчитане. */
 const MAX_OUTPUT_TOKENS = 4096;
@@ -152,6 +171,53 @@ export async function POST(request: Request) {
     return Response.json({ error: "Снимката е твърде голяма" }, { status: 413 });
   }
 
+  // ⚠️ Разрешението се иска ПРЕДИ модела, не след него. Обратният ред беше
+  // първата версия и беше безсмислен: заявката се отхвърляше, след като
+  // парите вече са похарчени. Спирачка след разхода не спира нищо.
+  const supabase = await createClient();
+  const { data: slot, error: slotError } = await supabase.rpc("viber_claim_slot", {
+    agent_token_hash: createHash("sha256").update(token).digest("hex"),
+  });
+
+  if (slotError) {
+    console.error("viber/ingest: базата отказа запазване на място", slotError);
+    // Fail-closed: не знаем колко е похарчено днес, значи не харчим повече.
+    return Response.json({ error: "Наблюдението не беше прието" }, { status: 502 });
+  }
+
+  // Отрицателните стойности са различни спирачки, а не грешки — роботът ги
+  // отбелязва в дневника си и опитва пак по-късно.
+  const BRAKES: Record<number, string> = {
+    [-1]: "твърде рано след предишното",
+    [-2]: "часовият таван е изчерпан",
+    [-3]: "дневният таван е изчерпан",
+  };
+  if (typeof slot === "number" && slot < 1) {
+    return Response.json({ accepted: 0, skipped: BRAKES[slot] ?? "спряно" });
+  }
+
+  // 2 = разрешено И прагът за разход току-що беше прекрачен. Базата вече е
+  // отбелязала, че сигналът е пратен за този месец, затова писмото тръгва
+  // само тук и само веднъж.
+  if (slot === SLOT_CROSSED_ALERT) {
+    const { data: rows } = await supabase.rpc("viber_spend_alert", {
+      agent_token_hash: createHash("sha256").update(token).digest("hex"),
+    });
+    const alert = rows?.[0];
+    if (alert) {
+      // Писмото не бива да проваля наблюдението: снимката вече е платена и
+      // заслужава да бъде записана, дори Resend да не отговори.
+      await sendViberSpendAlertEmail({
+        ownerEmail: alert.owner_email,
+        spentEur: Number(alert.spend_eur),
+        callsToday: alert.calls_today,
+        thresholdEur: SPEND_ALERT_EUR,
+      }).catch((error) => {
+        console.error("viber/ingest: сигналът за разход не беше изпратен", error);
+      });
+    }
+  }
+
   const anthropic = new Anthropic();
   let chats: ChatRow[];
 
@@ -159,7 +225,6 @@ export async function POST(request: Request) {
     const response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_OUTPUT_TOKENS,
-      output_config: { effort: "low" },
       tools: [RECORD_CHAT_LIST],
       tool_choice: { type: "tool", name: RECORD_CHAT_LIST.name },
       messages: [
@@ -193,7 +258,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createClient();
   const { data, error } = await supabase.rpc("viber_ingest", {
     agent_token_hash: createHash("sha256").update(token).digest("hex"),
     chats,
@@ -202,11 +266,6 @@ export async function POST(request: Request) {
   if (error) {
     console.error("viber/ingest: базата отказа наблюдението", error);
     return Response.json({ error: "Наблюдението не беше прието" }, { status: 502 });
-  }
-  if (data === -1) {
-    // Не е грешка: роботът просто е избързал. Отговаряме нормално, за да не го
-    // вкараме в цикъл от повторни опити.
-    return Response.json({ accepted: 0, skipped: "твърде рано" });
   }
 
   return Response.json({ accepted: data ?? 0, seen: chats.length });
