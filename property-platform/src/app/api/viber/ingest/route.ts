@@ -152,6 +152,31 @@ export async function POST(request: Request) {
     return Response.json({ error: "Снимката е твърде голяма" }, { status: 413 });
   }
 
+  // ⚠️ Разрешението се иска ПРЕДИ модела, не след него. Обратният ред беше
+  // първата версия и беше безсмислен: заявката се отхвърляше, след като
+  // парите вече са похарчени. Спирачка след разхода не спира нищо.
+  const supabase = await createClient();
+  const { data: slot, error: slotError } = await supabase.rpc("viber_claim_slot", {
+    agent_token_hash: createHash("sha256").update(token).digest("hex"),
+  });
+
+  if (slotError) {
+    console.error("viber/ingest: базата отказа запазване на място", slotError);
+    // Fail-closed: не знаем колко е похарчено днес, значи не харчим повече.
+    return Response.json({ error: "Наблюдението не беше прието" }, { status: 502 });
+  }
+
+  // Отрицателните стойности са различни спирачки, а не грешки — роботът ги
+  // отбелязва в дневника си и опитва пак по-късно.
+  const BRAKES: Record<number, string> = {
+    [-1]: "твърде рано след предишното",
+    [-2]: "часовият таван е изчерпан",
+    [-3]: "дневният таван е изчерпан",
+  };
+  if (typeof slot === "number" && slot < 1) {
+    return Response.json({ accepted: 0, skipped: BRAKES[slot] ?? "спряно" });
+  }
+
   const anthropic = new Anthropic();
   let chats: ChatRow[];
 
@@ -193,7 +218,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createClient();
   const { data, error } = await supabase.rpc("viber_ingest", {
     agent_token_hash: createHash("sha256").update(token).digest("hex"),
     chats,
@@ -202,11 +226,6 @@ export async function POST(request: Request) {
   if (error) {
     console.error("viber/ingest: базата отказа наблюдението", error);
     return Response.json({ error: "Наблюдението не беше прието" }, { status: 502 });
-  }
-  if (data === -1) {
-    // Не е грешка: роботът просто е избързал. Отговаряме нормално, за да не го
-    // вкараме в цикъл от повторни опити.
-    return Response.json({ accepted: 0, skipped: "твърде рано" });
   }
 
   return Response.json({ accepted: data ?? 0, seen: chats.length });

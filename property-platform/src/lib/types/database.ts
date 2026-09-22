@@ -322,6 +322,19 @@ export interface Database {
         /** Оставащи въпроси за деня; -1 = лимитът е изчерпан. */
         Returns: number;
       };
+      /**
+       * Иска разрешение за разход ПРЕДИ извикването на модела.
+       * 1 = може; -1 твърде рано; -2 часови таван; -3 дневен таван.
+       */
+      viber_claim_slot: {
+        Args: {
+          agent_token_hash: string;
+          min_interval_seconds?: number;
+          max_calls_per_hour?: number;
+          max_calls_per_day?: number;
+        };
+        Returns: number;
+      };
       viber_ingest: {
         Args: {
           agent_token_hash: string;
@@ -332,9 +345,8 @@ export interface Database {
             last_from_me: boolean;
             unread_count: number;
           }>;
-          min_interval_seconds?: number;
         };
-        /** Брой приети разговора; -1 = наблюдението е твърде скоро след предишното. */
+        /** Брой записани разговора. */
         Returns: number;
       };
     };
