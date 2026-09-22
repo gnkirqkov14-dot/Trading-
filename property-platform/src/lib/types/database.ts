@@ -247,7 +247,9 @@ export interface Database {
           display_name: string;
           last_preview: string | null;
           last_time_label: string | null;
-          last_from_me: boolean;
+          /** NULL = роботът не е разпознал кой е писал последен (виж 0030). */
+          last_from_me: boolean | null;
+          kind: "person" | "group";
           unread_count: number;
           waiting_since: string | null;
           first_seen_at: string;
@@ -259,7 +261,8 @@ export interface Database {
           display_name: string;
           last_preview?: string | null;
           last_time_label?: string | null;
-          last_from_me?: boolean;
+          last_from_me?: boolean | null;
+          kind?: "person" | "group";
           unread_count?: number;
           waiting_since?: string | null;
         }
@@ -354,7 +357,9 @@ export interface Database {
             name: string;
             preview: string;
             time_label: string;
-            last_from_me: boolean;
+            /** 'me' | 'them' | 'unclear' — три стойности, не две (виж 0030). */
+            last_sender: "me" | "them" | "unclear";
+            kind: "person" | "group";
             unread_count: number;
           }>;
         };

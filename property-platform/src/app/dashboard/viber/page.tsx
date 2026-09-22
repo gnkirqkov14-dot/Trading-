@@ -8,6 +8,13 @@ import { createClient } from "@/lib/supabase/server";
  * Едно нещо е важното на тази страница: **кой чака отговор и откога**.
  * Всичко останало е контекст, затова стои отдолу и по-бледо.
  *
+ * ⚠️ Три състояния, не две. Първата версия делеше разговорите на "чака" и
+ * "отговорено" — и това беше дефект, не опростяване: щом роботът не успее да
+ * разпознае кой е писал последен, единственото, което можеше да каже, беше
+ * "клиентът" — тоест "чака те". На живо 16 от 17 разговора излязоха чакащи.
+ * Затова "не е ясно" вече е отделен раздел: по-полезно е да видиш, че роботът
+ * не е разчел, отколкото да ти покаже измислен чакащ.
+ *
  * Роботът вижда само списъка с чатове, не самите разговори — виж
  * `api/viber/ingest/route.ts` защо. Затова тук няма текст на съобщения,
  * а само откъса, който Viber сам показва в списъка.
@@ -17,14 +24,16 @@ export const metadata: Metadata = { title: "Viber" };
 
 // Данните идват от робот, който може да е спрял. Страница, която показва
 // вчерашно състояние като днешно, е по-лоша от празна.
-const ROBOT_STALE_MINUTES = 15;
+const ROBOT_STALE_MINUTES = 25;
 
 type ViberChat = {
   chat_key: string;
   display_name: string;
   last_preview: string | null;
   last_time_label: string | null;
-  last_from_me: boolean;
+  /** NULL = роботът не е разпознал кой е писал последен. */
+  last_from_me: boolean | null;
+  kind: "person" | "group";
   unread_count: number;
   waiting_since: string | null;
   updated_at: string;
@@ -60,7 +69,17 @@ type PreparedChat = ViberChat & { waitedLabel: string; urgency: string };
  */
 function prepare(chats: ViberChat[]) {
   const nowMs = Date.now();
-  const waiting: PreparedChat[] = chats
+
+  // Групите и каналите се отделят ПРЕДИ всичко останало. Там "последното
+  // съобщение е чуждо" е нормалното състояние, не сигнал — автокъщи и
+  // официални акаунти трупат стотици непрочетени, които никой не чака
+  // да бъдат отговорени.
+  const people = chats.filter((c) => c.kind !== "group");
+  const groups = chats
+    .filter((c) => c.kind === "group")
+    .sort((a, b) => b.unread_count - a.unread_count);
+
+  const waiting: PreparedChat[] = people
     .filter((c): c is ViberChat & { waiting_since: string } => Boolean(c.waiting_since))
     .sort((a, b) => (a.waiting_since < b.waiting_since ? -1 : 1))
     .map((c) => {
@@ -72,6 +91,8 @@ function prepare(chats: ViberChat[]) {
       };
     });
 
+  const rest = people.filter((c) => !c.waiting_since);
+
   // Най-скорошното обновяване показва дали роботът изобщо работи.
   const lastSeenMs = chats.reduce(
     (latest, c) => Math.max(latest, new Date(c.updated_at).getTime()),
@@ -80,7 +101,9 @@ function prepare(chats: ViberChat[]) {
 
   return {
     waiting,
-    answered: chats.filter((c) => !c.waiting_since),
+    unclear: rest.filter((c) => c.last_from_me === null),
+    answered: rest.filter((c) => c.last_from_me === true),
+    groups,
     robotSilentFor: lastSeenMs ? humanDuration(lastSeenMs, nowMs) : null,
     robotStale: !lastSeenMs || nowMs - lastSeenMs > ROBOT_STALE_MINUTES * 60_000,
   };
@@ -94,13 +117,14 @@ export default async function ViberPage() {
   const { data } = await supabase
     .from("viber_chats")
     .select(
-      "chat_key, display_name, last_preview, last_time_label, last_from_me, unread_count, waiting_since, updated_at",
+      "chat_key, display_name, last_preview, last_time_label, last_from_me, kind, unread_count, waiting_since, updated_at",
     )
     .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
 
   const chats = (data ?? []) as ViberChat[];
-  const { waiting, answered, robotSilentFor, robotStale } = prepare(chats);
+  const { waiting, unclear, answered, groups, robotSilentFor, robotStale } =
+    prepare(chats);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -136,7 +160,7 @@ export default async function ViberPage() {
 
             {waiting.length === 0 ? (
               <p className="mt-3 rounded-lg bg-accent-500/10 px-4 py-3 text-sm text-slate-700">
-                ✅ На всички е отговорено.
+                ✅ Няма разговор, за който да е сигурно, че чака отговор.
               </p>
             ) : (
               <ul className="mt-3 space-y-2">
@@ -168,17 +192,79 @@ export default async function ViberPage() {
             )}
           </section>
 
+          {unclear.length > 0 && (
+            <section className="mt-10">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Не е ясно кой е писал последен ({unclear.length})
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Роботът не е различил дали последното съобщение е твое. Тези
+                разговори нарочно не се броят за чакащи — по-добре да ги
+                погледнеш сам, отколкото да те лъже числото горе.
+              </p>
+              <ul className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+                {unclear.map((chat) => (
+                  <li key={chat.chat_key} className="px-4 py-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate font-medium text-slate-800">
+                        {chat.display_name}
+                      </span>
+                      <span className="shrink-0 text-xs text-slate-400">
+                        {chat.last_time_label}
+                      </span>
+                    </div>
+                    {chat.last_preview && (
+                      <p className="mt-1 line-clamp-1 text-sm text-slate-500">
+                        {chat.last_preview}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {answered.length > 0 && (
             <section className="mt-10">
               <h2 className="text-lg font-semibold text-slate-900">
-                Отговорено ({answered.length})
+                Ти си писал последен ({answered.length})
               </h2>
               <ul className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
                 {answered.map((chat) => (
-                  <li key={chat.chat_key} className="flex items-baseline justify-between gap-3 px-4 py-3">
+                  <li
+                    key={chat.chat_key}
+                    className="flex items-baseline justify-between gap-3 px-4 py-3"
+                  >
                     <span className="truncate text-slate-700">{chat.display_name}</span>
                     <span className="shrink-0 text-xs text-slate-400">
                       {chat.last_time_label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {groups.length > 0 && (
+            <section className="mt-10">
+              <h2 className="text-lg font-semibold text-slate-500">
+                Групи и канали ({groups.length})
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Тук никой не чака отговор лично от теб, затова не влизат в
+                броя горе.
+              </p>
+              <ul className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50">
+                {groups.map((chat) => (
+                  <li
+                    key={chat.chat_key}
+                    className="flex items-baseline justify-between gap-3 px-4 py-3"
+                  >
+                    <span className="truncate text-slate-600">{chat.display_name}</span>
+                    <span className="shrink-0 text-xs text-slate-400">
+                      {chat.unread_count > 0
+                        ? `${chat.unread_count} непрочетени`
+                        : chat.last_time_label}
                     </span>
                   </li>
                 ))}
@@ -189,8 +275,10 @@ export default async function ViberPage() {
       )}
 
       <p className="mt-10 text-xs text-slate-400">
-        Роботът вижда само списъка с чатове — кой е писал последен и кога. Самите
-        разговори остават криптирани във Viber и не минават оттук.
+        Тук се пази само редът от списъка с чатове — име, откъсът, който Viber
+        сам показва, часът и броят непрочетени. Роботът не отваря разговори и
+        няма достъп до историята им. Снимката на прозореца обаче се разчита от
+        модел, затова дръж настрана разговор, който не искаш да бъде прочетен.
       </p>
     </div>
   );
