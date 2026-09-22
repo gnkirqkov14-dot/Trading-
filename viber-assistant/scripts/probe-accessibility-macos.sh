@@ -22,7 +22,50 @@ info()    { printf '     %s\n' "$1"; }
 
 printf 'Проверка за четене от екрана — %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
 
-section '1. Работи ли Viber'
+section '1. С каква технология е писан Viber'
+
+# Решава дали си струва да се гони достъпността. Програмите на Electron
+# (Chromium) нарочно НЕ градят дърво за достъпност, докато не усетят екранен
+# четец — но това може да се включи насила. При Qt такъв ключ няма.
+toolkit='неизвестна'
+fw='/Applications/Viber.app/Contents/Frameworks'
+
+if [ -d "$fw" ]; then
+  if ls "$fw" 2>/dev/null | grep -qi 'electron'; then
+    toolkit='Electron'
+  elif ls "$fw" 2>/dev/null | grep -qi '^Qt'; then
+    toolkit='Qt'
+  fi
+fi
+
+if [ "$toolkit" = 'неизвестна' ]; then
+  bin="$(ls /Applications/Viber.app/Contents/MacOS/ 2>/dev/null | head -1)"
+  if [ -n "$bin" ]; then
+    libs="$(otool -L "/Applications/Viber.app/Contents/MacOS/$bin" 2>/dev/null)"
+    printf '%s' "$libs" | grep -qi 'electron' && toolkit='Electron'
+    printf '%s' "$libs" | grep -qi 'libqt\|QtCore' && toolkit='Qt'
+  fi
+fi
+
+case "$toolkit" in
+  Electron)
+    ok 'Electron (Chromium).'
+    info 'Има шанс: дървото за достъпност може да се включи насила.'
+    info 'Малкият брой елементи по-долу може да е само защото спи.'
+    ;;
+  Qt)
+    warn 'Qt.'
+    info 'Qt рисува всичко сам и рядко излага съдържание за достъпност.'
+    info 'Ако и проверката по-долу покаже малко елементи — пътят е затворен.'
+    ;;
+  *)
+    warn 'Не можах да определя технологията.'
+    info 'Съдържанието на папката Frameworks:'
+    ls "$fw" 2>/dev/null | head -8 | sed 's/^/       /'
+    ;;
+esac
+
+section '2. Работи ли Viber'
 
 if ! pgrep -qx 'Viber' 2>/dev/null; then
   bad 'Viber не работи.'
@@ -31,23 +74,6 @@ if ! pgrep -qx 'Viber' 2>/dev/null; then
   exit 0
 fi
 ok 'Viber работи.'
-
-section '2. Разрешение за достъпност'
-
-# Тихо: при липса на разрешение osascript връща грешка, а не диалог.
-perm="$(osascript -e 'tell application "System Events" to return (count of processes)' 2>&1)"
-case "$perm" in
-  *[!0-9]*|'')
-    bad 'Терминалът НЯМА разрешение за достъпност.'
-    info 'Дай му го така:'
-    info '  System Settings → Privacy & Security → Accessibility'
-    info '  → бутон "+" → Applications → Utilities → Terminal'
-    info 'После ЗАТВОРИ Терминала, отвори го пак и пусни проверката наново.'
-    printf '\n     (съобщението от системата: %s)\n' "$(printf '%s' "$perm" | head -2 | tr '\n' ' ')"
-    exit 0
-    ;;
-esac
-ok 'Разрешението е налично.'
 
 section '3. Чете ли се прозорецът на Viber'
 
@@ -111,6 +137,13 @@ case "$result" in
   ERROR:*)
     bad 'Грешка при четенето.'
     info "$(printf '%s' "$result" | cut -d: -f2-)"
+    ;;
+  *-25211*|*'not allowed assistive access'*)
+    bad 'Терминалът НЯМА разрешение за достъпност.'
+    info 'Дай му го така:'
+    info '  System Settings → Privacy & Security → Accessibility'
+    info '  → бутон "+" → Applications → Utilities → Terminal'
+    info 'После ЗАТВОРИ Терминала изцяло (⌘Q), отвори го пак и пусни наново.'
     ;;
   *)
     bad 'Неочакван резултат.'
