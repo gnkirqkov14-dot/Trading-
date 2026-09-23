@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -39,13 +40,16 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       href={`/listings/${listing.id}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:shadow-md"
     >
-      <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {coverPhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          // През `next/image`, за да не тегли картичка от 300px цял кадър
+          // от телефон. `sizes` казва колко широка е тя на всеки екран.
+          <Image
             src={coverPhoto.url}
             alt={listing.title}
-            className="h-full w-full object-cover transition group-hover:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-slate-400">

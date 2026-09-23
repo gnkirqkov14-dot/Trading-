@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReportAgencyButton } from "@/components/report-agency-button";
@@ -250,13 +251,18 @@ export default async function ListingDetailPage({
       {visiblePhotos.length > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {visiblePhotos.map((photo) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <div
               key={photo.url}
-              src={photo.url}
-              alt={listing.title}
-              className="aspect-square w-full rounded-lg object-cover"
-            />
+              className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-100"
+            >
+              <Image
+                src={photo.url}
+                alt={listing.title}
+                fill
+                sizes="(max-width: 640px) 50vw, 33vw"
+                className="object-cover"
+              />
+            </div>
           ))}
         </div>
       )}
