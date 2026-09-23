@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
 import { PixelEvent } from "@/components/pixel-event";
+import { ListingGallery } from "@/components/listing-gallery";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -247,19 +248,7 @@ export default async function ListingDetailPage({
         )}
       </p>
 
-      {visiblePhotos.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {visiblePhotos.map((photo) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={photo.url}
-              src={photo.url}
-              alt={listing.title}
-              className="aspect-square w-full rounded-lg object-cover"
-            />
-          ))}
-        </div>
-      )}
+      <ListingGallery photos={visiblePhotos} title={listing.title} />
 
       {hasFullAccess && video && (
         <div className="mt-6">

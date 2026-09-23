@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Снимките на обявите. Минават през `next/image`, за да стигат до
+        // посетителя нарязани по големината на екрана и във WebP: иначе
+        // картичка 300px тегли цял кадър от телефон.
+        protocol: "https",
+        hostname: "uyjxsjcyzmafvmyffoxx.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
         // Кадрите на началната сцена (`components/home/story-scroll.tsx`)
         // засега се четат направо от CDN-а на Higgsfield, защото сесията,
         // която ги генерира, няма достъп до него, за да ги свали и сложи
