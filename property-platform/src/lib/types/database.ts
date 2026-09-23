@@ -275,6 +275,15 @@ export interface Database {
         /** Оставащи въпроси за деня; -1 = лимитът е изчерпан. */
         Returns: number;
       };
+      assistant_consume_account_quota: {
+        Args: { account: string; max_drafts: number };
+        /** Оставащи попълвания за профила; -1 = таванът е изчерпан. */
+        Returns: number;
+      };
+      assistant_refund_account_quota: {
+        Args: { account: string };
+        Returns: void;
+      };
     };
     Enums: {
       subscription_plan: SubscriptionPlan;

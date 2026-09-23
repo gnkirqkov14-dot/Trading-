@@ -36,6 +36,15 @@ const MAX_OUTPUT_TOKENS = 2000;
 
 /** Колко чернови може да направи един посетител за денонощие. */
 const DAILY_DRAFTS_PER_VISITOR = 10;
+/**
+ * Колко пъти един профил може да ползва помощника — за цял живот, не за ден.
+ *
+ * Всяка чернова струва пари на Anthropic, затова таванът е вързан за акаунта:
+ * дневният таван по IP се заобикаля със смяна на мрежата. Пет стигат за
+ * трите обяви, които профилът може да държи (DEFAULT_LISTING_LIMIT), плюс
+ * два опита, ако първата чернова не хареса. Ръчното качване остава без лимит.
+ */
+const DRAFTS_PER_ACCOUNT = 5;
 
 /** Таван на една снимка след смаляването в браузъра (base64 знаци). */
 const MAX_PHOTO_CHARS = 1_500_000;
@@ -310,6 +319,36 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: accountLeft, error: accountQuotaError } = await supabase.rpc(
+    "assistant_consume_account_quota",
+    { account: user.id, max_drafts: DRAFTS_PER_ACCOUNT },
+  );
+
+  if (accountQuotaError) {
+    console.error("listing assistant account quota failed", accountQuotaError);
+    return Response.json(
+      { error: "Помощникът не е на разположение. Попълни обявата ръчно." },
+      { status: 503 },
+    );
+  }
+
+  if (typeof accountLeft === "number" && accountLeft < 0) {
+    return Response.json(
+      {
+        error: `Използва помощника ${DRAFTS_PER_ACCOUNT} пъти — толкова са включени. Обявата се качва и ръчно, без ограничение. Ако ти трябват още, пиши на ${SUPPORT_EMAIL}.`,
+      },
+      { status: 429 },
+    );
+  }
+
+  /** Броячът е вдигнат; ако нататък нещо се провали, го връщаме обратно. */
+  const refundAccountQuota = async () => {
+    const { error } = await supabase.rpc("assistant_refund_account_quota", {
+      account: user.id,
+    });
+    if (error) console.error("listing assistant refund failed", error);
+  };
+
   const { data: remaining, error: quotaError } = await supabase.rpc(
     "assistant_consume_quota",
     {
@@ -320,6 +359,7 @@ export async function POST(request: Request) {
 
   if (quotaError) {
     console.error("listing assistant quota failed", quotaError);
+    await refundAccountQuota();
     return Response.json(
       { error: "Помощникът не е на разположение. Попълни обявата ръчно." },
       { status: 503 },
@@ -327,6 +367,7 @@ export async function POST(request: Request) {
   }
 
   if (typeof remaining === "number" && remaining < 0) {
+    await refundAccountQuota();
     return Response.json(
       {
         error: `Достигна ${DAILY_DRAFTS_PER_VISITOR} чернови за днес. Попълни обявата ръчно или пиши на ${SUPPORT_EMAIL}.`,
@@ -392,6 +433,7 @@ export async function POST(request: Request) {
 
     const block = response.content.find((item) => item.type === "tool_use");
     if (!block || block.type !== "tool_use") {
+      await refundAccountQuota();
       return Response.json(
         { error: "Помощникът не успя да състави обявата. Опитай пак." },
         { status: 502 },
@@ -399,6 +441,7 @@ export async function POST(request: Request) {
     }
     toolInput = block.input as DraftToolInput;
   } catch (error) {
+    await refundAccountQuota();
     if (error instanceof Anthropic.RateLimitError) {
       return Response.json(
         { error: "Малко повече заявки наведнъж. Опитай след минута." },
@@ -478,5 +521,5 @@ export async function POST(request: Request) {
     notes,
   };
 
-  return Response.json({ draft, remaining });
+  return Response.json({ draft, remaining: accountLeft });
 }
