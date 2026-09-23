@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
 import { PixelEvent } from "@/components/pixel-event";
+import { ListingGallery } from "@/components/listing-gallery";
 import {
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -248,24 +248,7 @@ export default async function ListingDetailPage({
         )}
       </p>
 
-      {visiblePhotos.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {visiblePhotos.map((photo) => (
-            <div
-              key={photo.url}
-              className="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-100"
-            >
-              <Image
-                src={photo.url}
-                alt={listing.title}
-                fill
-                sizes="(max-width: 640px) 50vw, 33vw"
-                className="object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      <ListingGallery photos={visiblePhotos} title={listing.title} />
 
       {hasFullAccess && video && (
         <div className="mt-6">
