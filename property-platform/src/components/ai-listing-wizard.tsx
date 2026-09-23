@@ -54,7 +54,7 @@ export function AiListingWizard({
   onReady,
   onManual,
 }: {
-  onReady: (draft: ListingDraft, photos: File[]) => void;
+  onReady: (draft: ListingDraft, photos: File[], remaining: number | null) => void;
   onManual: () => void;
 }) {
   // Стъпка 0 е сделката (два бутона), 1..6 са въпросите, 7 са снимките.
@@ -125,7 +125,11 @@ export function AiListingWizard({
         setError(payload?.error ?? "Нещо се обърка. Опитай пак.");
         return;
       }
-      onReady(payload.draft as ListingDraft, photos);
+      onReady(
+        payload.draft as ListingDraft,
+        photos,
+        typeof payload.remaining === "number" ? payload.remaining : null,
+      );
     } catch {
       setError("Няма връзка със сървъра. Опитай пак.");
     } finally {

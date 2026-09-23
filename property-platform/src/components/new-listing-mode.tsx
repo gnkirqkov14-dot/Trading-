@@ -31,14 +31,16 @@ export function NewListingMode({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [draft, setDraft] = useState<ListingDraft | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [draftsLeft, setDraftsLeft] = useState<number | null>(null);
 
   if (wizardOpen) {
     return (
       <div className="mx-auto max-w-2xl">
         <AiListingWizard
-          onReady={(nextDraft, nextPhotos) => {
+          onReady={(nextDraft, nextPhotos, left) => {
             setDraft(nextDraft);
             setPhotos(nextPhotos);
+            setDraftsLeft(left);
             setWizardOpen(false);
           }}
           onManual={() => setWizardOpen(false)}
@@ -81,6 +83,7 @@ export function NewListingMode({
           profilePhone={profilePhone}
           draft={draft}
           initialPhotos={photos}
+          draftsLeft={draftsLeft}
         />
       </div>
     </div>

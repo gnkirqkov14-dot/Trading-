@@ -30,6 +30,7 @@ export function NewListingForm({
   profilePhone,
   draft = null,
   initialPhotos = [],
+  draftsLeft = null,
 }: {
   userId: string;
   neighborhoods: Neighborhood[];
@@ -41,6 +42,8 @@ export function NewListingForm({
    */
   draft?: ListingDraft | null;
   initialPhotos?: File[];
+  /** Колко пъти още профилът може да ползва помощника; null = не знаем. */
+  draftsLeft?: number | null;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -201,6 +204,13 @@ export function NewListingForm({
           <p className="font-medium">
             Попълних каквото разбрах. Провери и поправи, преди да публикуваш.
           </p>
+          {draftsLeft !== null && (
+            <p className="mt-1 text-emerald-800">
+              {draftsLeft > 0
+                ? `Остават ти още ${draftsLeft} попълвания с помощника. Ръчното качване е без ограничение.`
+                : "Това беше последното ти попълване с помощника. Обяви се качват и ръчно, без ограничение."}
+            </p>
+          )}
           {draft.notes.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-emerald-800">
               {draft.notes.map((note, index) => (
