@@ -1,0 +1,16 @@
+# Настройки за Netlify, когато "Base directory" на сайта е english-app.
+# Няма стъпка за изграждане – публикуват се файловете както са.
+[build]
+  publish = "."
+  command = ""
+
+# Service worker-ът трябва винаги да се проверява за нова версия.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
