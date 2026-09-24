@@ -210,6 +210,8 @@ body.fullscreen .nav { display: none; }
 .lh-sub { color: var(--ink-2); margin: 6px 0 14px; }
 .lh-plan { font-size: .75rem; color: var(--muted); margin-top: 12px; }
 .hero-btn { font-size: 1.1rem; min-height: 56px; }
+.review-link { display: inline-block; margin-top: 10px; text-decoration: none; }
+.score-ring.low { background: conic-gradient(var(--almost) calc(var(--p) * 1%), var(--surface-2) 0); }
 .done-badge { background: var(--good-bg); color: var(--good); border-radius: 12px; padding: 6px 10px; margin-bottom: 12px; font-weight: 600; font-size: .9rem; }
 
 .quick-games { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

@@ -11,43 +11,27 @@ import { ask } from './ui.js';
 
 // ---------- Кога може да има нови думи ----------
 
+/** Минимален резултат на теста, за да се отключи следващият урок. */
+export const PASS = 80;
+
+export const passed = (id) => (getState().lessons[id]?.score || 0) >= PASS;
+
+/** Първият урок, който още не е взет с нужния резултат. */
 export function nextLesson() {
-  const s = getState();
-  return LESSONS.find((l) => !s.lessons[l.id]) || null;
+  return LESSONS.find((l) => !passed(l.id)) || null;
 }
 
 /**
- * Нищо ново, преди старото да е усвоено:
- * поне 80% от думите на последните 2 урока трябва да са "в зелено" (последно познати),
- * и не бива да има натрупани над 30 думи за повторение.
+ * Нищо ново, преди старото да е усвоено: следващ урок се отключва веднага,
+ * щом тестът на предишния е взет с поне 80%. Иначе същият урок се повтаря.
  */
-export function gate() {
-  const s = getState();
-  const done = LESSONS.filter((l) => s.lessons[l.id]);
-  if (!done.length) return { ok: true };
-  const recent = done.slice(-2).flatMap((l) => l.words);
-  const good = recent.filter((w) => (s.cards[w.id]?.iv || 0) >= 1).length;
-  const ratio = good / recent.length;
-  const due = dueWords().length;
-  if (ratio < 0.8) return { ok: false, reason: `Само ${Math.round(ratio * 100)}% от думите в последните уроци са затвърдени (трябват 80%).`, ratio };
-  if (due > 30) return { ok: false, reason: `Имаш ${due} думи за повторение – първо тях.`, ratio };
-  return { ok: true, ratio };
-}
-
-/** Какво предстои днес (за началния екран). */
 export function todayInfo() {
   const s = getState();
   const cur = s.current && s.current.day === dayKey() ? s.current : null;
   const next = nextLesson();
-  const g = gate();
   const doneToday = (s.days[dayKey()]?.lessons || 0) > 0;
-  // По един нов урок на ден – мозъкът подрежда новите думи по време на сън.
-  const newToday = !!s.days[dayKey()]?.newLesson;
-  let kind;
-  if (!next || newToday) kind = 'review';
-  else if (g.ok) kind = 'new';
-  else kind = 'review';
-  return { cur, next, gate: g, kind, doneToday, newToday };
+  const kind = !next ? 'review' : s.lessons[next.id] ? 'retry' : 'new';
+  return { cur, next, kind, doneToday, lastScore: next ? s.lessons[next.id]?.score : null };
 }
 
 // ---------- План ----------
@@ -65,19 +49,20 @@ const SECTIONS = {
   weak: { name: 'Слаби думи', emoji: '🎯' },
 };
 
-export function buildPlan() {
+export function buildPlan(mode) {
   const s = getState();
   const info = todayInfo();
+  if (mode === 'review') info.kind = 'review';
   const steps = [];
   const add = (sec, list) => list.forEach((st) => steps.push({ ...st, s: sec }));
   const ids = (ws) => ws.map((w) => w.id);
 
   // 1. Загрявка – думите, чийто момент за повторение е дошъл
-  const due = dueWords(info.kind === 'new' ? 15 : 25);
+  const due = dueWords(info.kind === 'review' ? 25 : 15);
   add('warm', due.map((w) => ({ t: reviewType(card(w.id)), w: w.id, g: 1 })));
 
   let lessonId = null;
-  if (info.kind === 'new') {
+  if (info.kind === 'new' || info.kind === 'retry') {
     const L = info.next;
     lessonId = L.id;
     const W = L.words;
@@ -164,11 +149,11 @@ export function buildPlan() {
 
 // ---------- Изпълнение ----------
 
-export async function runLesson(root, { onExit }) {
+export async function runLesson(root, { onExit, mode }) {
   const s = getState();
-  let plan = s.current && s.current.day === dayKey() && s.current.steps?.length ? s.current : buildPlan();
+  let plan = s.current && s.current.day === dayKey() && s.current.steps?.length ? s.current : buildPlan(mode);
   if (!plan.steps.length) {
-    root.replaceChildren(h('div.page', {}, [h('div.empty', {}, [h('div.big-emoji', {}, '🎉'), h('p', {}, 'Днес няма какво да повтаряш! Ела утре или поиграй в „Свободно време“.'), h('button.btn.primary', { onclick: onExit }, 'Към началото')])]));
+    root.replaceChildren(h('div.page', {}, [h('div.empty', {}, [h('div.big-emoji', {}, '🎉'), h('p', {}, 'В момента няма думи за повторение. Продължи с урока или поиграй в „Свободно време“.'), h('button.btn.primary', { onclick: onExit }, 'Към началото')])]));
     return;
   }
   s.current = plan;
@@ -237,25 +222,53 @@ function finish(root, plan, onExit) {
   const s = getState();
   const pct = plan.test.total ? Math.round((plan.test.ok / plan.test.total) * 100) : 100;
   const L = plan.lessonId ? LESSON[plan.lessonId] : null;
+  let ok = true;
   if (L) {
     const prev = s.lessons[L.id];
-    s.lessons[L.id] = { done: plan.day, score: Math.max(pct, prev?.score || 0) };
-    today().newLesson = L.id;
+    s.lessons[L.id] = { done: plan.day, score: Math.max(pct, prev?.score || 0), tries: (prev?.tries || 0) + 1 };
+    ok = pct >= PASS || (prev?.score || 0) >= PASS;
   }
   today().lessons = (today().lessons || 0) + 1;
   s.current = null;
   save(true);
-  sfx.win();
-  confetti();
+  if (ok) { sfx.win(); confetti(); } else sfx.ok();
   const mins = Math.max(1, Math.round((Date.now() - plan.started) / 60000));
   const c = counts();
-  const msg = pct >= 90 ? 'Страхотно! Ти си звезда! 🌟' : pct >= 70 ? 'Много добре! Продължавай така! 💪' : pct >= 50 ? 'Добро начало! Думите, които сбърка, ще се върнат по-често. 🔁' : 'Не се отказвай! Утре ще повторим трудните думи. 🌱';
+  const next = nextLesson();
+  const again = () => runLesson(root, { onExit });
+
+  let title, msg, actions;
+  if (L && ok) {
+    title = `Урок ${L.id} е взет! 🎉`;
+    msg = next ? `Отключи Урок ${next.id}: ${next.emoji} ${next.title}. Можеш да продължиш веднага!` : 'Премина всички уроци! 🏆';
+    actions = [
+      next ? h('button.btn.primary.wide', { type: 'button', onclick: again }, `▶ Урок ${next.id}: ${next.title}`) : null,
+      h('button.btn.ghost.wide', { type: 'button', onclick: () => (location.hash = '#/games') }, '🎮 Поиграй с думите'),
+      h('button.btn.ghost.wide', { type: 'button', onclick: onExit }, 'Към началото'),
+    ];
+  } else if (L) {
+    title = `Урок ${L.id}: ${pct}%`;
+    msg = `За да отключиш следващия урок, трябват ${PASS}%. Думите, които сбърка, вече са отбелязани – опитай пак и ще ги знаеш! 💪`;
+    actions = [
+      h('button.btn.primary.wide', { type: 'button', onclick: again }, `🔁 Опитай пак урок ${L.id}`),
+      h('button.btn.ghost.wide', { type: 'button', onclick: () => (location.hash = '#/games') }, '🎮 Първо поиграй с думите'),
+      h('button.btn.ghost.wide', { type: 'button', onclick: onExit }, 'Към началото'),
+    ];
+  } else {
+    title = 'Повторението е готово!';
+    msg = pct >= 80 ? 'Много добре помниш думите! 🌟' : 'Думите, които сбърка, ще се върнат по-често. 🔁';
+    actions = [
+      next ? h('button.btn.primary.wide', { type: 'button', onclick: again }, `▶ Урок ${next.id}: ${next.title}`) : null,
+      h('button.btn.ghost.wide', { type: 'button', onclick: onExit }, 'Към началото'),
+    ];
+  }
+
   root.replaceChildren(
     h('div.page.finish', {}, [
-      h('div.big-emoji', {}, pct >= 70 ? '🏆' : '🌱'),
-      h('h1', {}, L ? `Урок ${L.id} е завършен!` : 'Затвърждаването е готово!'),
+      h('div.big-emoji', {}, ok ? '🏆' : '🌱'),
+      h('h1', {}, title),
       L ? h('p.muted', {}, `${L.emoji} ${L.title} – ${L.goal}`) : null,
-      h('div.score-ring', { style: { '--p': pct } }, [h('span', {}, `${pct}%`), h('small', {}, 'тест')]),
+      h(`div.score-ring${ok ? '' : '.low'}`, { style: { '--p': pct } }, [h('span', {}, `${pct}%`), h('small', {}, L ? `нужни ${PASS}%` : 'тест')]),
       h('p', {}, msg),
       h('div.tiles', {}, [
         tile('✅', plan.stats.ok, 'верни'),
@@ -263,10 +276,7 @@ function finish(root, plan, onExit) {
         tile('📚', c.introduced, 'думи общо'),
         tile('⏱', mins, 'минути'),
       ]),
-      h('div.ex-actions', {}, [
-        h('button.btn.primary.wide', { type: 'button', onclick: () => (location.hash = '#/games') }, '🎮 Поиграй с думите'),
-        h('button.btn.ghost.wide', { type: 'button', onclick: onExit }, 'Към началото'),
-      ]),
+      h('div.ex-actions', {}, actions),
     ])
   );
 }

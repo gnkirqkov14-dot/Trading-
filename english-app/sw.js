@@ -1,6 +1,6 @@
 // Service worker: приложението работи и без интернет.
 // При промяна на файловете увеличи VERSION.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `english-a1-${VERSION}`;
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',

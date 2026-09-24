@@ -3,7 +3,7 @@ import { h, esc, dayKey } from './util.js';
 import { getState, save, today, dayMinutes, onExternalChange } from './store.js';
 import { LESSONS, LESSON } from './content/index.js';
 import { counts } from './srs.js';
-import { todayInfo, runLesson } from './lesson.js';
+import { todayInfo, runLesson, passed, PASS } from './lesson.js';
 import { gamesMenu, playGame, GAMES } from './games.js';
 import { statsPage, dictionaryPage, settingsPage, manualDialog, streak, modal } from './stats.js';
 import { speakBtn } from './exercises.js';
@@ -47,13 +47,14 @@ function updateNavBadge() {
 function route() {
   stopSpeaking();
   const path = location.hash.replace(/^#/, '') || '/';
-  const full = path === '/lesson' || path.startsWith('/game/');
+  const full = path === '/lesson' || path === '/review' || path.startsWith('/game/');
   document.body.classList.toggle('fullscreen', full);
   drawNav(path);
   main.scrollTop = 0;
   window.scrollTo(0, 0);
   if (path === '/') return home();
   if (path === '/lesson') return runLesson(main, { onExit: () => (location.hash = '#/') });
+  if (path === '/review') return runLesson(main, { onExit: () => (location.hash = '#/'), mode: 'review' });
   if (path === '/games') return gamesMenu(main);
   if (path.startsWith('/game/')) return playGame(main, path.split('/')[2]);
   if (path === '/words') return dictionaryPage(main);
@@ -98,16 +99,20 @@ function home() {
     const L = info.next;
     title = `Урок ${L.id}: ${L.title}`;
     sub = L.goal;
-    btn = info.doneToday ? '▶ Още един урок' : '▶ Започни днешния урок';
+    btn = info.doneToday ? `▶ Продължи с урок ${L.id}` : '▶ Започни урока';
+    color = L.color; emoji = L.emoji;
+  } else if (info.kind === 'retry') {
+    const L = info.next;
+    title = `Урок ${L.id}: ${L.title}`;
+    sub = `Последен резултат: ${info.lastScore}%. Вземи поне ${PASS}%, за да отключиш следващия урок.`;
+    btn = `🔁 Опитай пак урок ${L.id}`;
     color = L.color; emoji = L.emoji;
   } else {
-    title = 'Ден за затвърждаване';
+    title = 'Всички уроци са взети! 🏆';
     emoji = '🎯';
     color = '#7E57C2';
-    if (!info.next) sub = 'Премина всички уроци! 🏆 Повтаряй, за да не забравяш.';
-    else if (info.newToday) sub = 'Днес вече научи нови думи. Сега е време да ги затвърдиш – новият урок идва утре 😴';
-    else sub = `${info.gate.reason} Урок ${info.next.id} ще се отключи след малко повторение.`;
-    btn = info.doneToday ? '▶ Още упражнения' : '▶ Започни упражненията';
+    sub = 'Повтаряй редовно, за да не забравяш думите.';
+    btn = '▶ Започни повторението';
   }
 
   const doneBadge = info.doneToday ? h('div.done-badge', {}, '✓ Днес вече учи – браво!') : null;
@@ -133,7 +138,8 @@ function home() {
       h('div.lh-title', {}, title),
       h('div.lh-sub', {}, sub),
       doneBadge,
-      h('a.btn.primary.wide.hero-btn', { href: '#/lesson' }, btn),
+      h('a.btn.primary.wide.hero-btn', { href: info.kind === 'review' && !info.cur ? '#/review' : '#/lesson' }, btn),
+      c.due && info.kind !== 'review' && !info.cur ? h('a.link-btn.review-link', { href: '#/review' }, `🔁 Само повторение (${c.due} ${c.due === 1 ? 'дума' : 'думи'})`) : null,
       h('div.lh-plan', {}, '🔥 загрявка · ✨ думи · 📐 правило · 🎧 слушане · 📖 четене · 🔄 превод · ✍️ писане · 🗣️ говорене · 🏁 тест'),
     ]),
     c.introduced >= 4 ? h('section', {}, [
@@ -146,17 +152,18 @@ function home() {
 
 function courseMap() {
   const s = getState();
-  const nextId = LESSONS.find((l) => !s.lessons[l.id])?.id;
+  const nextId = LESSONS.find((l) => !passed(l.id))?.id;
   return h('div.course', {}, LESSONS.map((L) => {
-    const done = s.lessons[L.id];
+    const done = passed(L.id) && s.lessons[L.id];
     const isNext = L.id === nextId;
+    const tried = isNext && s.lessons[L.id];
     const cls = done ? 'done' : isNext ? 'next' : 'locked';
     return h(`button.course-item.${cls}`, {
       type: 'button', style: { '--c': L.color },
       onclick: () => (done || isNext) && lessonPreview(L, !!done),
     }, [
       h('span.ci-emoji', {}, done || isNext ? L.emoji : '🔒'),
-      h('span.ci-text', {}, [h('b', {}, `${L.id}. ${L.title}`), h('small', {}, done ? `✓ ${done.score}%` : isNext ? 'Следващ' : L.goal)]),
+      h('span.ci-text', {}, [h('b', {}, `${L.id}. ${L.title}`), h('small', {}, done ? `✓ ${done.score}%` : tried ? `${tried.score}% · нужни ${PASS}%` : isNext ? 'Следващ' : L.goal)]),
     ]);
   }));
 }
