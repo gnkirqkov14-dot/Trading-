@@ -62,7 +62,8 @@ export function stopSpeaking() {
 // ---------- Проверка на произношението ----------
 
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-export const canListen = () => !!Recognition;
+// В режим „преглед“ (вградена страница) микрофонът не е достъпен.
+export const canListen = () => !!Recognition && !window.__PREVIEW;
 
 /**
  * Слуша потребителя и сравнява с очаквания текст.

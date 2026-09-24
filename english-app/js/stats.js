@@ -5,6 +5,8 @@ import { counts, level, LEVELS, isKnown } from './srs.js';
 import { WORDS, LESSONS } from './content/index.js';
 import { speakBtn } from './exercises.js';
 import { englishVoices, say, canListen, canSpeak } from './speech.js';
+import { modal, ask, toast } from './ui.js';
+export { modal };
 
 export const STREAK_MIN = 5; // минимум минути, за да се брои денят
 
@@ -153,7 +155,7 @@ function manualList(root) {
       h('span', {}, `${d.getDate()}.${d.getMonth() + 1} · `),
       h('b', {}, `${m.min} мин`),
       m.note ? h('span.muted', {}, ` · ${m.note}`) : null,
-      h('button.btn-x', { type: 'button', 'aria-label': 'Изтрий', onclick: () => { if (confirm('Да изтрия ли този запис?')) { removeManual(k, m.id); statsPage(root); } } }, '🗑'),
+      h('button.btn-x', { type: 'button', 'aria-label': 'Изтрий', onclick: async () => { if (await ask('Да изтрия ли този запис?', `${m.min} мин${m.note ? ' · ' + m.note : ''}`, { yes: 'Изтрий', danger: true })) { removeManual(k, m.id); statsPage(root); } } }, '🗑'),
     ]);
   }));
 }
@@ -176,29 +178,14 @@ export function manualDialog(onDone) {
     {
       text: 'Запази', primary: true, onclick: () => {
         const v = Math.round(Number(input.value));
-        if (!v || v < 1 || v > 600) { alert('Въведи минути между 1 и 600.'); return false; }
+        if (!v || v < 1 || v > 600) { input.setCustomValidity('1–600'); input.reportValidity(); toast('Въведи минути между 1 и 600.'); return false; }
         addManual(date.value || dayKey(), v, note.value.trim());
+        toast(`✅ Добавени ${v} мин`);
         onDone?.();
       },
     },
   ]);
   return dlg;
-}
-
-export function modal(title, body, buttons) {
-  const close = () => { wrap.remove(); document.body.classList.remove('modal-open'); };
-  const wrap = h('div.modal-back', { onclick: (e) => { if (e.target === wrap) close(); } }, [
-    h('div.modal', { role: 'dialog', 'aria-modal': 'true' }, [
-      h('h2', {}, title),
-      h('div.modal-body', {}, body),
-      h('div.modal-actions', {}, buttons.map((b) => h(`button.btn${b.primary ? '.primary' : '.ghost'}`, {
-        type: 'button', onclick: () => { if (b.onclick?.() !== false) close(); },
-      }, b.text))),
-    ]),
-  ]);
-  document.body.append(wrap);
-  document.body.classList.add('modal-open');
-  return { close };
 }
 
 // ---------- Речник ----------
@@ -258,10 +245,10 @@ export function settingsPage(root) {
     try {
       const data = await decodeCode(text);
       mergeIn(data);
-      alert('✅ Прогресът е обединен успешно!');
+      toast('✅ Прогресът е обединен успешно!');
       location.hash = '#/';
     } catch (e) {
-      alert('❌ Кодът не е валиден. Провери дали е копиран целият.');
+      toast('❌ Кодът не е валиден. Провери дали е копиран целият.');
     }
   };
   fileIn.onchange = async () => { const f = fileIn.files[0]; if (f) doImport(await f.text()); };
@@ -285,7 +272,7 @@ export function settingsPage(root) {
         h('button.btn.primary', { type: 'button', onclick: async () => { codeOut.value = await exportCode(); codeOut.select(); } }, 'Създай код'),
         h('button.btn.ghost', { type: 'button', onclick: async () => {
           if (!codeOut.value) codeOut.value = await exportCode();
-          try { await navigator.clipboard.writeText(codeOut.value); alert('📋 Копирано!'); } catch { codeOut.select(); document.execCommand('copy'); }
+          try { await navigator.clipboard.writeText(codeOut.value); toast('📋 Копирано!'); } catch { codeOut.select(); try { document.execCommand('copy'); toast('📋 Копирано!'); } catch { toast('Маркирах кода – копирай го ръчно.'); } }
         } }, '📋 Копирай'),
         navigator.share ? h('button.btn.ghost', { type: 'button', onclick: async () => {
           if (!codeOut.value) codeOut.value = await exportCode();
@@ -312,7 +299,8 @@ export function settingsPage(root) {
     h('section.card.danger', {}, [
       h('h2', {}, '⚠️ Изтриване'),
       h('button.btn.ghost', { type: 'button', onclick: () => {
-        if (confirm('Сигурен ли си? Целият прогрес ще бъде изтрит от това устройство.') && confirm('Наистина ли? Това не може да се върне.')) { resetAll(); location.hash = '#/'; }
+        ask('Да изтрия ли целия прогрес?', 'Всички думи, уроци и статистика ще бъдат изтрити от това устройство. Това не може да се върне.', { yes: 'Изтрий всичко', danger: true })
+          .then((ok) => { if (ok) { resetAll(); toast('Прогресът е изтрит.'); location.hash = '#/'; } });
       } }, 'Изтрий целия прогрес'),
     ]),
     h('p.small.muted.center', {}, 'English A1 · работи и без интернет'),

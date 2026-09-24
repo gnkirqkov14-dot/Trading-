@@ -173,6 +173,6 @@ function lessonPreview(L, done) {
 // ---------- Старт ----------
 route();
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.__PREVIEW) {
   navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW', e));
 }

@@ -7,6 +7,7 @@ import { runStep, reviewType } from './steps.js';
 import { canListen, stopSpeaking } from './speech.js';
 import { sfx } from './sfx.js';
 import { confetti } from './confetti.js';
+import { ask } from './ui.js';
 
 // ---------- Кога може да има нови думи ----------
 
@@ -178,8 +179,8 @@ export async function runLesson(root, { onExit }) {
   const stage = h('div.stage');
   let quit = false;
   const close = h('button.btn-close', { type: 'button', 'aria-label': 'Затвори' }, '✕');
-  close.onclick = () => {
-    if (confirm('Да прекъсна ли урока? Прогресът ти е запазен и можеш да продължиш по-късно днес.')) {
+  close.onclick = async () => {
+    if (await ask('Да прекъсна ли урока?', 'Прогресът ти е запазен и можеш да продължиш по-късно днес.', { yes: 'Прекъсни', no: 'Продължи урока' })) {
       quit = true;
       stopSpeaking();
       onExit();
