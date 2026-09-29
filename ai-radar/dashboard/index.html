@@ -304,7 +304,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         <label class="f">Вид
           <select id="add-type"><option value="youtube">YouTube канал</option><option value="site">Сайт или блог</option><option value="person">Човек за следене</option></select>
         </label>
-        <label class="f"><span id="add-label">Линк към канала или @име</span>
+        <label class="f"><span id="add-label">Линк към канала, @име или към негов клип</span>
           <input id="add-ref" required placeholder="https://www.youtube.com/@mreflow">
         </label>
         <label class="f">Тема
@@ -312,7 +312,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
         </label>
         <button class="btn primary" type="submit" id="add-btn">Добави</button>
       </form>
-      <p class="muted small" id="add-hint" style="margin:10px 0 0">Каналът влиза в следващия брой. След „Обнови сега“ — до 15 минути.</p>
+      <p class="muted small" id="add-hint" style="margin:10px 0 0">Може и линк към клип — сам намирам канала. Влиза в следващия брой; след „Обнови сега“ — до 15 минути.</p>
       <p class="err" id="add-err" hidden></p>
     </section>
     <section class="panel">
@@ -643,7 +643,7 @@ function renderPeople() {
 
 // ------------------------------------------------------------ sources
 const ADD = {
-  youtube: ["Линк към канала или @име", "https://www.youtube.com/@mreflow", "Каналът влиза в следващия брой. След „Обнови сега“ — до 15 минути."],
+  youtube: ["Линк към канала, @име или към негов клип", "https://www.youtube.com/@mreflow", "Може и линк към клип — сам намирам канала. Влиза в следващия брой; след „Обнови сега“ — до 15 минути."],
   site: ["Адрес на сайта или RSS", "https://www.example.com/blog", "Ще намеря RSS на сайта. Ако няма, ще го следя през новините по име."],
   person: ["Име на човека", "Boris Cherny", "Ще следя новините, интервютата и публикациите за този човек."],
 };

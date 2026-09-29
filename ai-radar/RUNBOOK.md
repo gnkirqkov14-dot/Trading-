@@ -25,6 +25,11 @@ commit-ва).
    `work/prefs.json`), изход `work/analysis.json`, и проверка с
    `python3 build_digest.py --check work/analysis.json --work work`.
    Главната сесия НЕ чете compact.json — пести контекст.
+   **Същия ден („Обнови сега“ след вече готов брой):** не анализирай
+   всичко наново — `cp work/analysis.json work/prev_analysis.json`,
+   `python3 incremental.py split work/prev_analysis.json work` и subagent
+   анотира само `work/compact_new.json` → `work/analysis_new.json`, после
+   `python3 incremental.py merge work/prev_analysis.json work/analysis_new.json work`.
 6. `python3 build_digest.py --work work --history work/history.json --prefs work/prefs.json --user-sources work/user_sources.json --dashboard-url https://claude.ai/artifact/3rTEekKmP9BUMRpTJxvF2X`
 7. Запис в базата: `work/db/writes.json` изрежда документите. ArtifactData
    `batch` с `op: set` и `file_path` за всеки (до 50 на batch, до 1 MiB —

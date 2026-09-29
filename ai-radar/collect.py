@@ -130,6 +130,12 @@ def resolve_youtube(ref: str) -> tuple[str | None, str | None]:
             return cid, root.findtext("a:title", namespaces=NS)
         except Exception:  # noqa: BLE001
             return cid, None
+    if re.search(r"youtu\.be/|/watch\?|/shorts/|/live/", ref):
+        # линк към клип -> каналът на автора през oEmbed
+        vurl = ref if ref.startswith("http") else "https://" + ref
+        o = json.loads(fetch(f"https://www.youtube.com/oembed?format=json&url={urllib.parse.quote(vurl, safe='')}"))
+        cid, _ = resolve_youtube(o["author_url"])
+        return cid, o.get("author_name")
     if ref.startswith("@"):
         url = f"https://www.youtube.com/{ref}"
     elif ref.startswith("http"):
@@ -452,22 +458,23 @@ def main() -> None:
         if r.get("status") != "ok" and s.get("type") != "site":
             continue
         cat = s.get("category") or "mine"
+        mine = s.get("added_by") != "claude"  # добавените автоматично от Claude са част от радара, не "мои"
         if s["type"] == "youtube":
             if r["channel_id"] in known:
                 for c in channels:  # вече е в радара — става "мой"
-                    if c["channel_id"] == r["channel_id"]:
+                    if c["channel_id"] == r["channel_id"] and mine:
                         c["list"] = "mine"
             else:
                 channels.append({"channel_id": r["channel_id"], "name": r.get("resolved_name") or s.get("name"),
-                                 "category": cat, "list": "mine"})
+                                 "category": cat, "list": "mine" if mine else "radar"})
                 known.add(r["channel_id"])
         elif s["type"] == "site":
             if r.get("feed_url"):
                 feeds.append({"name": s.get("name") or urllib.parse.urlparse(s["url"]).netloc, "url": r["feed_url"],
-                              "category": cat, "mine": True})
+                              "category": cat, "mine": mine})
         elif s["type"] == "person":
             people.append({"name": s["name"], "role": s.get("role", ""), "org": s.get("org", ""), "category": cat,
-                           "x": s.get("x", ""), "bluesky": s.get("bluesky", ""), "yt_search": True, "mine": True})
+                           "x": s.get("x", ""), "bluesky": s.get("bluesky", ""), "yt_search": mine, "mine": mine})
 
     # 2) Задачи за паралелно теглене
     jobs: list[tuple[str, callable]] = []
