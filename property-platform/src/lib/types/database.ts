@@ -27,6 +27,7 @@ export interface Database {
           subscription_plan: SubscriptionPlan;
           subscription_expires_at: string | null;
           is_admin: boolean;
+          admin_notified_at: string | null;
           listing_limit: number;
           created_at: string;
         },
@@ -269,6 +270,21 @@ export interface Database {
       admin_ban_agency: {
         Args: { p_listing_id: string };
         Returns: void;
+      };
+      admin_signup_stats: {
+        Args: Record<string, never>;
+        Returns: { total: number; today: number; this_week: number }[];
+      };
+      claim_signup_notice: {
+        Args: Record<string, never>;
+        /** Празно, ако собственикът вече е бил известен за този профил. */
+        Returns: {
+          profile_id: string;
+          profile_name: string | null;
+          profile_email: string | null;
+          profile_phone: string | null;
+          registered_at: string;
+        }[];
       };
       assistant_consume_quota: {
         Args: { visitor: string; daily_limit: number };

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_LISTING_LIMIT } from "@/lib/listing-labels";
@@ -137,7 +138,15 @@ export default async function AdminPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-semibold">Админ панел — обяви</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Админ панел — обяви</h1>
+        <Link
+          href="/admin/users"
+          className="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900"
+        >
+          Към потребителите
+        </Link>
+      </div>
       <p className="mb-6 text-sm text-slate-500">
         Обяви със споделен телефон между {SUSPECTED_AGENCY_THRESHOLD}+ обяви
         са маркирани и подредени най-отгоре — вероятни агенции, не лични

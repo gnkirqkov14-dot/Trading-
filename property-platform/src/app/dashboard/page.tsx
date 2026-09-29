@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import Link from "next/link";
 import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { MyListings, type MyListing } from "@/components/my-listings";
 import { PixelEvent } from "@/components/pixel-event";
+import { notifyAdminOfSignup } from "@/lib/notify-signup";
 
 export const metadata: Metadata = { title: "Моят профил" };
 
@@ -16,6 +18,12 @@ export default async function DashboardPage({
 }) {
   const { registered } = await searchParams;
   const user = await getAuthedUser();
+
+  // Собственикът иска да знае за всяка нова регистрация. Върви след
+  // отговора, за да не чака никой Resend, и се обажда само първия път —
+  // бележката е на самия профил.
+  after(notifyAdminOfSignup);
+
   const profile = await getProfile();
   const supabase = await createClient();
 

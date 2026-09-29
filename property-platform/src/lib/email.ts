@@ -60,3 +60,52 @@ export async function sendListingReminderEmail(row: ListingReminderRow) {
     throw new Error(`Resend error ${res.status}: ${await res.text()}`);
   }
 }
+
+export type NewSignupRow = {
+  profile_id: string;
+  profile_name: string | null;
+  profile_email: string | null;
+  profile_phone: string | null;
+  registered_at: string;
+};
+
+/**
+ * Адресът, на който собственикът следи регистрациите. Държи се в
+ * настройките, а не в кода, защото repo-то е публично и това е личен
+ * имейл — в кода би станал храна за спам ботове.
+ */
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL ?? "imotpoint@gmail.com";
+
+export async function sendNewSignupEmail(row: NewSignupRow) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const name = row.profile_name?.trim() || "(без име)";
+  const when = new Date(row.registered_at).toLocaleString("bg-BG", {
+    timeZone: "Europe/Sofia",
+  });
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `Нова регистрация: ${name}`,
+      html: `<p>Нов потребител в imotpoint.com.</p>
+<table cellpadding="4">
+<tr><td><strong>Име</strong></td><td>${name}</td></tr>
+<tr><td><strong>Имейл</strong></td><td>${row.profile_email ?? "(няма)"}</td></tr>
+<tr><td><strong>Телефон</strong></td><td>${row.profile_phone ?? "(няма)"}</td></tr>
+<tr><td><strong>Регистриран</strong></td><td>${when}</td></tr>
+</table>
+<p><a href="${SITE_URL}/admin/users">Виж всички регистрации</a></p>`,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+  }
+}
