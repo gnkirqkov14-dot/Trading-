@@ -1,0 +1,969 @@
+{
+ "_readme": "Източници по подразбиране (радар). Твоите канали/сайтове/хора се добавят от таблото и се пазят в базата на таблото.",
+ "youtube": [
+  {
+   "type": "youtube",
+   "handle": "@aiexplained-official",
+   "channel_id": "UCNJ1Ymd5yFuUPtn21xtRbbw",
+   "name": "AI Explained",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@mreflow",
+   "channel_id": "UChpleBmo18P08aKCIgti38g",
+   "name": "Matt Wolfe",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@WesRoth",
+   "channel_id": "UCqcbQf6yw5KzRoDDcZ_wBSw",
+   "name": "Wes Roth",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@matthew_berman",
+   "channel_id": "UCawZsQWqfGSbCI5yjkdVkTA",
+   "name": "Matthew Berman",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@TheAiGrid",
+   "channel_id": "UCbY9xX3_jW5c2fjlZVBI4cg",
+   "name": "TheAIGRID",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@Fireship",
+   "channel_id": "UCsBjURrPoezykLs9EqgamOA",
+   "name": "Fireship",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@DwarkeshPatel",
+   "channel_id": "UCXl4i9dYBrFOabk0xGmbkRA",
+   "name": "Dwarkesh Patel",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@AndrejKarpathy",
+   "channel_id": "UCXUPKJO5MZQN11PqgIvyuvQ",
+   "name": "Andrej Karpathy",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@YannicKilcher",
+   "channel_id": "UCZHmQk67mSJgfCCTn7xBfew",
+   "name": "Yannic Kilcher",
+   "category": "research",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@bycloudAI",
+   "channel_id": "UCgfe2ooZD3VJPB6aJAnuQng",
+   "name": "bycloud",
+   "category": "research",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@samwitteveenai",
+   "channel_id": "UC55ODQSvARtgSyc8ThfiepQ",
+   "name": "Sam Witteveen",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@engineerprompt",
+   "channel_id": "UCDq7SjbgRKty5TgGafW8Clg",
+   "name": "Prompt Engineering",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@1littlecoder",
+   "channel_id": "UCpV_X0VrL8-jg3t6wYGS-1g",
+   "name": "1littlecoder",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@DaveShap",
+   "channel_id": "UCvKRFNawVcuz4b9ihUTApCg",
+   "name": "David Shapiro",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@OpenAI",
+   "channel_id": "UCXZCJLdBC09xxGZ6gcdrc6A",
+   "name": "OpenAI",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@anthropic-ai",
+   "channel_id": "UCrDwWp7EBBv4NwvScIpBDOA",
+   "name": "Anthropic",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@LatentSpacePod",
+   "channel_id": "UCxBcwypKK-W3GHd_RZ9FZrQ",
+   "name": "Latent Space",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@AIDailyBrief",
+   "channel_id": "UCKelCK4ZaO6HeEI1KQjqzWA",
+   "name": "The AI Daily Brief: Artificial Intelligence News",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@t3dotgg",
+   "channel_id": "UCbRP3c757lWg9M-U7TyEkXA",
+   "name": "Theo - t3.gg",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@MachineLearningStreetTalk",
+   "channel_id": "UCMLtBahI5DMrt0NPvDSoIRQ",
+   "name": "Machine Learning Street Talk",
+   "category": "research",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@ColdFusion",
+   "channel_id": "UC4QZ_LsYcvcq7qOsOhpAX4A",
+   "name": "ColdFusion",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@aiadvantage",
+   "channel_id": "UCHhYXsLBEVVnbvsq57n1MTQ",
+   "name": "The AI Advantage",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@SkillLeapAI",
+   "channel_id": "UCwSozl89jl2zUDzQ4jGJD3g",
+   "name": "Skill Leap AI",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@futurepedia_io",
+   "channel_id": "UC_RovKmk0OCbuZjA8f08opw",
+   "name": "Futurepedia",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@nateherk",
+   "channel_id": "UC2ojq-nuP8ceeHqiroeKhBA",
+   "name": "Nate Herk | AI Automation",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@LiamOttley",
+   "channel_id": "UCui4jxDaMb53Gdh-AZUTPAg",
+   "name": "Liam Ottley",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@AIJasonZ",
+   "channel_id": "UCrXSVX9a1mj8l0CMLwKgMVw",
+   "name": "AI Jason",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@AllAboutAI",
+   "channel_id": "UCR9j1jqqB5Rse69wjUnbYwA",
+   "name": "All About AI",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@ColeMedin",
+   "channel_id": "UCMwVTLZIRRUyyVrkjDpn4pA",
+   "name": "Cole Medin",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@indydevdan",
+   "channel_id": "UC_x36zCEGilGpB1m-V4gmjg",
+   "name": "IndyDevDan",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@rileybrownai",
+   "channel_id": "UCMcoud_ZW7cfxeIugBflSBw",
+   "name": "Riley Brown",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@GregIsenberg",
+   "channel_id": "UCPjNBjflYl0-HQtUvOx0Ibw",
+   "name": "Greg Isenberg",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@JeffSu",
+   "channel_id": "UCwAnu01qlnVg1Ai2AbtTMaA",
+   "name": "Jeff Su",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@parttimelarry",
+   "channel_id": "UCY2ifv8iH1Dsgjrz-h3lWLQ",
+   "name": "Part Time Larry",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@moondevonyt",
+   "channel_id": "UCN7D80fY9xMYu5mHhUhXEFw",
+   "name": "Moon Dev",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@PBoyle",
+   "channel_id": "UCASM0cgfkJxQ1ICmRilfHLw",
+   "name": "Patrick Boyle",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@TickerSymbolYOU",
+   "channel_id": "UC7kCeZ53sli_9XwuQeFxLqw",
+   "name": "Ticker Symbol: YOU",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@CoinBureau",
+   "channel_id": "UCqK_GSMbpiV8spgD3ZGloSw",
+   "name": "Coin Bureau",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@TheoreticallyMedia",
+   "channel_id": "UC9Ryt3XOGYBoAJVsBHNGDzA",
+   "name": "Theoretically Media",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@MattVidPro",
+   "channel_id": "UC5Wz4fFacYuON6IKbhSa7Zw",
+   "name": "MattVidPro",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@CuriousRefuge",
+   "channel_id": "UClnFtyUEaxQOCd1s5NKYGFA",
+   "name": "Curious Refuge",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@OlivioSarikas",
+   "channel_id": "UCCKx8mAHiFus-XYQLy_WnaA",
+   "name": "Olivio Sarikas",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@NerdyRodent",
+   "channel_id": "UC4-5v-f-xKnbi1yaAuRSi_w",
+   "name": "Nerdy Rodent",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@sebastiankamph",
+   "channel_id": "UCvKqTb-65iAmXK59sFNKINQ",
+   "name": "Sebastian Kamph",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@TaoPrompts",
+   "channel_id": "UCc1qMq2UBJD9cSKbeBwGoZQ",
+   "name": "Tao Prompts",
+   "category": "media",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@googledeepmind",
+   "channel_id": "UCP7jMXSY2xbc3KCAE0MHQ-A",
+   "name": "Google DeepMind",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@NVIDIA",
+   "channel_id": "UCHuiy8bXnmK5nisYHUd1J5g",
+   "name": "NVIDIA",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@Cursor",
+   "channel_id": "UCoAQC4a7-ks5kYMXO0kmQqQ",
+   "name": "Cursor",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@n8n-io",
+   "channel_id": "UCiHVTkJtWSdc9N3h0nUGWLg",
+   "name": "n8n",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@ycombinator",
+   "channel_id": "UCcefcZRL2oaA_uBNeo5UOWg",
+   "name": "Y Combinator",
+   "category": "tools",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@lexfridman",
+   "channel_id": "UCSHZKyawb77ixDdsGog4iWA",
+   "name": "Lex Fridman",
+   "category": "models",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@allin",
+   "channel_id": "UCESLZhusAkFfsNsApnjF_Cg",
+   "name": "All-In Podcast",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@a16z",
+   "channel_id": "UC9cn0TuPq4dnbTY-CBsm8XA",
+   "name": "a16z",
+   "category": "trading",
+   "list": "radar"
+  },
+  {
+   "type": "youtube",
+   "handle": "@RoboNuggets",
+   "channel_id": "UCgscS8mBsQZ5sFRkJIFWD7Q",
+   "name": "Jay E | RoboNuggets",
+   "category": "media",
+   "list": "radar"
+  }
+ ],
+ "feeds": [
+  {
+   "name": "The Verge — AI",
+   "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+   "category": "models"
+  },
+  {
+   "name": "TechCrunch — AI",
+   "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+   "category": "models"
+  },
+  {
+   "name": "Ars Technica — AI",
+   "url": "https://arstechnica.com/ai/feed/",
+   "category": "models"
+  },
+  {
+   "name": "MIT Technology Review — AI",
+   "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed",
+   "category": "research"
+  },
+  {
+   "name": "Wired — AI",
+   "url": "https://www.wired.com/feed/tag/ai/latest/rss",
+   "category": "models"
+  },
+  {
+   "name": "The Decoder",
+   "url": "https://the-decoder.com/feed/",
+   "category": "models"
+  },
+  {
+   "name": "OpenAI News",
+   "url": "https://openai.com/news/rss.xml",
+   "category": "models"
+  },
+  {
+   "name": "Google DeepMind Blog",
+   "url": "https://deepmind.google/blog/rss.xml",
+   "category": "models"
+  },
+  {
+   "name": "Hugging Face Blog",
+   "url": "https://huggingface.co/blog/feed.xml",
+   "category": "research"
+  },
+  {
+   "name": "NVIDIA Blog",
+   "url": "https://blogs.nvidia.com/feed/",
+   "category": "models"
+  },
+  {
+   "name": "Simon Willison",
+   "url": "https://simonwillison.net/atom/everything/",
+   "category": "tools"
+  },
+  {
+   "name": "Import AI (Jack Clark)",
+   "url": "https://importai.substack.com/feed",
+   "category": "research"
+  },
+  {
+   "name": "Latent Space",
+   "url": "https://www.latent.space/feed",
+   "category": "tools"
+  },
+  {
+   "name": "One Useful Thing (Ethan Mollick)",
+   "url": "https://www.oneusefulthing.org/feed",
+   "category": "tools"
+  },
+  {
+   "name": "Interconnects (Nathan Lambert)",
+   "url": "https://www.interconnects.ai/feed",
+   "category": "research"
+  },
+  {
+   "name": "TLDR AI",
+   "url": "https://tldr.tech/api/rss/ai",
+   "category": "tools"
+  }
+ ],
+ "google_news": [
+  {
+   "q": "OpenAI OR ChatGPT OR \"Sam Altman\"",
+   "category": "models",
+   "lang": "en"
+  },
+  {
+   "q": "Anthropic OR \"Claude AI\" OR \"Claude Code\"",
+   "category": "models",
+   "lang": "en"
+  },
+  {
+   "q": "\"Google Gemini\" OR DeepMind",
+   "category": "models",
+   "lang": "en"
+  },
+  {
+   "q": "xAI Grok OR \"Meta AI\" OR DeepSeek OR Mistral OR Qwen",
+   "category": "models",
+   "lang": "en"
+  },
+  {
+   "q": "\"AI agents\" OR \"AI automation\" OR \"agentic\"",
+   "category": "tools",
+   "lang": "en"
+  },
+  {
+   "q": "\"AI trading\" OR \"AI stocks\" OR \"AI bubble\" OR \"AI hedge fund\" OR Nvidia earnings",
+   "category": "trading",
+   "lang": "en"
+  },
+  {
+   "q": "\"AI video\" OR Sora OR Veo OR Runway OR Midjourney OR ElevenLabs OR Kling",
+   "category": "media",
+   "lang": "en"
+  },
+  {
+   "q": "\"artificial intelligence\" regulation OR lawsuit OR \"AI Act\"",
+   "category": "policy",
+   "lang": "en"
+  },
+  {
+   "q": "изкуствен интелект",
+   "category": "models",
+   "lang": "bg"
+  }
+ ],
+ "youtube_search": [
+  {
+   "q": "AI news this week",
+   "category": "models"
+  },
+  {
+   "q": "new AI model",
+   "category": "models"
+  },
+  {
+   "q": "Claude",
+   "category": "models"
+  },
+  {
+   "q": "ChatGPT",
+   "category": "models"
+  },
+  {
+   "q": "Gemini AI",
+   "category": "models"
+  },
+  {
+   "q": "AI agents",
+   "category": "tools"
+  },
+  {
+   "q": "n8n AI automation",
+   "category": "tools"
+  },
+  {
+   "q": "vibe coding",
+   "category": "tools"
+  },
+  {
+   "q": "AI trading bot",
+   "category": "trading"
+  },
+  {
+   "q": "AI stocks",
+   "category": "trading"
+  },
+  {
+   "q": "AI video generator",
+   "category": "media"
+  },
+  {
+   "q": "AI image generator",
+   "category": "media"
+  }
+ ],
+ "people": [
+  {
+   "name": "Dario Amodei",
+   "role": "CEO и съосновател",
+   "org": "Anthropic",
+   "category": "models",
+   "x": "DarioAmodei",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Daniela Amodei",
+   "role": "Президент и съосновател",
+   "org": "Anthropic",
+   "category": "models",
+   "x": "DanielaAmodei",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Jack Clark",
+   "role": "Съосновател, Policy",
+   "org": "Anthropic",
+   "category": "models",
+   "x": "jackclarkSF",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Mike Krieger",
+   "role": "Chief Product Officer",
+   "org": "Anthropic",
+   "category": "models",
+   "x": "mikeyk",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Boris Cherny",
+   "role": "Създател на Claude Code",
+   "org": "Anthropic",
+   "category": "tools",
+   "x": "bcherny",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Sam Altman",
+   "role": "CEO",
+   "org": "OpenAI",
+   "category": "models",
+   "x": "sama",
+   "bluesky": "sama.xmirror.bot",
+   "yt_search": true
+  },
+  {
+   "name": "Greg Brockman",
+   "role": "Президент",
+   "org": "OpenAI",
+   "category": "models",
+   "x": "gdb",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Demis Hassabis",
+   "role": "CEO",
+   "org": "Google DeepMind",
+   "category": "models",
+   "x": "demishassabis",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Sundar Pichai",
+   "role": "CEO",
+   "org": "Google",
+   "category": "models",
+   "x": "sundarpichai",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Logan Kilpatrick",
+   "role": "Lead, Gemini API",
+   "org": "Google",
+   "category": "tools",
+   "x": "OfficialLoganK",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Elon Musk",
+   "role": "CEO",
+   "org": "xAI / Tesla",
+   "category": "models",
+   "x": "elonmusk",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Mark Zuckerberg",
+   "role": "CEO",
+   "org": "Meta",
+   "category": "models",
+   "x": "finkd",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Alexandr Wang",
+   "role": "Chief AI Officer",
+   "org": "Meta",
+   "category": "models",
+   "x": "alexandr_wang",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Yann LeCun",
+   "role": "AI учен",
+   "org": "AMI Labs / NYU",
+   "category": "research",
+   "x": "ylecun",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Satya Nadella",
+   "role": "CEO",
+   "org": "Microsoft",
+   "category": "models",
+   "x": "satyanadella",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Mustafa Suleyman",
+   "role": "CEO Microsoft AI",
+   "org": "Microsoft",
+   "category": "models",
+   "x": "mustafasuleyman",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Jensen Huang",
+   "role": "CEO",
+   "org": "NVIDIA",
+   "category": "trading",
+   "x": "",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Ilya Sutskever",
+   "role": "Основател",
+   "org": "Safe Superintelligence",
+   "category": "research",
+   "x": "ilyasut",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Mira Murati",
+   "role": "CEO",
+   "org": "Thinking Machines Lab",
+   "category": "models",
+   "x": "miramurati",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Andrej Karpathy",
+   "role": "AI изследовател и преподавател",
+   "org": "Eureka Labs",
+   "category": "research",
+   "x": "karpathy",
+   "bluesky": "karpathy-mirr.selfhosted.social",
+   "yt_search": true
+  },
+  {
+   "name": "Andrew Ng",
+   "role": "Основател",
+   "org": "DeepLearning.AI",
+   "category": "tools",
+   "x": "AndrewYNg",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Geoffrey Hinton",
+   "role": "Нобелов лауреат, AI пионер",
+   "org": "",
+   "category": "research",
+   "x": "geoffreyhinton",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Fei-Fei Li",
+   "role": "Съосновател",
+   "org": "World Labs",
+   "category": "research",
+   "x": "drfeifei",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Liang Wenfeng",
+   "role": "Основател",
+   "org": "DeepSeek",
+   "category": "models",
+   "x": "",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Arthur Mensch",
+   "role": "CEO",
+   "org": "Mistral AI",
+   "category": "models",
+   "x": "arthurmensch",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Aravind Srinivas",
+   "role": "CEO",
+   "org": "Perplexity",
+   "category": "tools",
+   "x": "AravSrinivas",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Amjad Masad",
+   "role": "CEO",
+   "org": "Replit",
+   "category": "tools",
+   "x": "amasad",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Michael Truell",
+   "role": "CEO",
+   "org": "Cursor (Anysphere)",
+   "category": "tools",
+   "x": "mntruell",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Guillermo Rauch",
+   "role": "CEO",
+   "org": "Vercel",
+   "category": "tools",
+   "x": "rauchg",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Harrison Chase",
+   "role": "CEO",
+   "org": "LangChain",
+   "category": "tools",
+   "x": "hwchase17",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Simon Willison",
+   "role": "Разработчик, блогър",
+   "org": "Datasette",
+   "category": "tools",
+   "x": "simonw",
+   "bluesky": "simonwillison.net",
+   "yt_search": false
+  },
+  {
+   "name": "Ethan Mollick",
+   "role": "Професор, Wharton",
+   "org": "",
+   "category": "tools",
+   "x": "emollick",
+   "bluesky": "emollick.bsky.social",
+   "yt_search": false
+  },
+  {
+   "name": "swyx (Shawn Wang)",
+   "role": "Latent Space, AI Engineer",
+   "org": "",
+   "category": "tools",
+   "x": "swyx",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Pieter Levels",
+   "role": "Инди хакер",
+   "org": "",
+   "category": "tools",
+   "x": "levelsio",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Cristóbal Valenzuela",
+   "role": "CEO",
+   "org": "Runway",
+   "category": "media",
+   "x": "c_valenzuelab",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "David Holz",
+   "role": "Основател",
+   "org": "Midjourney",
+   "category": "media",
+   "x": "DavidSHolz",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Mati Staniszewski",
+   "role": "CEO",
+   "org": "ElevenLabs",
+   "category": "media",
+   "x": "matistanis",
+   "bluesky": "",
+   "yt_search": false
+  },
+  {
+   "name": "Cathie Wood",
+   "role": "CEO",
+   "org": "ARK Invest",
+   "category": "trading",
+   "x": "CathieDWood",
+   "bluesky": "",
+   "yt_search": true
+  },
+  {
+   "name": "Dan Ives",
+   "role": "Технологичен анализатор",
+   "org": "Wedbush",
+   "category": "trading",
+   "x": "DivesTech",
+   "bluesky": "",
+   "yt_search": false
+  }
+ ]
+}
