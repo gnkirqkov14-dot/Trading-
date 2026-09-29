@@ -284,7 +284,8 @@ def main() -> None:
     for p in (disc.get("people") or [])[:5]:
         if p.get("name") and p["name"].lower() not in known_names:
             new_sources.append({"type": "person", "name": p["name"], "role": p.get("role", ""), "org": p.get("org", ""),
-                                "category": p.get("category", "other"), "why": p.get("why", ""), "added_by": "claude", "added_at": raw["generated_at"]})
+                                "category": p.get("category", "other"), "why": p.get("why", ""), "added_by": "claude", "added_at": raw["generated_at"],
+                                "status": "ok"})
     for c in (disc.get("channels") or [])[:5]:
         ref = c.get("ref") or ""
         cid = ref if re.fullmatch(r"UC[\w-]{22}", ref) else by_name.get((c.get("name") or "").lower())
@@ -360,12 +361,12 @@ def write_email(work: Path, date: str, an: dict, topics: list[dict], must: list[
     e = html.escape
     rows = "".join(
         f"<tr><td style='padding:4px 8px 4px 0;white-space:nowrap;color:#555'>{t['metrics']['72'].get('attention', 0):.0f}%</td>"
-        f"<td style='padding:4px 0;width:100%'><div style='background:#e8e6f5;border-radius:4px'>"
-        f"<div style='background:#5b4bd6;height:8px;border-radius:4px;width:{min(100, 2.2 * t['metrics']['72'].get('attention', 0)):.0f}%'></div></div>"
+        f"<td style='padding:4px 0;width:100%'><div style='background:#e3e7f7;border-radius:4px'>"
+        f"<div style='background:#1f3fd1;height:8px;border-radius:4px;width:{min(100, 2.2 * t['metrics']['72'].get('attention', 0)):.0f}%'></div></div>"
         f"<div style='font-size:14px;margin-top:3px'>{e(t['name'])} <span style='color:#888'>· важност {t['importance']}/10</span></div></td></tr>"
         for t in top)
     vids = "".join(
-        f"<p style='margin:0 0 12px'><a href='{e(i['url'])}' style='color:#3b2fb0;font-weight:600;text-decoration:none'>▶ {e(i['title'])}</a>"
+        f"<p style='margin:0 0 12px'><a href='{e(i['url'])}' style='color:#1f3fd1;font-weight:600;text-decoration:none'>▶ {e(i['title'])}</a>"
         f"<br><span style='color:#777;font-size:13px'>{e(i.get('channel') or '')} · {fmt_views(i.get('views'))} гледания</span>"
         f"<br><span style='font-size:14px'>{e(i.get('s') or '')}</span></p>" for i in must[:4])
     body = (
@@ -376,7 +377,7 @@ def write_email(work: Path, date: str, an: dict, topics: list[dict], must: list[
         + "</ul><h3 style='margin:0 0 8px'>За какво се говори <span style='font-weight:400;color:#888;font-size:13px'>дял от вниманието, 3 дни</span></h3>"
         f"<table style='width:100%;border-collapse:collapse;margin-bottom:18px'>{rows}</table>"
         + (f"<h3 style='margin:0 0 8px'>За гледане</h3>{vids}" if vids else "")
-        + (f"<p style='margin-top:20px'><a href='{e(url)}' style='background:#5b4bd6;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none'>Отвори таблото</a></p>" if url else "")
+        + (f"<p style='margin-top:20px'><a href='{e(url)}' style='background:#1f3fd1;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none'>Отвори таблото</a></p>" if url else "")
         + "</div>")
     (work / "email_subject.txt").write_text(subj, encoding="utf-8")
     (work / "email.txt").write_text("\n".join(txt), encoding="utf-8")

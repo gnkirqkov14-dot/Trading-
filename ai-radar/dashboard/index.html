@@ -31,6 +31,7 @@
   --c-research: #d55181; --c-policy: #9085e9; --c-other: #8a8f9c; --c-misc: #5b6070; color-scheme: dark; }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); margin: 0; }
 a { color: inherit; }
 button, input, select { font: inherit; color: inherit; }
@@ -148,6 +149,12 @@ ol.brief li::before { content: counter(b); font: 600 12px/22px var(--f-mono); co
 .quad .lab { fill: var(--ink); font: 500 11.5px var(--f-body); }
 .quad circle { stroke: var(--surface); stroke-width: 2; cursor: pointer; }
 .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; padding: 7px 9px; border-radius: 6px; max-width: 240px; z-index: 3; }
+.qlists { display: grid; gap: 10px; margin-top: 10px; }
+.qlist { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.qlist .eyebrow { width: 100%; }
+.qname { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 2px 9px 2px 7px; font-size: 12.5px; display: inline-flex; gap: 5px; align-items: center; text-align: left; }
+.qname:hover { border-color: var(--ink-3); }
+.qname .dot { width: 7px; height: 7px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); margin-top: 8px; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 
@@ -503,11 +510,14 @@ function renderQuad() {
   const d = S.digest; const w = S.win;
   const pts = d.topics.filter((t) => !isMuted(t.id)).map((t) => ({ t, x: t.metrics[w]?.attention || 0, y: t.importance }));
   const W = 360, H = 300, L = 30, R = 12, T = 14, B = 34;
+  // корен-квадратна скала по X: повечето теми са под 5% и иначе се слепват вляво
   const xmax = Math.max(10, Math.ceil(Math.max(...pts.map((p) => p.x), 1) / 5) * 5);
-  const sx = (x) => L + (x / xmax) * (W - L - R), sy = (y) => T + (1 - (y - 1) / 9) * (H - T - B);
-  const xm = sx(xmax / 2), ym = sy(5.5);
-  const ticks = [0, xmax / 2, xmax];
-  const labelled = new Set([...pts].sort((a, b) => (b.x + b.y * 3) - (a.x + a.y * 3)).slice(0, 6).map((p) => p.t.id));
+  const sx = (x) => L + Math.sqrt(Math.max(x, 0) / xmax) * (W - L - R), sy = (y) => T + (1 - (y - 1) / 9) * (H - T - B);
+  const xm = sx(xmax / 4), ym = sy(5.5);
+  const ticks = [0, 1, xmax / 4, xmax].filter((v, i, a) => a.indexOf(v) === i);
+  // еднаква важност → леко разместване, за да не се скриват точките една под друга
+  const rows = {}; for (const p of pts) (rows[p.y] ||= []).push(p);
+  for (const r of Object.values(rows)) { r.sort((a, b) => a.x - b.x); r.forEach((p, k) => (p.jy = r.length > 1 ? (k / (r.length - 1) - 0.5) * 0.5 : 0)); }
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Теми по внимание и важност">
     <rect x="${xm}" y="${T}" width="${W - R - xm}" height="${ym - T}" fill="var(--hot)" opacity=".06"/>
     <rect x="${L}" y="${T}" width="${xm - L}" height="${ym - T}" fill="var(--accent)" opacity=".05"/>
@@ -518,19 +528,27 @@ function renderQuad() {
     <text class="ql" x="${L + 4}" y="${T + 13}">Тихо, но важно</text>
     <text class="ql" x="${W - R - 4}" y="${H - B - 6}" text-anchor="end">Шум</text>
     <text class="ql" x="${L + 4}" y="${H - B - 6}">Второстепенно</text>
-    ${ticks.map((v) => `<text x="${sx(v)}" y="${H - B + 14}" text-anchor="middle">${v}%</text>`).join("")}
+    ${ticks.map((v) => `<text x="${sx(v)}" y="${H - B + 14}" text-anchor="middle">${String(v).replace(".", ",")}%</text>`).join("")}
     <text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">колко се говори →</text>
     ${[1, 5, 10].map((v) => `<text x="${L - 6}" y="${sy(v) + 4}" text-anchor="end">${v}</text>`).join("")}
     <text x="10" y="${(T + H - B) / 2}" transform="rotate(-90 10 ${(T + H - B) / 2})" text-anchor="middle">важност →</text>`;
+  const boxes = [[W - R - 90, T, W - R, T + 16], [L, T, L + 110, T + 16], [W - R - 40, H - B - 18, W - R, H - B], [L, H - B - 18, L + 100, H - B]];
+  const hit = (b) => boxes.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+  const order = [...pts].sort((a, b) => (b.y * 4 + b.x) - (a.y * 4 + a.x));
+  let dots = "", labels = "";
   for (const p of pts) {
-    const cx = sx(p.x), cy = sy(p.y);
-    svg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(5 + Math.sqrt(p.x) * 1.2).toFixed(1)}" fill="${cvar(p.t.category)}" data-q="${esc(p.t.id)}" tabindex="0"><title>${esc(p.t.name)}</title></circle>`;
-    if (labelled.has(p.t.id)) {
-      const right = cx < W - 110;
-      svg += `<text class="lab" x="${(right ? cx + 9 : cx - 9).toFixed(1)}" y="${(cy + 4).toFixed(1)}" text-anchor="${right ? "start" : "end"}">${esc(p.t.name.length > 22 ? p.t.name.slice(0, 21) + "…" : p.t.name)}</text>`;
-    }
+    p.cx = sx(p.x); p.cy = sy(p.y + p.jy); p.r = 5 + Math.sqrt(p.x) * 1.2;
+    boxes.push([p.cx - p.r, p.cy - p.r, p.cx + p.r, p.cy + p.r]);
+    dots += `<circle cx="${p.cx.toFixed(1)}" cy="${p.cy.toFixed(1)}" r="${p.r.toFixed(1)}" fill="${cvar(p.t.category)}" data-q="${esc(p.t.id)}" tabindex="0"><title>${esc(p.t.name)}</title></circle>`;
   }
-  $("#quad").innerHTML = svg + `</svg><div class="tip" hidden></div>`;
+  svg += dots;
+  const quads = [["Гледай сега", (p) => p.x >= xmax / 4 && p.y >= 5.5], ["Тихо, но важно", (p) => p.x < xmax / 4 && p.y >= 5.5],
+    ["Шум", (p) => p.x >= xmax / 4 && p.y < 5.5], ["Второстепенно", (p) => p.x < xmax / 4 && p.y < 5.5]];
+  const lists = quads.map(([name, f]) => {
+    const ps = pts.filter(f).sort((a, b) => b.y - a.y || b.x - a.x); if (!ps.length) return "";
+    return `<div class="qlist"><span class="eyebrow">${name}</span>${ps.map((p) => `<button class="qname" data-topic="${esc(p.t.id)}"><span class="dot" style="--c:${cvar(p.t.category)}"></span>${esc(p.t.name)}</button>`).join("")}</div>`;
+  }).join("");
+  $("#quad").innerHTML = svg + `</svg><div class="tip" hidden></div><div class="qlists">${lists}</div>`;
 }
 $("#quad").addEventListener("mousemove", (e) => {
   const c = e.target.closest("circle[data-q]"); const tip = $("#quad .tip"); if (!tip) return;
