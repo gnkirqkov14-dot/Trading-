@@ -27,10 +27,16 @@ def merge(prev_p: Path, new_p: Path, work: Path) -> None:
     topics = {t["id"]: t for t in prev["topics"]}
     for t in new.get("topics", []):
         topics[t["id"]] = {**topics.get(t["id"], {}), **t}
+    live = {i["id"] for i in json.loads((work / "compact.json").read_text(encoding="utf-8"))["items"]}
+    items = {k: v for k, v in {**prev.get("items", {}), **new.get("items", {})}.items() if k in live or k.startswith("w:")}
+    ok = set(items) | {k for k in items if k.startswith("w:")}
+    for t in topics.values():  # махни препратки към елементи, които вече ги няма
+        t["watch"] = [i for i in t.get("watch") or [] if i in ok]
+        t["read"] = [i for i in t.get("read") or [] if i in ok]
     out = {**prev, **{k: v for k, v in new.items() if k in ("brief", "people", "date") and v},
-           "topics": list(topics.values()), "items": {**prev.get("items", {}), **new.get("items", {})}}
+           "topics": list(topics.values()), "items": items}
     d = new.get("discovered") or {}
-    if d:
+    if d.get("people") or d.get("channels"):
         out["discovered"] = d
     (work / "analysis.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
     print(f"{len(out['topics'])} теми, {len(out['items'])} анотации")
