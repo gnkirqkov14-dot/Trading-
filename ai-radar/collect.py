@@ -148,8 +148,53 @@ def resolve_youtube(ref: str) -> tuple[str | None, str | None]:
     return (m.group(1) if m else None), (html.unescape(t.group(1)) if t else None)
 
 
+def _find_all(o, name: str, out: list) -> list:
+    if isinstance(o, dict):
+        if name in o:
+            out.append(o[name])
+        for v in o.values():
+            _find_all(v, name, out)
+    elif isinstance(o, list):
+        for v in o:
+            _find_all(v, name, out)
+    return out
+
+
+def youtube_channel_page(ch: dict) -> list[dict]:
+    """Резервен път, когато YouTube RSS е паднал: страницата „Видеа“ на канала (без описания)."""
+    page = fetch(f"https://www.youtube.com/channel/{ch['channel_id']}/videos").decode("utf-8", "ignore")
+    m = re.search(r"var ytInitialData = (\{.*?\});</script>", page)
+    if not m:
+        raise RuntimeError("няма ytInitialData")
+    out = []
+    for lk in _find_all(json.loads(m.group(1)), "lockupViewModel", []):
+        if lk.get("contentType") != "LOCKUP_CONTENT_TYPE_VIDEO":
+            continue
+        vid = lk.get("contentId")
+        meta = (lk.get("metadata") or {}).get("lockupMetadataViewModel") or {}
+        parts = [p.get("text", {}).get("content", "") for row in (_find_all(meta, "metadataRows", []) or [[]])[0] for p in row.get("metadataParts", [])]
+        views = next((parse_views(p) for p in parts if re.search(r"\d\s*[KMkm]?$|views?", p) and not REL.search(p)), None)
+        ah = next((parse_rel(p) for p in parts if REL.search(p) and "ago" in p), None)
+        badge = next((b.get("text") for b in _find_all(lk, "thumbnailBadgeViewModel", []) if re.fullmatch(r"[\d:]+", b.get("text") or "")), None)
+        if ah is None:
+            continue
+        out.append({
+            "id": f"yt:{vid}", "kind": "video", "video_id": vid, "title": clean((meta.get("title") or {}).get("content")),
+            "url": f"https://www.youtube.com/watch?v={vid}", "is_short": False,
+            "published": iso(NOW - timedelta(hours=ah)), "age_h": ah, "published_approx": True,
+            "channel": ch.get("name"), "channel_id": ch["channel_id"], "list": ch.get("list", "radar"),
+            "category_hint": ch.get("category"), "views": views, "duration_s": parse_len(badge),
+            "thumb": f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg", "description": "", "found_via": ["channel"],
+        })
+    return out
+
+
 def youtube_channel(ch: dict) -> list[dict]:
-    root = ET.fromstring(fetch(f"https://www.youtube.com/feeds/videos.xml?channel_id={ch['channel_id']}"))
+    try:
+        data = fetch(f"https://www.youtube.com/feeds/videos.xml?channel_id={ch['channel_id']}")
+    except Exception:  # noqa: BLE001 — RSS на YouTube понякога връща 404/500 за всички канали
+        return youtube_channel_page(ch)
+    root = ET.fromstring(data)
     out = []
     for e in root.findall("a:entry", NS):
         vid = e.findtext("yt:videoId", namespaces=NS)

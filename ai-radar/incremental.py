@@ -33,6 +33,8 @@ def merge(prev_p: Path, new_p: Path, work: Path) -> None:
     for t in topics.values():  # махни препратки към елементи, които вече ги няма
         t["watch"] = [i for i in t.get("watch") or [] if i in ok]
         t["read"] = [i for i in t.get("read") or [] if i in ok]
+    used = {a.get("t") for a in items.values()}
+    topics = {k: t for k, t in topics.items() if k in used}  # теми без нито един жив елемент отпадат
     out = {**prev, **{k: v for k, v in new.items() if k in ("brief", "people", "date") and v},
            "topics": list(topics.values()), "items": items}
     d = new.get("discovered") or {}
