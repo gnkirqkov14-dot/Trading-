@@ -25,6 +25,12 @@ commit-ва).
    `work/prefs.json`), изход `work/analysis.json`, и проверка с
    `python3 build_digest.py --check work/analysis.json --work work`.
    Главната сесия НЕ чете compact.json — пести контекст.
+   **Ако има предишен анализ** (`work/prev/analysis-<вчера>.json` — пази се,
+   докато контейнерът е жив): ползвай го като `prev_analysis.json` със
+   стъпките отдолу; subagent-ът пише свеж `brief`, `people`, нови и обновени
+   теми само за новите елементи. След записа копирай `work/analysis.json`
+   в `work/prev/analysis-<днес>.json`. Ако RSS на YouTube падне, събирачът
+   сам чете страниците на каналите.
    **Същия ден („Обнови сега“ след вече готов брой):** не анализирай
    всичко наново — `cp work/analysis.json work/prev_analysis.json`,
    `python3 incremental.py split work/prev_analysis.json work` и subagent
