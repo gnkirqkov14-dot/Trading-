@@ -33,7 +33,10 @@ def merge(prev_p: Path, new_p: Path, work: Path) -> None:
     for t in topics.values():  # махни препратки към елементи, които вече ги няма
         t["watch"] = [i for i in t.get("watch") or [] if i in ok]
         t["read"] = [i for i in t.get("read") or [] if i in ok]
-    used = {a.get("t") for a in items.values()}
+    comp_items = json.loads((work / "compact.json").read_text(encoding="utf-8"))["items"]
+    recent = {i["id"] for i in comp_items if (i.get("age_h") or 999) <= 96}
+    # тема остава само ако има поне един елемент от последните 4 дни (иначе темите се трупат ден след ден)
+    used = {a.get("t") for k, a in items.items() if k in recent or k.startswith("w:")}
     topics = {k: t for k, t in topics.items() if k in used}  # теми без нито един жив елемент отпадат
     out = {**prev, **{k: v for k, v in new.items() if k in ("brief", "people", "date") and v},
            "topics": list(topics.values()), "items": items}
