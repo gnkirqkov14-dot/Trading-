@@ -514,7 +514,10 @@ def main() -> None:
                                  "category": cat, "list": "mine" if mine else "radar"})
                 known.add(r["channel_id"])
         elif s["type"] == "site":
-            if r.get("feed_url"):
+            same = next((f for f in feeds if f["url"].rstrip("/") == (r.get("feed_url") or "").rstrip("/")), None)
+            if same:  # вече е в радара — само става "мой"
+                same["mine"] = same.get("mine") or mine
+            elif r.get("feed_url"):
                 feeds.append({"name": s.get("name") or urllib.parse.urlparse(s["url"]).netloc, "url": r["feed_url"],
                               "category": cat, "mine": mine})
         elif s["type"] == "person":
