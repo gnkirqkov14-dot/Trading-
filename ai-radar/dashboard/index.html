@@ -725,13 +725,19 @@ async function askClaude(id) {
 
 // ------------------------------------------------------------ refresh (fires the daily Claude routine)
 $("#refresh").addEventListener("click", async () => {
-  const btn = $("#refresh"); const mcp = await claude.use("mcp");
-  if (!mcp || !S.config.trigger_id) { toast("Ръчното обновяване не е достъпно тук. Следващият брой е утре сутрин."); return; }
+  const btn = $("#refresh"); const mcp = await claude.use("mcp"); const r = S.config.refresh;
+  if (!mcp || !r) { toast("Ръчното обновяване не е достъпно тук. Следващият брой е утре сутрин."); return; }
+  const s = S.status; if (s && ["requested", "running"].includes(s.state) && Date.now() - new Date(s.at) < 30 * 60e3) { toast("Вече се подготвя нов брой — изчакай да свърши."); return; }
   btn.disabled = true; btn.textContent = "Пускам…";
   try {
-    await mcp.callTool("Claude Code Remote", "fire_trigger", { trigger_id: S.config.trigger_id, text: "Ръчно обновяване от таблото" });
+    // нова облачна сесия с кода на проекта; тя изпълнява RUNBOOK.md и записва в тази база
+    await mcp.callTool("Claude Code Remote", "create_session", {
+      environment_id: r.environment_id, source_url: r.source_url, source_revision: r.revision,
+      title: "AI Радар — ръчно обновяване", permission_mode: "auto",
+      prompt: "Ръчно обновяване от таблото AI Радар: направи нов брой по ai-radar/RUNBOOK.md (събиране, анализ чрез subagent, build_digest, запис в базата на таблото " + r.dashboard_url + ", статуси на източниците). БЕЗ имейл. Не прави commit или push. Не питай — действай.",
+    });
     try { await S.db.doc("meta/status").set({ state: "requested", at: new Date().toISOString(), message: "Поискано от таблото" }); } catch {}
-    toast("Claude започна нов брой — обикновено отнема 10–15 минути.");
+    toast("Claude започна нов брой — обикновено отнема 10–20 минути.");
   } catch (x) {
     toast(x?.code === "needs_reauth" || x?.code === "server_not_connected" ? "Свържи Claude Code в настройките на claude.ai, за да ползваш бутона." : "Не се получи: " + (x?.message || x?.code || x));
   } finally { btn.disabled = false; btn.textContent = "Обнови сега"; }
@@ -766,14 +772,14 @@ async function boot() {
   if (!db) { $("#date").textContent = "офлайн"; $("#today-empty").querySelector("p").textContent = "Данните се зареждат само когато таблото е отворено в claude.ai с влязъл профил."; return; }
   S.db = db;
   claude.use("sample").then((s) => { S.canSample = !!s; if (S.digest) renderTopics(); });
-  claude.use("mcp").then((m) => { S.canRefresh = !!m; $("#refresh").hidden = !m || !S.config.trigger_id; });
+  claude.use("mcp").then((m) => { S.canRefresh = !!m; $("#refresh").hidden = !m || !S.config.refresh; });
   const onErr = (e) => console.warn("db", e);
   db.doc("meta/latest").onSnapshot(async (snap) => {
     if (!snap.exists) { $("#date").textContent = "още няма брой"; renderToday(); return; }
     const latest = snap.data();
     if (!S.archiveDate && latest.date && (!S.digest || S.digest.generated_at !== latest.generated_at)) await loadDigest(latest.date);
   }, onErr);
-  db.doc("meta/config").onSnapshot((snap) => { S.config = snap.exists ? snap.data() : {}; $("#refresh").hidden = !S.canRefresh || !S.config.trigger_id; }, onErr);
+  db.doc("meta/config").onSnapshot((snap) => { S.config = snap.exists ? snap.data() : {}; $("#refresh").hidden = !S.canRefresh || !S.config.refresh; }, onErr);
   db.doc("meta/status").onSnapshot((snap) => { S.status = snap.exists ? snap.data() : null; renderStatus(); }, onErr);
   db.doc("meta/radar").onSnapshot((snap) => { S.radar = snap.exists ? snap.data() : null; renderSources(); renderPeople(); }, onErr);
   db.doc("prefs/main").onSnapshot((snap) => { S.prefs = snap.exists ? snap.data() : {}; if (S.digest) renderAll(); }, onErr);
