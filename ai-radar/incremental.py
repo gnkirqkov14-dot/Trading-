@@ -6,7 +6,10 @@
         -> work/analysis.json: старите анотации + новите (новите печелят)
 """
 import json
+import math
 import sys
+
+MAX_TOPICS = 22
 from pathlib import Path
 
 
@@ -34,10 +37,20 @@ def merge(prev_p: Path, new_p: Path, work: Path) -> None:
         t["watch"] = [i for i in t.get("watch") or [] if i in ok]
         t["read"] = [i for i in t.get("read") or [] if i in ok]
     comp_items = json.loads((work / "compact.json").read_text(encoding="utf-8"))["items"]
-    recent = {i["id"] for i in comp_items if (i.get("age_h") or 999) <= 96}
-    # тема остава само ако има поне един елемент от последните 4 дни (иначе темите се трупат ден след ден)
-    used = {a.get("t") for k, a in items.items() if k in recent or k.startswith("w:")}
-    topics = {k: t for k, t in topics.items() if k in used}  # теми без нито един жив елемент отпадат
+    recent = {i["id"] for i in comp_items if (i.get("age_h") or 999) <= 72}
+    cnt = {}
+    for k, a in items.items():
+        if k in recent or k.startswith("w:"):
+            cnt[a.get("t")] = cnt.get(a.get("t"), 0) + 1
+    fresh = {t["id"] for t in new.get("topics", [])}
+    # тема остава само с елементи от последните 3 дни; над MAX_TOPICS отпадат най-слабите
+    alive = [t for k, t in topics.items() if cnt.get(k)]
+    alive.sort(key=lambda t: (t["id"] in fresh, (t.get("importance") or 0) * 2 + math.log(cnt.get(t["id"], 0) + 1) * 3), reverse=True)
+    keep = {t["id"] for t in alive[:MAX_TOPICS]}
+    topics = {k: t for k, t in topics.items() if k in keep}
+    for a in items.values():
+        if a.get("t") not in keep | {"misc", "off"}:
+            a["t"] = "misc"
     out = {**prev, **{k: v for k, v in new.items() if k in ("brief", "people", "date") and v},
            "topics": list(topics.values()), "items": items}
     d = new.get("discovered") or {}
