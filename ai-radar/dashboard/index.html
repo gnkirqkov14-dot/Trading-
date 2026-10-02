@@ -134,6 +134,15 @@ ol.brief li::before { content: counter(b); font: 600 12px/22px var(--f-mono); co
 .v-summary, .v-skip { color: var(--ink-3); border: 1px dashed var(--line); }
 .tag { font-size: 12px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; }
 .mine { color: var(--accent); font-weight: 600; }
+.star { border: 0; background: none; padding: 0 2px; font-size: 17px; line-height: 1; color: var(--ink-3); }
+.star[aria-pressed="true"] { color: var(--hot); }
+.star:hover { color: var(--hot); }
+.fav { display: grid; gap: 4px; padding: 12px 6px; border-bottom: 1px solid var(--line); }
+.fav:last-child { border-bottom: 0; }
+.fav.done { opacity: .55; }
+.fav-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.fav .why { margin: 2px 0 0; font-size: 14px; }
+.fav ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
 .check { border: 1px solid var(--line); background: none; border-radius: 6px; font-size: 11px; padding: 2px 6px; color: var(--ink-3); }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
 .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 11px; font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
@@ -201,6 +210,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
       <button role="tab" data-tab="videos" aria-selected="false">Видеа<span class="count" id="n-videos"></span></button>
       <button role="tab" data-tab="news" aria-selected="false">Новини<span class="count" id="n-news"></span></button>
       <button role="tab" data-tab="people" aria-selected="false">Хора<span class="count" id="n-people"></span></button>
+      <button role="tab" data-tab="favs" aria-selected="false">Любими<span class="count" id="n-favs"></span></button>
       <button role="tab" data-tab="sources" aria-selected="false">Източници<span class="count" id="n-sources"></span></button>
     </nav>
   </div>
@@ -297,6 +307,14 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
     </div>
   </section>
 
+  <section id="view-favs" hidden>
+    <div class="panel" style="margin-top:20px">
+      <div class="phead"><h2>Любими</h2><span class="muted small">запазени за по-късно — остават, докато не ги махнеш</span></div>
+      <div class="filters" id="ff-kinds"></div>
+      <div id="favs"></div>
+    </div>
+  </section>
+
   <section id="view-sources" hidden>
     <section class="panel" style="margin-top:20px">
       <div class="phead"><h2>Добави източник</h2></div>
@@ -361,7 +379,7 @@ const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? 
 const S = {
   db: null, digest: null, items: [], byId: new Map(), topics: new Map(), win: "72", open: null,
   sources: [], radar: null, prefs: {}, prefsVer: null, config: {}, status: null,
-  done: new Set(store.get("radar.done", [])), tab: "today",
+  done: new Set(store.get("radar.done", [])), tab: "today", favs: new Map(),
   vf: { cat: null, mine: false, shorts: false, fresh: false, sort: "score", limit: 60 },
   nf: { cat: null, kind: null, limit: 60 },
 };
@@ -372,13 +390,13 @@ function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = fal
 function setTab(tab) {
   S.tab = tab;
   for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
-  for (const v of ["today", "videos", "news", "people", "sources"]) $("#view-" + v).hidden = v !== tab;
+  for (const v of ["today", "videos", "news", "people", "favs", "sources"]) $("#view-" + v).hidden = v !== tab;
   if (location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab);
   window.scrollTo({ top: 0 });
 }
 $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
 document.addEventListener("click", (e) => { const g = e.target.closest("[data-go]"); if (g) setTab(g.dataset.go); });
-const initial = location.hash.slice(1); if (["videos", "news", "people", "sources"].includes(initial)) setTab(initial);
+const initial = location.hash.slice(1); if (["videos", "news", "people", "favs", "sources"].includes(initial)) setTab(initial);
 
 // ------------------------------------------------------------ rendering: today
 function renderToday() {
@@ -464,12 +482,68 @@ function topicDetail(t, m) {
       <button class="btn" data-alltopic="${esc(t.id)}">Всичко по темата (${count})</button>
       <button class="btn" data-like="${esc(t.id)}">${liked ? "Спри да я следя" : "Следи темата"}</button>
       <button class="btn" data-mute="${esc(t.id)}">Скрий темата</button>
+      <button class="btn" data-favtopic="${esc(t.id)}" aria-pressed="${S.favs.has(favKey("topic:" + t.id))}">${S.favs.has(favKey("topic:" + t.id)) ? "★ В любими" : "☆ Добави в любими"}</button>
     </div>
     <div class="ask" data-ask="${esc(t.id)}" ${S.canSample ? "" : "hidden"}>
       <div class="ask-row"><input id="ask-${esc(t.id)}" placeholder="Попитай Claude: какво значи това за мен?" aria-label="Въпрос към Claude за темата"><button class="btn primary" data-askbtn="${esc(t.id)}">Попитай</button></div>
       <div class="answer" id="ans-${esc(t.id)}" hidden></div>
     </div>
   </div>`;
+}
+
+// ------------------------------------------------------------ favourites (db: favorites/<key>, snapshot of the item so it outlives the daily issue)
+const favKey = (id) => "f-" + String(id).replace(/[^A-Za-z0-9_\-.~:@+]/g, "_").slice(0, 190);
+function starBtn(id) {
+  const on = S.favs.has(favKey(id));
+  return `<button class="star" data-fav="${esc(id)}" aria-pressed="${on}" title="${on ? "Махни от любими" : "Добави в любими"}" aria-label="${on ? "Махни от любими" : "Добави в любими"}">${on ? "★" : "☆"}</button>`;
+}
+async function toggleFav(key, makeDoc) {
+  if (!S.db) { toast("Любимите се пазят само в claude.ai с влязъл профил."); return; }
+  const ref = S.db.collection("favorites").doc(key);
+  try {
+    if (S.favs.has(key)) { await ref.delete(); toast("Махнато от любими."); }
+    else { await ref.set(makeDoc()); toast("Добавено в любими."); }
+  } catch (x) { toast("Не успях: " + (x?.message || x)); }
+}
+function favItem(i) {
+  const t = S.topics.get(i.t);
+  const pick = ["kind", "title", "url", "channel", "source", "s", "imp", "v", "views", "duration_s", "published", "points", "upvotes", "hn_url", "list", "mine"];
+  const d = { ref: i.id, saved_at: new Date().toISOString(), issue: S.digest?.date || null, done: false };
+  for (const k of pick) if (i[k] != null && i[k] !== "") d[k] = i[k];
+  if (t) { d.topic = t.name; d.category = t.category; }
+  return d;
+}
+function favTopic(t) {
+  const links = (ids) => (ids || []).map((id) => S.byId.get(id)).filter(Boolean).map((i) => ({ title: i.title, url: i.url, by: i.channel || i.source || "" }));
+  return { ref: "topic:" + t.id, kind: "topic", title: t.name, s: t.summary, why: t.why, imp: t.importance, category: t.category,
+    watch: links(t.watch), read: links(t.read), saved_at: new Date().toISOString(), issue: S.digest?.date || null, done: false };
+}
+const FKINDS = { topic: "Теми", video: "Видеа", news: "Новини" };
+function renderFavs() {
+  const f = (S.ff ||= { kind: null, showDone: true });
+  const all = [...S.favs.values()].sort((a, b) => (b.saved_at || "").localeCompare(a.saved_at || ""));
+  $("#n-favs").textContent = all.filter((x) => !x.done).length || "";
+  const kindOf = (x) => x.kind === "topic" ? "topic" : x.kind === "video" ? "video" : "news";
+  $("#ff-kinds").innerHTML = `<button class="chip" data-fk="" aria-pressed="${!f.kind}">Всичко (${all.length})</button>` +
+    Object.entries(FKINDS).map(([k, l]) => `<button class="chip" data-fk="${k}" aria-pressed="${f.kind === k}">${l} (${all.filter((x) => kindOf(x) === k).length})</button>`).join("") +
+    `<button class="chip" data-fkdone aria-pressed="${!f.showDone}">Скрий прегледаните</button>`;
+  $("#ff-kinds").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; if (b.hasAttribute("data-fkdone")) f.showDone = !f.showDone; else f.kind = b.dataset.fk || null; renderFavs(); };
+  const list = all.filter((x) => (!f.kind || kindOf(x) === f.kind) && (f.showDone || !x.done));
+  if (!all.length) { $("#favs").innerHTML = `<p class="muted">Още нямаш любими. Натисни ☆ до новина, видео или тема — ще се появи тук и ще остане, докато не го махнеш.</p>`; return; }
+  $("#favs").innerHTML = list.map((x) => {
+    const when = x.saved_at ? new Date(x.saved_at).toLocaleDateString("bg-BG", { day: "numeric", month: "short" }) : "";
+    const label = x.kind === "topic" ? "Тема" : x.kind === "video" ? "Видео" : x.kind === "paper" ? "Изследване" : x.kind === "discussion" ? "Hacker News" : "Новина";
+    const by = x.channel || x.source || "";
+    const head = x.url ? `<a class="ititle" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : `<span class="ititle">${esc(x.title)}</span>`;
+    const links = x.kind === "topic" ? [...(x.watch || []).map((l) => ["Гледай", l]), ...(x.read || []).map((l) => ["Прочети", l])] : [];
+    return `<div class="fav ${x.done ? "done" : ""}" style="--c:${cvar(x.category || "misc")}">
+      ${head}
+      <div class="imeta"><span class="tag"><span class="dot"></span>${label}</span>${by ? `<span>${esc(by)}</span>` : ""}${x.topic ? `<span>${esc(x.topic)}</span>` : ""}${x.imp ? `<span class="pill ${x.imp >= 8 ? "imp-hi" : ""}">важност ${x.imp}</span>` : ""}${x.v ? `<span class="verdict v-${x.v}">${VERD[x.v]}</span>` : ""}<span>запазено ${esc(when)}</span></div>
+      ${x.s ? `<p class="isum">${esc(x.s)}</p>` : ""}${x.why ? `<p class="why">${esc(x.why)}</p>` : ""}
+      ${links.length ? `<ul>${links.map(([k, l]) => `<li>${k}: <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a> <span class="muted">${esc(l.by)}</span></li>`).join("")}</ul>` : ""}
+      <div class="fav-actions"><button class="check" data-favdone="${esc(x.key)}">${x.done ? "✓ прегледано" : "прегледано"}</button><button class="check" data-favdel="${esc(x.key)}">махни</button></div>
+    </div>`;
+  }).join("") || `<p class="muted">Няма любими с тези филтри.</p>`;
 }
 
 function itemHTML(i, compact) {
@@ -484,6 +558,7 @@ function itemHTML(i, compact) {
       i.v ? `<span class="verdict v-${i.v}">${VERD[i.v]}</span>` : "",
       t && !compact ? `<span class="tag"><span class="dot" style="--c:${c}"></span>${esc(t.name)}</span>` : "",
       `<button class="check" data-done="${esc(i.id)}">${done ? "✓ гледано" : "гледано"}</button>`,
+      starBtn(i.id),
     ].join("");
     const initials = (i.channel || "?").replace(/[^\p{L}\p{N} ]/gu, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
     return `<div class="item ${done ? "done" : ""}" style="--c:${c}">
@@ -500,6 +575,7 @@ function itemHTML(i, compact) {
     i.lang === "bg" ? `<span class="pill">БГ</span>` : "",
     t && !compact ? `<span class="tag"><span class="dot" style="--c:${c}"></span>${esc(t.name)}</span>` : "",
     i.hn_url && i.hn_url !== i.url ? `<a href="${esc(i.hn_url)}" target="_blank" rel="noopener">дискусия</a>` : "",
+    starBtn(i.id),
   ].join("");
   return `<div class="item news"><div><a class="ititle" href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>
     <div class="imeta">${meta}</div>${i.s ? `<p class="isum">${esc(i.s)}</p>` : ""}</div></div>`;
@@ -614,6 +690,10 @@ document.addEventListener("click", (e) => {
     if (hasVid) { Object.assign(S.vf, { topic: id, cat: null, limit: 60 }); renderVideos(); setTab("videos"); }
     else { Object.assign(S.nf, { topic: id, cat: null, limit: 60 }); renderNews(); setTab("news"); }
   }
+  else if (b.dataset.fav) { const i = S.byId.get(b.dataset.fav); if (i) toggleFav(favKey(i.id), () => favItem(i)); }
+  else if (b.dataset.favtopic) { const t = S.topics.get(b.dataset.favtopic); if (t) toggleFav(favKey("topic:" + t.id), () => favTopic(t)); }
+  else if (b.dataset.favdel) { S.db?.collection("favorites").doc(b.dataset.favdel).delete().then(() => toast("Махнато от любими."), (x) => toast("Не успях: " + (x?.message || x))); }
+  else if (b.dataset.favdone) { const x = S.favs.get(b.dataset.favdone); if (x) S.db?.collection("favorites").doc(b.dataset.favdone).update({ done: !x.done }).catch((e) => toast("Не успях: " + (e?.message || e))); }
   else if (b.dataset.done) {
     const id = b.dataset.done; S.done.has(id) ? S.done.delete(id) : S.done.add(id);
     store.set("radar.done", [...S.done].slice(-800)); renderAll();
@@ -750,7 +830,7 @@ function renderStatus() {
 }
 
 // ------------------------------------------------------------ data
-function renderAll() { renderToday(); renderVideos(); renderNews(); renderPeople(); renderSources(); }
+function renderAll() { renderToday(); renderVideos(); renderNews(); renderPeople(); renderFavs(); renderSources(); }
 $("#win").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-w]"); if (!b) return; S.win = b.dataset.w;
   for (const x of $("#win").children) x.setAttribute("aria-pressed", String(x === b));
@@ -783,6 +863,7 @@ async function boot() {
   db.doc("meta/status").onSnapshot((snap) => { S.status = snap.exists ? snap.data() : null; renderStatus(); }, onErr);
   db.doc("meta/radar").onSnapshot((snap) => { S.radar = snap.exists ? snap.data() : null; renderSources(); renderPeople(); }, onErr);
   db.doc("prefs/main").onSnapshot((snap) => { S.prefs = snap.exists ? snap.data() : {}; if (S.digest) renderAll(); }, onErr);
+  db.collection("favorites").onSnapshot((q) => { S.favs = new Map(q.docs.map((d) => [d.id, { key: d.id, ...d.data() }])); if (S.digest) renderAll(); else renderFavs(); }, onErr);
   db.collection("sources").onSnapshot((q) => { S.sources = q.docs.map((d) => ({ doc_id: d.id, ...d.data() })); renderSources(); renderPeople(); }, onErr);
   try {
     const hist = await db.collection("history").get();
