@@ -10,6 +10,19 @@ export async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Не минава през getProfile(): той праща към /login, когато няма вход,
+  // а шапката стои и на публичните страници. Заявката е една колона по
+  // първичен ключ и върви само за влезли хора.
+  let isAdmin = false;
+  if (user) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+    isAdmin = Boolean(data?.is_admin);
+  }
+
   const sectionLinks: NavLink[] = [
     { href: "/listings?type=sale", label: "Продажби" },
     { href: "/listings?type=rent", label: "Наеми" },
@@ -19,6 +32,7 @@ export async function SiteHeader() {
 
   const accountLinks: NavLink[] = user
     ? [
+        ...(isAdmin ? [{ href: "/admin", label: "Админ" }] : []),
         { href: "/dashboard", label: "Моят профил" },
         { href: "/dashboard/messages", label: "Съобщения" },
       ]
