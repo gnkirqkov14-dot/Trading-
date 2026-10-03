@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { shrinkPhoto } from "@/lib/shrink-image";
+import { preparePhoto } from "@/lib/prepare-photo";
 import { updateListing } from "@/lib/actions/listings";
 import {
   DEAL_TYPE_LABELS,
@@ -169,10 +169,11 @@ export function EditListingForm({
         const path = `${userId}/${listingId}/${Date.now()}-${i}-${safeName}`;
 
         // Кадърът от телефона е 3–4 MB; качва се бавно и после всеки
-        // посетител го тегли цял. Смаляваме го, преди да тръгне.
+        // посетител го тегли цял. Смаляваме го и го подписваме, преди да
+        // тръгне — снимка, веднъж показана, вече не може да се опази.
         const { error: uploadError } = await supabase.storage
           .from("listing-photos")
-          .upload(path, await shrinkPhoto(file), { upsert: true });
+          .upload(path, await preparePhoto(file), { upsert: true });
 
         if (uploadError) {
           throw new Error(`Грешка при качване на снимка: ${uploadError.message}`);

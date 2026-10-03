@@ -111,13 +111,13 @@ export function ListingGallery({
             type="button"
             onClick={close}
             aria-label="Затвори"
-            className="absolute right-4 top-4 rounded-full bg-white/10 px-4 py-2 text-2xl leading-none text-white transition hover:bg-white/20"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 px-4 py-2 text-2xl leading-none text-white transition hover:bg-white/20"
           >
             ✕
           </button>
 
           {photos.length > 1 && (
-            <p className="absolute left-4 top-5 text-sm text-white/80">
+            <p className="absolute left-4 top-5 z-10 text-sm text-white/80">
               {(openIndex ?? 0) + 1} от {photos.length}
             </p>
           )}
@@ -131,7 +131,7 @@ export function ListingGallery({
                   step(-1);
                 }}
                 aria-label="Предишна снимка"
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-4 py-3 text-2xl leading-none text-white transition hover:bg-white/20 sm:left-6"
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 px-4 py-3 text-2xl leading-none text-white transition hover:bg-white/20 sm:left-6"
               >
                 ‹
               </button>
@@ -142,30 +142,29 @@ export function ListingGallery({
                   step(1);
                 }}
                 aria-label="Следваща снимка"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-4 py-3 text-2xl leading-none text-white transition hover:bg-white/20 sm:right-6"
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 px-4 py-3 text-2xl leading-none text-white transition hover:bg-white/20 sm:right-6"
               >
                 ›
               </button>
             </>
           )}
 
-          {/* Натискането върху самата снимка не затваря — иначе човек я
+          {/* Обикновен <img>, а не `fill`: така елементът е точно колкото
+              снимката и тъмното встрани е наистина фон — натискането там
+              затваря. С `fill` снимката покриваше целия екран, лягаше
+              върху ✕ и стрелките и поглъщаше натисканията им.
+
+              Върху самата снимка натискането не затваря — иначе човек я
               закрива, докато се опитва да я разгледа. */}
-          <div
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={open.url}
+            alt={title}
+            draggable={false}
+            onContextMenu={(event) => event.preventDefault()}
             onClick={(event) => event.stopPropagation()}
-            className="relative h-full w-full"
-          >
-            <Image
-              src={open.url}
-              alt={title}
-              fill
-              sizes="100vw"
-              priority
-              draggable={false}
-              onContextMenu={(event) => event.preventDefault()}
-              className="select-none object-contain"
-            />
-          </div>
+            className="max-h-full max-w-full select-none object-contain"
+          />
         </div>
       )}
     </>
