@@ -6,13 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "x402:test": "tsx scripts/x402-client.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.114.0",
     "@vercel/analytics": "^2.0.1",
+    "@x402/core": "^2.28.0",
+    "@x402/evm": "^2.28.0",
+    "@x402/extensions": "^2.28.0",
+    "@x402/next": "^2.28.0",
     "d3-delaunay": "^6.0.4",
     "leaflet": "^1.9.4",
     "next": "16.3.4",
@@ -28,9 +33,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.186.0",
+    "@x402/fetch": "^2.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "viem": "^2.57.2"
   }
 }

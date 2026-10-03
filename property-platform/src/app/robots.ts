@@ -7,7 +7,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      // /api/agent е нарочно отворен: това е каталогът и платените
+      // адреси за AI агенти (x402); каталозите им (Bazaar) ги обхождат.
+      allow: ["/", "/api/agent"],
       disallow: ["/dashboard", "/api", "/admin"],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
