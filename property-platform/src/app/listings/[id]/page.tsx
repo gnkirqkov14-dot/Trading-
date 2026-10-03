@@ -275,7 +275,12 @@ export default async function ListingDetailPage({
       </dl>
 
       {hasFullAccess && listing.description && (
-        <div className="mt-8">
+        // Описанието не се маркира с мишка — това е трудът на собственика
+        // и първото, което конкурент би копирал. Ключалка от станиол е
+        // (Ctrl+U я заобикаля), но спира мързеливия. Контактите отдолу
+        // НАРОЧНО остават свободни: купувачът трябва да може да копира
+        // телефона, за да звънне.
+        <div className="mt-8 select-none">
           <h2 className="mb-2 text-lg font-semibold">Описание</h2>
           <p className="whitespace-pre-wrap text-slate-700">
             {listing.description}

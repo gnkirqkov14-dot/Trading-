@@ -49,7 +49,8 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
             alt={listing.title}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover transition group-hover:scale-105"
+            draggable={false}
+            className="select-none object-cover transition group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-slate-400">
