@@ -21,6 +21,7 @@ import type {
   PropertyType,
 } from "@/lib/types/database";
 import type { ListingDraft } from "@/lib/listing-draft";
+import { shrinkPhoto } from "@/lib/shrink-image";
 
 type Neighborhood = { id: string; city_id: string; name: string };
 
@@ -143,9 +144,11 @@ export function NewListingForm({
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const path = `${userId}/${listingId}/${i}-${safeName}`;
 
+        // Кадърът от телефона е 3–4 MB; качва се бавно и после всеки
+        // посетител го тегли цял. Смаляваме го, преди да тръгне.
         const { error: uploadError } = await supabase.storage
           .from("listing-photos")
-          .upload(path, file, { upsert: true });
+          .upload(path, await shrinkPhoto(file), { upsert: true });
 
         if (uploadError) {
           throw new Error(`Грешка при качване на снимка: ${uploadError.message}`);
