@@ -9,6 +9,10 @@ import Image from "next/image";
  * Квадратчетата изрязват кадъра, за да е подредено; в голямото се вижда
  * целият, защото там човекът гледа имота, не оформлението.
  *
+ * Снимките не се влачат и десният бутон върху тях не дава меню. Това не
+ * е истинска защита — Ctrl+U показва адресите — но спира случайното
+ * „Запази изображението" от конкурент, който бърза.
+ *
  * Управление: стрелки и Esc от клавиатура, плъзгане с пръст на телефон,
  * натискане извън снимката за затваряне. Докато е отворено, страницата
  * отзад не се превърта — иначе на телефон под пръста бяга фонът.
@@ -77,7 +81,9 @@ export function ListingGallery({
               alt={title}
               fill
               sizes="(max-width: 640px) 50vw, 33vw"
-              className="object-cover"
+              draggable={false}
+              onContextMenu={(event) => event.preventDefault()}
+              className="select-none object-cover"
             />
           </button>
         ))}
@@ -155,7 +161,9 @@ export function ListingGallery({
               fill
               sizes="100vw"
               priority
-              className="object-contain"
+              draggable={false}
+              onContextMenu={(event) => event.preventDefault()}
+              className="select-none object-contain"
             />
           </div>
         </div>
