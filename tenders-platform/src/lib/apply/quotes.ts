@@ -70,17 +70,18 @@ export function makeQuoteChecker(source: string) {
  */
 function numberTokens(text: string): string[] {
   const out: string[] = [];
-  for (const m of text.matchAll(/\d(?:[\d\u00A0\u202F .,]*\d)?/g)) {
-    const raw = m[0].trim();
-    // Дати като 12.10.2026 — по части.
+  // Дата (12.10.2026) | хиляди с интервал (138 495,00) или с точка
+  // (1.000.000) | обикновено число (70, 1,2). „20, 30 и 50“ са три числа.
+  const re =
+    /\d{1,2}\.\d{1,2}\.\d{4}|\d{1,3}(?:[ \u00A0\u202F]\d{3})+(?:[.,]\d+)?|\d{1,3}(?:\.\d{3}){2,}(?:,\d+)?|\d+(?:[.,]\d+)?/g;
+  for (const m of text.matchAll(re)) {
+    const raw = m[0];
     const date = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     const pieces = date ? [date[1], date[2], date[3]] : [raw];
     for (const piece of pieces) {
-      const canon = piece
-        .replace(/[.,]0+$/, "")
-        .replace(/[\s\u00A0\u202F]/g, "")
-        .replace(/[.,](?=\d{3}(?:\D|$))/g, "")
-        .replace(",", ".");
+      let canon = piece.replace(/[\s\u00A0\u202F]/g, "");
+      if (/^\d{1,3}(\.\d{3}){2,}/.test(canon)) canon = canon.replace(/\.(?=\d{3})/g, "");
+      canon = canon.replace(/[.,]0+$/, "").replace(",", ".");
       out.push(canon.replace(/^0+(?=\d)/, ""));
     }
   }
