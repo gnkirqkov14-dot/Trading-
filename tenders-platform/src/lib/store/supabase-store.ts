@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
+import type { GrantCall, GrantKnown } from "@/lib/grants/types";
+import type { SavedProfile } from "@/lib/advisor/types";
 import type {
   AdvisorQuota,
   AlertSubscription,
@@ -176,6 +178,108 @@ export class SupabaseStore implements Store {
 
   async refundAdvisorQuota(visitor: string) {
     await this.rpc("tenders_advisor_refund", { p_secret: this.requireSecret(), p_visitor: visitor });
+  }
+
+  async grantsKnown() {
+    return (await this.rpc<GrantKnown[]>("tenders_grants_known", { p_secret: this.requireSecret() })) ?? [];
+  }
+
+  async upsertGrants(rows: Partial<GrantCall>[]) {
+    let written = 0;
+    for (let i = 0; i < rows.length; i += 100) {
+      written += Number(
+        await this.rpc<number>("tenders_grants_upsert", {
+          p_secret: this.requireSecret(),
+          p_rows: rows.slice(i, i + 100),
+        }),
+      );
+    }
+    return written;
+  }
+
+  async deactivateGrants(seenBefore: string) {
+    return Number(
+      await this.rpc<number>("tenders_grants_deactivate", {
+        p_secret: this.requireSecret(),
+        p_seen_before: seenBefore,
+      }),
+    );
+  }
+
+  async replacePlannedGrants(source: string, rows: Partial<GrantCall>[]) {
+    return Number(
+      await this.rpc<number>("tenders_grants_replace_planned", {
+        p_secret: this.requireSecret(),
+        p_source: source,
+        p_rows: rows,
+      }),
+    );
+  }
+
+  async getGrantSource(id: string) {
+    return (
+      (await this.rpc<{ pdf_url: string | null } | null>("tenders_grant_source_get", {
+        p_secret: this.requireSecret(),
+        p_id: id,
+      })) ?? null
+    );
+  }
+
+  async setGrantSource(src: {
+    id: string;
+    programme: string;
+    page_url: string;
+    pdf_url: string;
+    rows: number;
+    message: string | null;
+  }) {
+    await this.rpc("tenders_grant_source_set", {
+      p_secret: this.requireSecret(),
+      p_id: src.id,
+      p_programme: src.programme,
+      p_page_url: src.page_url,
+      p_pdf_url: src.pdf_url,
+      p_rows: src.rows,
+      p_message: src.message,
+    });
+  }
+
+  async listGrants(businessOnly: boolean) {
+    const rows = (await this.rpc<GrantCall[]>("tenders_grants_list", { p_business_only: businessOnly })) ?? [];
+    const num = (v: number | null) => (v === null ? null : Number(v));
+    return rows.map((g) => ({
+      ...g,
+      budget_eur: num(g.budget_eur),
+      grant_min_eur: num(g.grant_min_eur),
+      grant_max_eur: num(g.grant_max_eur),
+      max_aid_pct: num(g.max_aid_pct),
+    }));
+  }
+
+  async getProfile(token: string) {
+    return (
+      (await this.rpc<SavedProfile | null>("tenders_profile_get", {
+        p_secret: this.requireSecret(),
+        p_token: token,
+      })) ?? null
+    );
+  }
+
+  async saveProfile(
+    token: string,
+    patch: Partial<Omit<SavedProfile, "token" | "last_run_at" | "updated_at">>,
+    ran: boolean,
+  ) {
+    await this.rpc("tenders_profile_save", {
+      p_secret: this.requireSecret(),
+      p_token: token,
+      p_description: patch.description ?? null,
+      p_answers: patch.answers ?? null,
+      p_profile: patch.profile ?? null,
+      p_filters: patch.filters ?? null,
+      p_results: patch.results ?? null,
+      p_ran: ran,
+    });
   }
 }
 
