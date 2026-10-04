@@ -104,6 +104,12 @@ export default async function TenderPage({ params }: { params: Promise<{ id: str
           Документите и подаването в ЦАИС ЕОП
         </a>
         <Link
+          href={`/apply/tender/${tender.id}`}
+          className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
+        >
+          Помощ за ЕЕДОП и офертата
+        </Link>
+        <Link
           href={`/alerts?${similar.toString()}`}
           className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"
         >

@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
 import type { GrantCall, GrantKnown } from "@/lib/grants/types";
 import type { SavedProfile } from "@/lib/advisor/types";
+import type { CompanyData, TenderGuide } from "@/lib/apply/types";
 import type {
   AdvisorQuota,
   AlertSubscription,
@@ -279,6 +280,37 @@ export class SupabaseStore implements Store {
       p_filters: patch.filters ?? null,
       p_results: patch.results ?? null,
       p_ran: ran,
+    });
+  }
+
+  async saveCompany(token: string, company: Partial<CompanyData>) {
+    await this.rpc("tenders_profile_company_save", {
+      p_secret: this.requireSecret(),
+      p_token: token,
+      p_company: company,
+    });
+  }
+
+  async noticeTenderIds(noticeId: number) {
+    const ids = await this.rpc<number[] | null>("tenders_notice_ids", { p_notice_id: noticeId });
+    return (ids ?? []).map(Number);
+  }
+
+  async getGuide(key: string) {
+    return (
+      (await this.rpc<{ source_hash: string; guide: TenderGuide; updated_at: string } | null>("tenders_guide_get", {
+        p_secret: this.requireSecret(),
+        p_key: key,
+      })) ?? null
+    );
+  }
+
+  async saveGuide(key: string, sourceHash: string, guide: TenderGuide) {
+    await this.rpc("tenders_guide_save", {
+      p_secret: this.requireSecret(),
+      p_key: key,
+      p_hash: sourceHash,
+      p_guide: guide,
     });
   }
 }

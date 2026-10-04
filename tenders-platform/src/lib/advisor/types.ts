@@ -3,6 +3,8 @@
  * компоненти, а те не бива да внасят SDK-то на Anthropic в браузъра.
  */
 
+import type { CompanyData } from "@/lib/apply/types";
+
 export type AdvisorFilters = {
   /** Какво да търси: обществени поръчки, европейски програми или и двете. */
   tenders: boolean;
@@ -58,6 +60,8 @@ export type SavedProfile = {
   profile: AdvisorProfile;
   filters: AdvisorFilters;
   results: AdvisorResults;
+  /** Данни на фирмата за документите (помощникът за кандидатстване). */
+  company?: Partial<CompanyData>;
   last_run_at: string | null;
   updated_at?: string;
 };

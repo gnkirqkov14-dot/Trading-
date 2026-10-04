@@ -89,6 +89,10 @@ function TenderCard({ tender: t, pick, isNew }: { tender: TenderLike; pick?: Ten
         Срок за оферти: {formatDate(t.deadline_at)} ·{" "}
         <Link href={`/tenders/${t.id}`} className="text-brand-600 hover:underline">
           Подробности →
+        </Link>{" "}
+        ·{" "}
+        <Link href={`/apply/tender/${t.id}`} className="text-brand-600 hover:underline">
+          Помощ за ЕЕДОП и офертата →
         </Link>
       </p>
     </article>
