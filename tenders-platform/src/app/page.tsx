@@ -51,6 +51,24 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </p>
       </section>
 
+      <Link
+        href="/advisor"
+        className="flex flex-col gap-2 rounded-2xl border border-brand-100 bg-brand-50 p-5 transition hover:border-brand-500 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <span>
+          <span className="block font-semibold text-slate-900">
+            Не знаете какво да търсите? Попитайте съветника.
+          </span>
+          <span className="block text-sm text-slate-600">
+            Опишете с думи какво работи фирмата ви и ще ви покажем поръчките, в които можете да
+            участвате, и защо.
+          </span>
+        </span>
+        <span className="whitespace-nowrap rounded-lg bg-brand-600 px-4 py-2 text-center text-sm font-semibold text-white">
+          Опиши фирмата си →
+        </span>
+      </Link>
+
       <SearchForm filters={filters} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
