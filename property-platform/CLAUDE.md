@@ -206,6 +206,7 @@ supabase/migrations/
   0013_listing_reminder_schedule.sql — 3-степенна схема + process_listing_reminders()
   0014_missing_region_cities.sql     — 10 области без нито един seed-нат град
   0015_backfill_neighborhood_coordinates.sql — 0005 беше пропусната ръчно (виж по-долу)
+  0034_lock_listing_reminders.sql   — security fix: напомнянията само с таен низ
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 .github/workflows/supabase-migrations.yml — авто-пускане на миграциите (виж по-долу)
@@ -642,6 +643,20 @@ OG таговете и имейлите, докато не се направи �
   собственикът потвърди/активира обява (`setListingStatus`,
   `confirmListingActive`), `reminder_count` се нулира и цикълът
   започва отначало.
+
+  ⚠️ **Функцията е заключена с таен низ** (`0034_lock_listing_reminders.sql`).
+  До тогава всеки с публичния ключ можеше да я извика през
+  `/rest/v1/rpc/process_listing_reminders`, да получи имейлите на
+  собствениците и да придвижи напомнянията им. Cron-ът ползва същия
+  публичен ключ (service_role няма във Vercel), затова сега функцията
+  приема `p_secret` и го сравнява с `private.settings`
+  (`reminders_secret`); схемата `private` не е отворена към API-то.
+  Във Vercel стойността е `REMINDERS_DB_SECRET`. Стойността не е в
+  миграцията — въведена е ръчно и в двете места. Без ред в
+  `private.settings` функцията отказва на всички. **Всяка нова
+  security definer функция, която връща лични данни, трябва или да
+  проверява `auth.uid()`/`is_admin`, или да е зад такъв низ** —
+  Supabase по подразбиране дава execute на `anon`.
 
   Имейлите се пращат през `lib/email.ts` (директни HTTP заявки към
   Resend API, без техния SDK) — **тихо не прави нищо без
