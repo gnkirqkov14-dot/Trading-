@@ -25,6 +25,27 @@ async function visitorId() {
  * грешка, приятелски съобщения. Връща съобщение при неуспех; при успех
  * `run` сам записва и пренасочва.
  */
+/**
+ * Логовете на Vercel не са достъпни от сесиите за разработка — последната
+ * грешка се пази в базата (tenders.apply_guides, ключ err:last), без текста
+ * на посетителя: само вид, HTTP статус и съобщение на грешката.
+ */
+async function recordError(error: unknown) {
+  const e = error as { name?: string; message?: string; status?: number };
+  await getStore()
+    .saveGuide(
+      "err:last",
+      "",
+      {
+        name: e?.name ?? typeof error,
+        status: e?.status ?? null,
+        message: String(e?.message ?? error).slice(0, 800),
+        at: new Date().toISOString(),
+      } as never,
+    )
+    .catch(() => {});
+}
+
 export async function withQuota(run: () => Promise<void>, free = false): Promise<AdvisorState> {
   if (!advisorEnabled) return { message: "Съветникът се включва скоро." };
   const store = getStore();
@@ -52,6 +73,7 @@ export async function withQuota(run: () => Promise<void>, free = false): Promise
     return null;
   } catch (error) {
     if (!free) await store.refundAdvisorQuota(visitor).catch(() => {});
+    await recordError(error);
     if (error instanceof AdvisorError) return { message: error.message };
     if (error instanceof Anthropic.RateLimitError || error instanceof Anthropic.InternalServerError) {
       return { message: "Съветникът е претоварен в момента. Опитайте пак след минута." };
