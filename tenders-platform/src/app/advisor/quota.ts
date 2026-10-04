@@ -75,6 +75,14 @@ export async function withQuota(run: () => Promise<void>, free = false): Promise
     if (!free) await store.refundAdvisorQuota(visitor).catch(() => {});
     await recordError(error);
     if (error instanceof AdvisorError) return { message: error.message };
+    // Лимитът или кредитът в сметката при Anthropic е свършил — това не е
+    // „опитайте след малко“, а нещо за собственика (console.anthropic.com).
+    if (error instanceof Anthropic.APIError && /usage limits|credit balance/i.test(error.message)) {
+      return {
+        message:
+          "Съветникът временно не работи: изчерпан е месечният лимит за изкуствения интелект. Собственикът на сайта трябва да го увеличи. Филтрите работят и сега.",
+      };
+    }
     if (error instanceof Anthropic.RateLimitError || error instanceof Anthropic.InternalServerError) {
       return { message: "Съветникът е претоварен в момента. Опитайте пак след минута." };
     }
