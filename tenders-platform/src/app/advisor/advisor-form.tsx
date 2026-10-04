@@ -24,6 +24,12 @@ const EXAMPLES = [
   "Доставяме компютри, принтери и офис техника и ги поддържаме. Работим в цялата страна.",
 ];
 
+const TRACKS = [
+  { key: "общи", title: "За фирмата" },
+  { key: "обществени поръчки", title: "За обществените поръчки" },
+  { key: "европейски програми", title: "За европейските програми" },
+];
+
 const STEPS = [
   "Чета описанието на фирмата…",
   "Търся в отворените поръчки…",
@@ -151,47 +157,67 @@ export function SurveyForm({
   const extra = answers.find((a) => a.question === "Допълнително от фирмата")?.answer ?? "";
   return (
     <form action={action} className="space-y-6">
-      <ol className="space-y-6">
-        {questions.map((q, i) => {
-          const prev = previous.get(q.text) ?? [];
-          const other = prev.filter((p) => !q.options.includes(p)).join(", ");
-          return (
-            <li key={q.id}>
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium text-slate-900">
-                  <span className="mr-1 text-slate-400">{i + 1}.</span>
-                  {q.text}
-                  {q.multi ? <span className="ml-1 text-xs font-normal text-slate-500">(може няколко)</span> : null}
-                </legend>
-                <div className="flex flex-wrap gap-2">
-                  {q.options.map((o) => (
-                    <label
-                      key={o}
-                      className="cursor-pointer rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-600 has-[:checked]:text-white"
-                    >
-                      <input
-                        type={q.multi ? "checkbox" : "radio"}
-                        name={q.id}
-                        value={o}
-                        defaultChecked={prev.includes(o)}
-                        className="sr-only"
-                      />
-                      {o}
-                    </label>
-                  ))}
-                </div>
-                <input
-                  name={`${q.id}_other`}
-                  defaultValue={other}
-                  maxLength={200}
-                  className={`${field} sm:max-w-sm`}
-                  placeholder="или напишете друго…"
-                />
-              </fieldset>
-            </li>
-          );
-        })}
-      </ol>
+      {TRACKS.map((track) => {
+        const items = questions.filter((q) => (q.track ?? "общи") === track.key);
+        if (!items.length) return null;
+        return (
+          <section key={track.key} className="space-y-5" aria-labelledby={`track-${track.key}`}>
+            <h2 id={`track-${track.key}`} className="text-base font-semibold text-slate-900">
+              {track.title}
+            </h2>
+            <ol className="space-y-6">
+              {items.map((q) => {
+                const n = questions.indexOf(q) + 1;
+                const prev = previous.get(q.text) ?? [];
+                const other = prev.filter((p) => !q.options.includes(p)).join(", ");
+                return (
+                  <li key={q.id}>
+                    <fieldset className="space-y-2" aria-describedby={q.why ? `${q.id}-why` : undefined}>
+                      <legend className="text-sm font-medium text-slate-900">
+                        <span className="mr-1 text-slate-500">{n}.</span>
+                        {q.text}
+                        {q.multi ? <span className="ml-1 text-xs font-normal text-slate-600">(може няколко отговора)</span> : null}
+                      </legend>
+                      {q.why ? (
+                        <p id={`${q.id}-why`} className="text-xs text-slate-600">
+                          {q.why}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {q.options.map((o) => (
+                          <label
+                            key={o}
+                            className="cursor-pointer rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-600 has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 has-[:focus-visible]:ring-offset-2"
+                          >
+                            <input
+                              type={q.multi ? "checkbox" : "radio"}
+                              name={q.id}
+                              value={o}
+                              defaultChecked={prev.includes(o)}
+                              className="sr-only"
+                            />
+                            {o}
+                          </label>
+                        ))}
+                      </div>
+                      <label className="block sm:max-w-sm">
+                        <span className="sr-only">Друг отговор на въпрос {n}</span>
+                        <input
+                          name={`${q.id}_other`}
+                          defaultValue={other}
+                          maxLength={200}
+                          className={field}
+                          placeholder="или напишете друго…"
+                        />
+                      </label>
+                    </fieldset>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        );
+      })}
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-slate-900">Нещо друго, което да знам? (по избор)</span>
         <input

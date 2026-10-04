@@ -111,8 +111,8 @@ export async function startAdvisor(_prev: AdvisorState, form: FormData): Promise
       {
         description,
         answers: [],
-        profile: { summary: survey.summary, fitAreas: [], growthAreas: [], questions: survey.questions, surveyDone: false },
-        filters: { tenders: true, grants: true, cpvPrefixes: [], keywords: [], regions: region ? [region] : [] },
+        profile: { ...survey.profile, questions: survey.questions, surveyDone: false },
+        filters: { tenders: true, grants: true, ...survey.filters },
         results: EMPTY_RESULTS,
       },
       false,

@@ -15,7 +15,17 @@ export type AdvisorFilters = {
 };
 
 /** Въпрос от анкетата. `multi` — може да се изберат няколко отговора. */
-export type AdvisorQuestion = { id: string; topic: string; text: string; options: string[]; multi: boolean };
+export type AdvisorQuestion = {
+  id: string;
+  topic: string;
+  text: string;
+  options: string[];
+  multi: boolean;
+  /** „общи“, „обществени поръчки“ или „европейски програми“. */
+  track?: string;
+  /** Защо питаме — показва се под въпроса. */
+  why?: string;
+};
 export type AdvisorAnswer = { question: string; answer: string };
 
 /** Какво AI е разбрало за фирмата (стъпка 1). */
@@ -62,5 +72,7 @@ export function normalizeQuestions(questions: Partial<AdvisorQuestion>[] | undef
     text: q.text ?? "",
     options: q.options ?? [],
     multi: q.multi ?? false,
+    track: q.track,
+    why: q.why,
   }));
 }
