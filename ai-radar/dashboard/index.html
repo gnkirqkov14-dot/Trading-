@@ -587,6 +587,8 @@ S.audio = new Map(); S.audioJobs = new Map();
 const audioId = (key) => key.startsWith("brief:") ? `brief-${S.digest?.date}-${key.slice(6)}` : key.replace(/[^A-Za-z0-9_-]/g, "_");
 const inQueue = (key) => TTS.cur?.key === key || TTS.queue.some((q) => q.key === key);
 const ready = (q) => S.audio.get(audioId(q.key));
+// записано в ElevenLabs, но още не е качено в таблото (поръчка в audio_jobs) — не се записва и плаща втори път
+const queued = (q) => [...S.audioJobs.values()].some((j) => j.state === "new" && j.clips?.some((c) => c.id === audioId(q.key)));
 function listenBtn(key, label) {
   const on = inQueue(key);
   return `<button class="listen" data-listen="${esc(key)}" aria-pressed="${on}" title="${on ? "Махни от избраните" : "Избери за слушане"}">${on ? "♪ избрано" : "▶ " + (label || "слушай")}</button>`;
@@ -618,7 +620,7 @@ function renderPlayer() {
   if (!show) return;
   const active = TTS.playing || TTS.waiting;
   const all = [TTS.cur, ...TTS.queue].filter(Boolean);
-  const toRecord = all.filter((q) => !ready(q) && !TTS.pending.has(audioId(q.key)));
+  const toRecord = all.filter((q) => !ready(q) && !queued(q) && !TTS.pending.has(audioId(q.key)));
   const chars = toRecord.reduce((n, q) => n + q.text.length, 0);
   $("#pl-now").innerHTML = TTS.busy ? `<b>${esc(TTS.busy)}</b>`
     : TTS.cur && TTS.waiting ? `<b>Milena записва…</b> ${esc(TTS.cur.title)} · обикновено 1–2 мин`
@@ -682,7 +684,7 @@ async function record(items) {
     TTS.busy = null; renderPlayer();
     for (let n = 0; sid && n < 3; n++) { // стартът на облачната среда се проваля за секунди, ако изобщо
       await sleep(4000);
-      const s = payloadOf(await mcp.callTool("Claude Code Remote", "get_session", { session_id: sid }));
+      let s; try { s = payloadOf(await mcp.callTool("Claude Code Remote", "get_session", { session_id: sid })); } catch { break; } // проверката е по желание
       const err = (s?.ccr || s)?.external_metadata?.last_init_error;
       if (err) throw new Error(err.message || "средата не стартира");
     }
@@ -712,6 +714,9 @@ async function listen() {
   // отключва звука, докато е в натискането — после клиповете тръгват сами, щом са готови
   TTS.el.src = SILENCE; TTS.el.play().catch(() => {});
   if (TTS.cur && !TTS.waiting) { playCur(); return; }
+  const later = TTS.queue.filter((q) => !ready(q) && queued(q) && !TTS.pending.has(audioId(q.key)));
+  if (later.length) { TTS.queue = TTS.queue.filter((q) => !later.includes(q)); toast(`${later.length === 1 ? "Една е записана" : later.length + " са записани"}, но още не са качени в таблото — ще се появят след обновяването.`); refreshListenButtons(); }
+  if (!TTS.cur && !TTS.queue.length) { renderPlayer(); return; }
   const missing = [TTS.cur, ...TTS.queue].filter((q) => q && !ready(q) && !TTS.pending.has(audioId(q.key)));
   if (!TTS.cur) next();
   if (missing.length) {
