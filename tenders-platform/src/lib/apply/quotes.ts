@@ -20,10 +20,27 @@ export function normalizeForMatch(s: string) {
     .trim();
 }
 
+/**
+ * Обявленията във формат eForms са „етикет на един ред, стойност на
+ * следващия“: „Изисква се гаранция за участие(BT-751-Lot)“ / „не“. Ако
+ * моделът цитира само етикета, цитатът е верен, но подвежда — добавяме
+ * стойността от следващия ред (и мерната единица, ако стойността е число).
+ */
+function withEformsValue(text: string, lines: string[]) {
+  if (!/\(BT-[^)]+\)\s*$/.test(text)) return text;
+  const want = normalizeForMatch(text);
+  const i = lines.findIndex((l) => normalizeForMatch(l).endsWith(want));
+  if (i < 0 || i + 1 >= lines.length) return text;
+  const value = lines[i + 1].trim();
+  const unit = /^[\d.,\s]+$/.test(value) && i + 2 < lines.length ? ` ${lines[i + 2].trim()}` : "";
+  return `${text} ${value}${unit}`;
+}
+
 export function makeQuoteChecker(source: string) {
   const haystack = normalizeForMatch(source);
+  const lines = source.split("\n").filter((l) => l.trim());
   return (raw: string | null | undefined): Quote | null => {
-    const text = (raw ?? "").replace(/\s+/g, " ").trim();
+    const text = withEformsValue((raw ?? "").replace(/\s+/g, " ").trim(), lines);
     if (!text) return null;
     // Моделът понякога съединява два откъса с „…“ — тогава всеки трябва да
     // го има, в същия ред.
