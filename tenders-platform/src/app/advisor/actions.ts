@@ -5,8 +5,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ADVISOR_LIMITS, AdvisorError, advisorEnabled, runAdvisor } from "@/lib/advisor";
-import type { AdvisorAnswer, AdvisorFilters } from "@/lib/advisor/types";
+import { ADVISOR_LIMITS, AdvisorError, advisorEnabled, buildSurvey, runAdvisor } from "@/lib/advisor";
+import { EMPTY_RESULTS, normalizeQuestions, type AdvisorAnswer, type AdvisorFilters } from "@/lib/advisor/types";
 import { CPV_DIVISIONS } from "@/lib/eop/cpv";
 import { REGIONS } from "@/lib/eop/regions";
 import { numParam } from "@/lib/format";
@@ -44,13 +44,14 @@ export async function currentToken() {
  * грешка, приятелски съобщения. Връща съобщение при неуспех; при успех
  * `run` сам записва и пренасочва.
  */
-async function withQuota(run: () => Promise<void>): Promise<AdvisorState> {
+async function withQuota(run: () => Promise<void>, free = false): Promise<AdvisorState> {
   if (!advisorEnabled) return { message: "Съветникът се включва скоро." };
   const store = getStore();
   const visitor = await visitorId();
   let left: number;
   try {
-    left = await store.consumeAdvisorQuota(visitor, ADVISOR_LIMITS.perVisitorPerDay, ADVISOR_LIMITS.perDay);
+    // Анкетата е продължение на същото питане — не се брои отделно.
+    left = free ? 1 : await store.consumeAdvisorQuota(visitor, ADVISOR_LIMITS.perVisitorPerDay, ADVISOR_LIMITS.perDay);
   } catch (error) {
     // Без брояч не пускаме заявка към модела: по-добре съветникът да
     // мълчи, отколкото сметката да е отворена.
@@ -69,7 +70,7 @@ async function withQuota(run: () => Promise<void>): Promise<AdvisorState> {
     await run();
     return null;
   } catch (error) {
-    await store.refundAdvisorQuota(visitor).catch(() => {});
+    if (!free) await store.refundAdvisorQuota(visitor).catch(() => {});
     if (error instanceof AdvisorError) return { message: error.message };
     if (error instanceof Anthropic.RateLimitError || error instanceof Anthropic.InternalServerError) {
       return { message: "Съветникът е претоварен в момента. Опитайте пак след минута." };
@@ -93,7 +94,7 @@ function descriptionProblem(description: string) {
   return null;
 }
 
-/** Първо питане: описание → профил → подбор → запазване. */
+/** Първо питане: описание → анкета (8–12 въпроса). Подборът е след анкетата. */
 export async function startAdvisor(_prev: AdvisorState, form: FormData): Promise<AdvisorState> {
   if (String(form.get("website") ?? "") !== "") return { message: "Опитайте пак." };
   const description = readDescription(form);
@@ -104,11 +105,17 @@ export async function startAdvisor(_prev: AdvisorState, form: FormData): Promise
 
   const token = randomBytes(24).toString("hex");
   const state = await withQuota(async () => {
-    const run = await runAdvisor({ description, answers: [], regionHint: region, reprofile: true });
+    const survey = await buildSurvey(description, region);
     await getStore().saveProfile(
       token,
-      { description, answers: [], profile: run.profile, filters: run.filters, results: run.results },
-      true,
+      {
+        description,
+        answers: [],
+        profile: { summary: survey.summary, fitAreas: [], growthAreas: [], questions: survey.questions, surveyDone: false },
+        filters: { tenders: true, grants: true, cpvPrefixes: [], keywords: [], regions: region ? [region] : [] },
+        results: EMPTY_RESULTS,
+      },
+      false,
     );
     await rememberToken(token);
   });
@@ -117,47 +124,73 @@ export async function startAdvisor(_prev: AdvisorState, form: FormData): Promise
   redirect("/advisor");
 }
 
-/** Отговори на въпросите и/или ново описание → нов профил и подбор. */
-export async function refineAdvisor(_prev: AdvisorState, form: FormData): Promise<AdvisorState> {
+/**
+ * Попълнената анкета → профил, филтри и подбор. Първият път е част от
+ * същото питане (не се брои); после промяна на отговорите се брои.
+ */
+export async function submitSurvey(_prev: AdvisorState, form: FormData): Promise<AdvisorState> {
   const token = await currentToken();
   const saved = token ? await getStore().getProfile(token) : null;
   if (!token || !saved) return { message: "Профилът не е намерен. Опишете фирмата отначало." };
 
-  const newDescription = form.has("description") ? readDescription(form) : saved.description;
-  const problem = descriptionProblem(newDescription);
-  if (problem) return { message: problem };
-
-  // Въпросите идват като q0..q3 (текст) и a0..a3 (избран отговор) или
-  // a0_other (свободен текст).
-  const fresh: AdvisorAnswer[] = [];
-  for (let i = 0; i < 4; i++) {
-    const question = String(form.get(`q${i}`) ?? "").trim();
-    const other = String(form.get(`a${i}_other`) ?? "").trim();
-    const answer = (other || String(form.get(`a${i}`) ?? "")).trim().slice(0, 200);
-    if (question && answer) fresh.push({ question: question.slice(0, 200), answer });
+  const answers: AdvisorAnswer[] = [];
+  for (const q of normalizeQuestions(saved.profile.questions)) {
+    const picked = form
+      .getAll(q.id)
+      .map((v) => String(v).trim())
+      .filter((v) => q.options.includes(v));
+    const other = String(form.get(`${q.id}_other`) ?? "").trim().slice(0, 200);
+    const answer = [...picked, ...(other ? [other] : [])].join(", ");
+    if (answer) answers.push({ question: q.text, answer });
   }
   const extra = String(form.get("extra") ?? "").trim().slice(0, 300);
-  if (extra) fresh.push({ question: "Допълнително от фирмата", answer: extra });
-  // По-новият отговор на същия въпрос замества стария.
-  const answers = [
-    ...saved.answers.filter((a) => !fresh.some((f) => f.question === a.question)),
-    ...fresh,
-  ].slice(-ADVISOR_LIMITS.maxAnswers);
+  if (extra) answers.push({ question: "Допълнително от фирмата", answer: extra });
 
-  if (!fresh.length && newDescription === saved.description) {
-    return { message: "Изберете поне един отговор или променете описанието." };
-  }
-
+  const free = !saved.profile.surveyDone;
+  // Безплатно е само веднъж: отбелязваме анкетата като попълнена преди
+  // заявката, за да не може едно питане да се пусне многократно наведнъж.
+  if (free) await getStore().saveProfile(token, { profile: { ...saved.profile, surveyDone: true } }, false);
   const state = await withQuota(async () => {
     const run = await runAdvisor({
-      description: newDescription,
+      description: saved.description,
       answers,
+      regionHint: saved.filters.regions.length === 1 ? saved.filters.regions[0] : undefined,
       previous: { profile: saved.profile, filters: saved.filters },
       reprofile: true,
     });
     await getStore().saveProfile(
       token,
-      { description: newDescription, answers, profile: run.profile, filters: run.filters, results: run.results },
+      { answers, profile: run.profile, filters: run.filters, results: run.results },
+      true,
+    );
+  }, free);
+  if (state) {
+    if (free) await getStore().saveProfile(token, { profile: saved.profile }, false).catch(() => {});
+    return state;
+  }
+  revalidatePath("/advisor");
+  redirect("/advisor#results");
+}
+
+/** Ново описание на фирмата → нов профил и подбор (отговорите от анкетата остават). */
+export async function refineAdvisor(_prev: AdvisorState, form: FormData): Promise<AdvisorState> {
+  const token = await currentToken();
+  const saved = token ? await getStore().getProfile(token) : null;
+  if (!token || !saved) return { message: "Профилът не е намерен. Опишете фирмата отначало." };
+  const description = readDescription(form);
+  const problem = descriptionProblem(description);
+  if (problem) return { message: problem };
+
+  const state = await withQuota(async () => {
+    const run = await runAdvisor({
+      description,
+      answers: saved.answers,
+      previous: { profile: saved.profile, filters: saved.filters },
+      reprofile: true,
+    });
+    await getStore().saveProfile(
+      token,
+      { description, profile: run.profile, filters: run.filters, results: run.results },
       true,
     );
   });

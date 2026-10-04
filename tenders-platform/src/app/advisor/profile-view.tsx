@@ -7,7 +7,7 @@ import { deadlineLabel, formatDate, formatEur } from "@/lib/format";
 import type { GrantCall } from "@/lib/grants/types";
 import type { MatchedTender } from "@/lib/store/types";
 import { saveFilters } from "./actions";
-import { DescriptionForm, ForgetButton, QuestionsForm, RerunButton, ShareLink } from "./advisor-form";
+import { DescriptionForm, ForgetButton, RerunButton, ShareLink, SurveyForm } from "./advisor-form";
 import { field } from "./styles";
 
 type TenderLike = MatchedTender | Tender;
@@ -279,12 +279,31 @@ export function ProfileView({
   const p = profile.profile;
   const r = profile.results;
   const lastRun = profile.last_run_at ? Date.parse(profile.last_run_at) : 0;
-  const answered = new Set(profile.answers.map((a) => a.question));
-  const openQuestions = p.questions.filter((q) => !answered.has(q.text));
   const alertQs = new URLSearchParams();
   const firstDivision = profile.filters.cpvPrefixes[0]?.slice(0, 2);
   if (firstDivision && firstDivision in CPV_DIVISIONS) alertQs.set("category", firstDivision);
   if (profile.filters.regions.length === 1) alertQs.set("region", profile.filters.regions[0]);
+
+  if (p.surveyDone === false) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <header className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">Съветник · анкета</p>
+          <h1 className="text-2xl font-bold text-slate-900">Няколко въпроса за фирмата ви</h1>
+          {p.summary ? <p className="text-slate-700">{p.summary}</p> : null}
+          <p className="text-sm text-slate-600">
+            {p.questions.length} въпроса, около 2 минути. Колкото повече отговорите, толкова по-точно
+            ще подберем поръчките и европейските програми за вас. Отговорите се запазват и можете да
+            ги промените по-късно.
+          </p>
+        </header>
+        <section className="rounded-2xl border border-brand-100 bg-brand-50 p-5">
+          <SurveyForm questions={p.questions} answers={profile.answers} done={false} enabled={enabled} />
+        </section>
+        <ForgetButton />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -311,11 +330,15 @@ export function ProfileView({
         ) : null}
       </header>
 
-      {openQuestions.length ? (
-        <section className="space-y-3 rounded-2xl border border-brand-100 bg-brand-50 p-5">
-          <h2 className="font-semibold text-slate-900">За да подбирам по-точно, отговорете на няколко въпроса</h2>
-          <QuestionsForm questions={openQuestions} enabled={enabled} />
-        </section>
+      {p.questions.length ? (
+        <details className="rounded-2xl border border-slate-200 bg-white p-5">
+          <summary className="cursor-pointer font-semibold text-slate-900">
+            Вашите отговори от анкетата <span className="font-normal text-slate-500">— промени</span>
+          </summary>
+          <div className="mt-4">
+            <SurveyForm questions={p.questions} answers={profile.answers} done enabled={enabled} />
+          </div>
+        </details>
       ) : null}
 
       {p.fitAreas.length || p.growthAreas.length ? (

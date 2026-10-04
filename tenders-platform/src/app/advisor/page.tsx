@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { advisorEnabled, businessGrants } from "@/lib/advisor";
-import { EMPTY_RESULTS, type SavedProfile, type TenderPick } from "@/lib/advisor/types";
+import { EMPTY_RESULTS, normalizeQuestions, type SavedProfile, type TenderPick } from "@/lib/advisor/types";
 import type { Tender } from "@/lib/eop/types";
 import type { GrantCall } from "@/lib/grants/types";
 import { SITE_URL } from "@/lib/site";
@@ -67,7 +67,12 @@ export default async function AdvisorPage({
     );
   }
 
-  const profile: SavedProfile = { ...saved, results: { ...EMPTY_RESULTS, ...saved.results } };
+  const questions = normalizeQuestions(saved.profile.questions);
+  const profile: SavedProfile = {
+    ...saved,
+    profile: { ...saved.profile, questions },
+    results: { ...EMPTY_RESULTS, ...saved.results },
+  };
   const f = profile.filters;
 
   // Каквото е избрал AI + каквото дават филтрите сега (без AI, безплатно).
