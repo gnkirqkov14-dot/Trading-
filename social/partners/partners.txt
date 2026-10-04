@@ -1,0 +1,6 @@
+master_fasad_russia	Русия
+phomi.kg	Киргизстан
+phomi_russia	Русия
+phomiturkey	Турция
+phomibeneluxfrance	Бенелюкс / Франция
+phomi.chechnya	Чечня
