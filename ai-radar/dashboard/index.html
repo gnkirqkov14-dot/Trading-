@@ -142,7 +142,6 @@ ol.brief li::before { content: counter(b); font: 600 12px/22px var(--f-mono); co
 .player .now b { font-weight: 600; }
 .player button { border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); background: none; color: var(--bg); border-radius: 8px; padding: 5px 10px; font-size: 13px; }
 .player .el { background: var(--bg); color: var(--ink); border-color: var(--bg); font-weight: 600; }
-.player .pl-link { background: var(--hot); color: #fff; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; text-decoration: none; }
 .player select { background: none; color: var(--bg); border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent); border-radius: 8px; padding: 4px 6px; font-size: 12.5px; }
 body.has-player main { padding-bottom: 90px; }
 .star { border: 0; background: none; padding: 0 2px; font-size: 17px; line-height: 1; color: var(--ink-3); }
@@ -363,9 +362,7 @@ details summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
 </main>
 <div class="player" id="player" hidden>
   <div class="now" id="pl-now"></div>
-  <button id="pl-el" class="el">▶ Слушай с Milena</button>
-  <a id="pl-link" class="pl-link" target="_blank" rel="noopener" hidden>▶ Пусни аудиото</a>
-  <button id="pl-quick">Бърз глас</button>
+  <button id="pl-play" class="el">▶ Слушай</button>
   <button id="pl-toggle">Пауза</button>
   <button id="pl-next">Следваща</button>
   <select id="pl-rate" aria-label="Скорост"><option value="0.9">0,9×</option><option value="1" selected>1×</option><option value="1.15">1,15×</option><option value="1.3">1,3×</option></select>
@@ -580,14 +577,16 @@ function renderFavs() {
   }).join("") || `<p class="muted">Няма любими с тези филтри.</p>`;
 }
 
-// ------------------------------------------------------------ listening: pick one or several items, then hear them with the ElevenLabs voice (Milena)
-// The artifact cannot play audio from other hosts, so the finished ElevenLabs track opens in a new tab;
-// the browser's own voice stays as a "quick" fallback.
+// ------------------------------------------------------------ listening: pick one or several items, press ▶ and Milena (ElevenLabs) reads them here, one after another
+// The page cannot play audio from other hosts. So a missing clip is recorded through the ElevenLabs connector, and a short Claude
+// session (ai-radar/AUDIO.md) stores it in this artifact's own asset store (audio/<id> in the db points at it). Every clip is recorded once and kept.
 const EL_VOICE = "M1ydWt7KnBCiuv4CnEDC"; // Milena — избрана от потребителя
-const TTS = { queue: [], cur: null, paused: false, rate: 1, voice: null, mode: null, busy: false, link: null };
-function pickVoice() { const vs = (window.speechSynthesis?.getVoices?.() || []); TTS.voice = vs.find((v) => /^bg/i.test(v.lang)) || null; }
-if ("speechSynthesis" in window) { pickVoice(); window.speechSynthesis.onvoiceschanged = pickVoice; }
+const SILENCE = "/_blob/ca18f63507d8cb189188189d542a614f"; // 0,3 с тишина — отключва звука при натискането (iOS)
+const TTS = { queue: [], cur: null, playing: false, waiting: false, busy: null, rate: 1, pending: new Map(), el: new Audio() };
+S.audio = new Map(); S.audioJobs = new Map();
+const audioId = (key) => key.startsWith("brief:") ? `brief-${S.digest?.date}-${key.slice(6)}` : key.replace(/[^A-Za-z0-9_-]/g, "_");
 const inQueue = (key) => TTS.cur?.key === key || TTS.queue.some((q) => q.key === key);
+const ready = (q) => S.audio.get(audioId(q.key));
 function listenBtn(key, label) {
   const on = inQueue(key);
   return `<button class="listen" data-listen="${esc(key)}" aria-pressed="${on}" title="${on ? "Махни от избраните" : "Избери за слушане"}">${on ? "♪ избрано" : "▶ " + (label || "слушай")}</button>`;
@@ -608,27 +607,28 @@ async function bulgarian(entry) {
   catch { return entry.text; }
 }
 function toggleListen(key) {
-  if (TTS.mode === "quick" && TTS.cur?.key === key) { quickNext(); return; }
+  if (TTS.cur?.key === key) { skip(); return; }
   if (inQueue(key)) TTS.queue = TTS.queue.filter((q) => q.key !== key);
   else { const e = speechFor(key); if (!e) return; TTS.queue.push({ key, ...e }); }
-  TTS.link = null; renderPlayer(); refreshListenButtons();
+  renderPlayer(); refreshListenButtons();
 }
 function renderPlayer() {
-  const show = TTS.queue.length || TTS.cur || TTS.busy || TTS.link;
+  const show = TTS.queue.length || TTS.cur;
   $("#player").hidden = !show; document.body.classList.toggle("has-player", !!show);
   if (!show) return;
-  const quick = TTS.mode === "quick" && TTS.cur;
-  const chars = TTS.queue.reduce((n, q) => n + q.text.length, 0);
+  const active = TTS.playing || TTS.waiting;
+  const all = [TTS.cur, ...TTS.queue].filter(Boolean);
+  const toRecord = all.filter((q) => !ready(q) && !TTS.pending.has(audioId(q.key)));
+  const chars = toRecord.reduce((n, q) => n + q.text.length, 0);
   $("#pl-now").innerHTML = TTS.busy ? `<b>${esc(TTS.busy)}</b>`
-    : quick ? `<b>Слушаш:</b> ${esc(TTS.cur.title)}${TTS.queue.length ? ` · още ${TTS.queue.length}` : ""}`
-    : TTS.link ? `<b>Аудиото е готово</b> · ${esc(TTS.link.label)}`
-    : `<b>Избрани: ${TTS.queue.length}</b> · ~${Math.max(1, Math.round(chars / 15 / 60))} мин${TTS.queue.some((q) => q.translate) ? " · цяла статия се превежда" : ""}`;
-  $("#pl-el").hidden = quick || !TTS.queue.length || !!TTS.busy;
-  $("#pl-quick").hidden = quick || !TTS.queue.length || !!TTS.busy || !("speechSynthesis" in window);
-  const a = $("#pl-link"); a.hidden = !TTS.link || !!TTS.busy; if (TTS.link) a.href = TTS.link.url;
-  $("#pl-toggle").hidden = !quick; $("#pl-next").hidden = !quick; $("#pl-rate").hidden = !quick && !TTS.queue.length;
-  $("#pl-toggle").textContent = TTS.paused ? "Продължи" : "Пауза";
-  $("#pl-stop").textContent = quick ? "Спри" : "Изчисти";
+    : TTS.cur && TTS.waiting ? `<b>Milena записва…</b> ${esc(TTS.cur.title)} · обикновено 1–2 мин`
+    : TTS.cur ? `<b>${TTS.el.paused ? "Пауза" : "Слушаш"}:</b> ${esc(TTS.cur.title)}${TTS.queue.length ? ` · още ${TTS.queue.length}` : ""}`
+    : `<b>Избрани: ${TTS.queue.length}</b>${toRecord.length ? ` · за запис ${toRecord.length} (~${Math.ceil(chars / 100) * 100} кредита)` : " · записани са"}`;
+  $("#pl-play").hidden = active;
+  $("#pl-play").textContent = TTS.cur ? "▶ Продължи" : "▶ Слушай";
+  $("#pl-toggle").hidden = !TTS.playing; $("#pl-toggle").textContent = TTS.el.paused ? "Продължи" : "Пауза";
+  $("#pl-next").hidden = !active || !TTS.queue.length;
+  $("#pl-stop").textContent = active ? "Спри" : "Изчисти";
 }
 function refreshListenButtons() {
   for (const b of document.querySelectorAll("button[data-listen]")) {
@@ -637,64 +637,122 @@ function refreshListenButtons() {
   }
 }
 const payloadOf = (r) => r?.payload ?? r?.structuredContent ?? (() => { try { return JSON.parse(r?.content?.find((c) => c.type === "text")?.text || "null"); } catch { return null; } })();
-async function elevenLabs() {
-  const mcp = await claude.use("mcp");
-  if (!mcp) { toast("Гласът на ElevenLabs не е достъпен тук — ползвай „Бърз глас“."); return; }
-  const items = TTS.queue.slice();
-  TTS.busy = "Подготвям текста…"; TTS.link = null; renderPlayer();
-  try {
-    const texts = [];
-    for (const q of items) { if (q.translate) { TTS.busy = "Превеждам статията на български…"; renderPlayer(); } texts.push(await bulgarian(q)); }
-    let text = texts.join("\n\nСледваща новина.\n\n");
-    if (text.length > 9500) { text = text.slice(0, 9500).replace(/[^.!?…]*$/, ""); toast("Текстът е дълъг — чета първите ~9500 знака."); }
-    TTS.busy = `Milena записва ${items.length > 1 ? items.length + " новини" : "новината"}… (~${Math.round(text.length / 15)} сек аудио)`; renderPlayer();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// записва липсващите клипове: ElevenLabs прави аудиото, после кратка сесия на Claude го слага в таблото
+async function record(items) {
+  const mcp = await claude.use("mcp"); const r = S.config.refresh;
+  if (!mcp || !r) throw new Error("ElevenLabs/Claude не са достъпни в този изглед");
+  const runs = [];
+  for (const q of items) {
+    if (q.translate) { TTS.busy = "Превеждам статията на български…"; renderPlayer(); }
+    let text = await bulgarian(q);
+    if (text.length > 9500) text = text.slice(0, 9500).replace(/[^.!?…]*$/, "");
+    TTS.busy = `Milena записва ${items.length > 1 ? items.length + " новини" : "новината"}…`; renderPlayer();
     const start = payloadOf(await mcp.callTool("ElevenLabs", "creative_generate_speech", {
       context: "AI Радар: потребителят избра новини за слушане в таблото",
       prompt: text, model_id: "eleven_multilingual_v2", voice_id: EL_VOICE, generations_count: 1,
     }));
     if (!start?.flow_id || !start?.session_ids?.length) throw new Error("ElevenLabs не върна задача");
+    runs.push({ q, start });
+  }
+  const clips = [];
+  for (const { q, start } of runs) {
     let url = null;
     for (let n = 0; n < 60 && !url; n++) {
-      await new Promise((r) => setTimeout(r, Math.max(2, start.poll_after_seconds || 3) * 1000));
+      await sleep(Math.max(2, start.poll_after_seconds || 3) * 1000);
       const st = payloadOf(await mcp.callTool("ElevenLabs", "creative_get_flow_run_status", { context: "AI Радар: чакам аудиото", flow_id: start.flow_id, session_ids: start.session_ids }));
-      if (st?.has_failures) throw new Error("генерирането се провали");
+      if (st?.has_failures) throw new Error("ElevenLabs не успя да запише");
       if (st?.all_completed) url = st.media?.find((m) => m.kind === "audio")?.url || st.media?.[0]?.url;
     }
     if (!url) throw new Error("аудиото не стана навреме");
-    TTS.link = { url, label: items.length > 1 ? `${items.length} новини` : items[0].title };
-    TTS.queue = [];
+    clips.push({ id: audioId(q.key), key: q.key, title: q.title.slice(0, 140), url, flow_id: start.flow_id, session_ids: start.session_ids });
+  }
+  // задачата живее в базата: ако Claude не тръгне сега, записът не се губи — качва се при следващото обновяване
+  const job = "j" + Date.now();
+  await S.db.doc("audio_jobs/" + job).set({ state: "new", at: new Date().toISOString(), clips });
+  for (const c of clips) TTS.pending.set(c.id, { job, at: Date.now() });
+  TTS.busy = "Качвам записа в таблото…"; renderPlayer();
+  try {
+    const made = payloadOf(await mcp.callTool("Claude Code Remote", "create_session", {
+      environment_id: r.environment_id, source_url: r.source_url, source_revision: r.revision, clone_depth: 1,
+      title: "AI Радар — аудио", permission_mode: "auto", model: "claude-sonnet-5-5",
+      prompt: `AI Радар — аудио: изпълни ai-radar/AUDIO.md за задача ${job} в таблото ${r.dashboard_url}. Не питай — действай.`,
+    }));
+    const sid = (made?.ccr || made)?.id;
+    TTS.busy = null; renderPlayer();
+    for (let n = 0; sid && n < 3; n++) { // стартът на облачната среда се проваля за секунди, ако изобщо
+      await sleep(4000);
+      const s = payloadOf(await mcp.callTool("Claude Code Remote", "get_session", { session_id: sid }));
+      const err = (s?.ccr || s)?.external_metadata?.last_init_error;
+      if (err) throw new Error(err.message || "средата не стартира");
+    }
   } catch (x) {
-    toast(x?.code === "server_not_connected" || x?.code === "needs_reauth" ? "Свържи ElevenLabs в настройките на claude.ai." : "Не се получи: " + (x?.message || x?.code || x));
-  } finally { TTS.busy = false; renderPlayer(); refreshListenButtons(); }
+    for (const c of clips) TTS.pending.delete(c.id);
+    const ids = new Set(clips.map((c) => c.id));
+    TTS.queue = TTS.queue.filter((q) => !ids.has(audioId(q.key)));
+    if (TTS.cur && ids.has(audioId(TTS.cur.key))) next();
+    toast(`Milena записа новините, но Claude не можа да тръгне (${x?.message || x?.code || x}). Ще се появят след следващото обновяване.`);
+  } finally { TTS.busy = null; renderPlayer(); }
 }
-// бърз (вграден) глас — резервен вариант
-function chunks(text) {
-  const parts = String(text).replace(/\s+/g, " ").match(/[^.!?…]+[.!?…]*\s*/g) || [text];
-  const out = []; let cur = "";
-  for (const p of parts) { if ((cur + p).length > 220 && cur) { out.push(cur); cur = ""; } cur += p; }
-  if (cur.trim()) out.push(cur);
-  return out;
+function playCur() {
+  const a = ready(TTS.cur);
+  if (!a) { TTS.waiting = true; TTS.playing = false; renderPlayer(); return; }
+  TTS.waiting = false; TTS.playing = true;
+  TTS.el.src = "/_blob/" + a.asset; TTS.el.playbackRate = TTS.rate;
+  TTS.el.play().catch(() => { TTS.playing = false; TTS.queue.unshift(TTS.cur); TTS.cur = null; toast("Натисни ▶, за да пусна звука."); renderPlayer(); });
+  renderPlayer();
 }
-async function quickNext() {
-  const synth = window.speechSynthesis; synth.cancel();
-  TTS.cur = TTS.queue.shift() || null; TTS.mode = TTS.cur ? "quick" : null;
+function next() {
+  TTS.cur = TTS.queue.shift() || null;
+  if (!TTS.cur) { TTS.playing = TTS.waiting = false; TTS.el.removeAttribute("src"); renderPlayer(); refreshListenButtons(); return; }
+  refreshListenButtons(); playCur();
+}
+function skip() { TTS.el.pause(); next(); }
+async function listen() {
+  // отключва звука, докато е в натискането — после клиповете тръгват сами, щом са готови
+  TTS.el.src = SILENCE; TTS.el.play().catch(() => {});
+  if (TTS.cur && !TTS.waiting) { playCur(); return; }
+  const missing = [TTS.cur, ...TTS.queue].filter((q) => q && !ready(q) && !TTS.pending.has(audioId(q.key)));
+  if (!TTS.cur) next();
+  if (missing.length) {
+    try { await record(missing); }
+    catch (x) {
+      TTS.busy = null;
+      toast(x?.code === "server_not_connected" || x?.code === "needs_reauth" ? "Свържи ElevenLabs и Claude Code в настройките на claude.ai." : "Не се получи: " + (x?.message || x?.code || x));
+      const bad = new Set(missing.map((q) => q.key));
+      TTS.queue = TTS.queue.filter((q) => !bad.has(q.key));
+      if (TTS.cur && bad.has(TTS.cur.key)) next(); else renderPlayer();
+      refreshListenButtons();
+    }
+  }
+}
+function onAudio() {
+  for (const id of S.audio.keys()) TTS.pending.delete(id);
+  for (const [id, p] of TTS.pending) {
+    const j = S.audioJobs.get(p.job);
+    const failed = j?.state === "error" || (j?.state === "done" && Date.now() - Date.parse(j.at) > 20e3);
+    if (failed || Date.now() - p.at > 8 * 60e3) {
+      TTS.pending.delete(id);
+      toast(failed ? "Записът не стигна до таблото" + (j?.message ? ": " + j.message : "") + "." : "Записът се бави — ще се появи по-късно.");
+      TTS.queue = TTS.queue.filter((q) => audioId(q.key) !== id);
+      if (TTS.cur && audioId(TTS.cur.key) === id) { next(); return; }
+    }
+  }
+  if (TTS.waiting && ready(TTS.cur)) playCur(); else renderPlayer();
+}
+setInterval(() => { if (TTS.pending.size) onAudio(); }, 30e3);
+TTS.el.addEventListener("ended", () => { if (TTS.el.src.endsWith(SILENCE)) return; next(); });
+TTS.el.addEventListener("error", () => { if (TTS.playing && !TTS.el.src.endsWith(SILENCE)) { toast("Клипът не се пусна — следващият."); next(); } });
+TTS.el.addEventListener("pause", renderPlayer); TTS.el.addEventListener("play", renderPlayer);
+$("#pl-play").addEventListener("click", listen);
+$("#pl-toggle").addEventListener("click", () => { if (TTS.el.paused) TTS.el.play().catch(() => {}); else TTS.el.pause(); });
+$("#pl-next").addEventListener("click", skip);
+$("#pl-stop").addEventListener("click", () => {
+  if (TTS.playing || TTS.waiting) { TTS.el.pause(); TTS.el.removeAttribute("src"); TTS.playing = TTS.waiting = false; TTS.cur = null; }
+  else TTS.queue = [];
   renderPlayer(); refreshListenButtons();
-  if (!TTS.cur) return;
-  const me = TTS.cur; const pieces = chunks(await bulgarian(me)); let n = 0;
-  const speak = () => {
-    if (TTS.cur !== me) return;
-    if (n >= pieces.length) { quickNext(); return; }
-    const u = new SpeechSynthesisUtterance(pieces[n++]); u.lang = "bg-BG"; if (TTS.voice) u.voice = TTS.voice; u.rate = TTS.rate;
-    u.onend = speak; u.onerror = speak; synth.speak(u);
-  };
-  speak();
-}
-$("#pl-el").addEventListener("click", elevenLabs);
-$("#pl-quick").addEventListener("click", () => { TTS.link = null; quickNext(); });
-$("#pl-toggle").addEventListener("click", () => { const s = window.speechSynthesis; if (TTS.paused) { s.resume(); TTS.paused = false; } else { s.pause(); TTS.paused = true; } renderPlayer(); });
-$("#pl-next").addEventListener("click", () => { TTS.paused = false; quickNext(); });
-$("#pl-stop").addEventListener("click", () => { TTS.queue = []; TTS.paused = false; TTS.cur = null; TTS.mode = null; TTS.link = null; window.speechSynthesis?.cancel(); renderPlayer(); refreshListenButtons(); });
-$("#pl-rate").addEventListener("change", (e) => { TTS.rate = +e.target.value; });
+});
+$("#pl-rate").addEventListener("change", (e) => { TTS.rate = +e.target.value; TTS.el.playbackRate = TTS.rate; });
 
 function itemHTML(i, compact) {
   const t = S.topics.get(i.t); const c = cvar(t?.category || "misc");
@@ -1020,6 +1078,8 @@ async function boot() {
   db.doc("meta/radar").onSnapshot((snap) => { S.radar = snap.exists ? snap.data() : null; renderSources(); renderPeople(); }, onErr);
   db.doc("prefs/main").onSnapshot((snap) => { S.prefs = snap.exists ? snap.data() : {}; if (S.digest) renderAll(); }, onErr);
   db.collection("favorites").onSnapshot((q) => { S.favs = new Map(q.docs.map((d) => [d.id, { key: d.id, ...d.data() }])); if (S.digest) renderAll(); else renderFavs(); }, onErr);
+  db.collection("audio").onSnapshot((q) => { S.audio = new Map(q.docs.map((d) => [d.id, d.data()])); onAudio(); }, onErr);
+  db.collection("audio_jobs").onSnapshot((q) => { S.audioJobs = new Map(q.docs.map((d) => [d.id, d.data()])); onAudio(); }, onErr);
   db.collection("sources").onSnapshot((q) => { S.sources = q.docs.map((d) => ({ doc_id: d.id, ...d.data() })); renderSources(); renderPeople(); }, onErr);
   try {
     const hist = await db.collection("history").get();

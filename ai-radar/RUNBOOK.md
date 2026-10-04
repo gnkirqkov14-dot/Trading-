@@ -59,6 +59,8 @@ commit-ва).
    контейнер — старите id се виждат с agents_get в knowledge_base). Главната
    сесия не чете текстовете — пести контекст. Гласът на агента е Milena
    (`M1ydWt7KnBCiuv4CnEDC`, избран от потребителя) — не го сменяй.
+8в. Чакащо аудио: ArtifactData `query` на `audio_jobs` със `state == "new"` — ако има,
+   качи ги по `AUDIO.md` (поръчки от „▶ Слушай“, които не са стигнали до таблото).
 9. Имейл: Gmail `send_message` до собственика, тема
    `work/email_subject.txt`, тяло `work/email.html` (HTML) / `email.txt`.
    Само при сутрешния брой — при ръчно обновяване от таблото не се праща.
