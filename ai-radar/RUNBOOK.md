@@ -47,20 +47,14 @@ commit-ва).
 8. Статуси на потребителските източници: `python3 db_io.py statuses work/`
    дава update-и за `sources/<id>` (status ok/error, channel_id, resolved_name) —
    запиши ги с batch `update` + `if_version`.
-8б. Глас (ElevenLabs агент `agent_3801m42rnt0meg7vg7pqv6j7gn7z`, „AI Радар — гласов
-   бюлетин“) и „цялата статия“ в таблото: `python3 voice.py --work work` →
-   `work/voice_day.txt`, `work/voice_kb.txt`, `work/db/fulltext__<дата>.json`.
-   Запиши `fulltext/<дата>` в базата (ArtifactData set с file_path). После
-   subagent качва двата текста като нови KB документи („AI Радар — днешен
-   брой“ с usage_mode prompt, „AI Радар — пълни статии“ с auto), закача ги към
-   агента (agents_update, body → conversation_config.agent.prompt.knowledge_base;
-   промптът се праща непроменен), изтрива старите документи по id от
-   `work/voice_state.json` и записва новите id там (ако файлът липсва след нов
-   контейнер — старите id се виждат с agents_get в knowledge_base). Главната
-   сесия не чете текстовете — пести контекст. Гласът на агента е Milena
-   (`M1ydWt7KnBCiuv4CnEDC`, избран от потребителя) — не го сменяй.
-8в. Чакащо аудио: ArtifactData `query` на `audio_jobs` със `state == "new"` — ако има,
-   качи ги по `AUDIO.md` (поръчки от „▶ Слушай“, които не са стигнали до таблото).
+8б. Пълни статии за „▶ цялата статия“: `python3 voice.py --work work` → запиши
+   `work/db/fulltext__<дата>.json` като `fulltext/<дата>` в базата (ArtifactData set с
+   file_path). ElevenLabs вече НЕ се ползва (потребителят го спря заради цената) —
+   не качвай нищо в агента.
+8в. Безплатно аудио (Microsoft Kalina): `python3 audio_daily.py --work work` → качи
+   `work/audio_day.mp4` с Artifact (`url` на таблото, `asset: true`) и запиши
+   `audio/day-<дата>` = съдържанието на `work/audio_day.json` + `"asset": "<id>"`.
+   Изтрий `audio/day-*` по-стари от 7 дни и техните файлове (Artifact delete с id).
 9. Имейл: Gmail `send_message` до собственика, тема
    `work/email_subject.txt`, тяло `work/email.html` (HTML) / `email.txt`.
    Само при сутрешния брой — при ръчно обновяване от таблото не се праща.
