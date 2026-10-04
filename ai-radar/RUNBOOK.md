@@ -47,6 +47,16 @@ commit-ва).
 8. Статуси на потребителските източници: `python3 db_io.py statuses work/`
    дава update-и за `sources/<id>` (status ok/error, channel_id, resolved_name) —
    запиши ги с batch `update` + `if_version`.
+8б. Глас (ElevenLabs агент `agent_3801m42rnt0meg7vg7pqv6j7gn7z`, „AI Радар — гласов
+   бюлетин“) и „цялата статия“ в таблото: `python3 voice.py --work work` →
+   `work/voice_day.txt`, `work/voice_kb.txt`, `work/db/fulltext__<дата>.json`.
+   Запиши `fulltext/<дата>` в базата (ArtifactData set с file_path). После
+   subagent качва двата текста като нови KB документи („AI Радар — днешен
+   брой“ с usage_mode prompt, „AI Радар — пълни статии“ с auto), закача ги към
+   агента (agents_update, body → conversation_config.agent.prompt.knowledge_base;
+   промптът се праща непроменен), изтрива старите документи по id от
+   `work/voice_state.json` и записва новите id там. Главната сесия не чете
+   текстовете — пести контекст.
 9. Имейл: Gmail `send_message` до собственика, тема
    `work/email_subject.txt`, тяло `work/email.html` (HTML) / `email.txt`.
    Само при сутрешния брой — при ръчно обновяване от таблото не се праща.
