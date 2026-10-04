@@ -138,51 +138,69 @@ const GRANT_RANK_SYSTEM = `Ти си консултант по европейс�
 - Пиши простичко, без жаргон и без markdown.`;
 
 const SurveySchema = z.object({
-  enough_info: z.boolean(),
-  company_summary: z.string(),
   questions: z.array(
     z.object({
+      track: z.enum(["общи", "обществени поръчки", "европейски програми"]),
       topic: z.string(),
       text: z.string(),
+      why: z.string(),
       options: z.array(z.string()),
       multi: z.boolean(),
     }),
   ),
 });
 
-const SURVEY_SYSTEM = `Ти си консултант по обществени поръчки и европейски програми в България — като бюро за проекти. Фирма е описала с няколко думи какво работи. Преди да ѝ търсиш поръчки и програми, ти ѝ правиш кратка анкета, както консултант на първа среща.
+const SURVEY_SYSTEM = `Ти си консултант в бюро за обществени поръчки и европейски проекти в България. Фирма е описала накратко какво работи. Ти вече си прегледал кои отворени обществени поръчки и кои европейски/национални програми биха могли да са за нея — те са в съобщението. Сега ѝ правиш анкета, както на първа среща в бюрото: целта е да разбереш реално може ли да участва в ТЕЗИ възможности и да стесниш кръга.
 
 ${INJECTION_NOTE}
 
-Какво връщаш:
-- enough_info: false само ако от описанието изобщо не става ясно с какво се занимава фирмата. Тогава първият въпрос в анкетата е „С какво се занимава фирмата?“ с няколко примерни отговора.
-- company_summary: 1–2 изречения на български на „вие“ — как разбра фирмата досега.
-- questions: между 8 и 12 въпроса, които заедно дават пълна картина. Всеки въпрос е за различна тема (topic) — без два въпроса за едно и също. Не питай за неща, които вече са ясни от описанието. Подреди ги от общото към конкретното. Покрий темите, които още не са ясни, от този списък, съобразени с бранша на фирмата:
-  1. правна форма и статут (ЕООД/ООД/ЕТ/АД, клон или представителство на чуждестранна фирма);
-  2. от колко години работи;
-  3. брой служители;
-  4. годишен оборот (за категорията микро/малко/средно предприятие);
-  5. в каква роля иска да участва в обществени поръчки (изпълнител, доставчик, подизпълнител);
-  6. регистрации, лицензи и сертификати, важни за бранша (например ЦПРС за строителство, ISO 9001/14001, лиценз за охрана) — с конкретни отговори за този бранш;
-  7. къде може да работи (област, региони, цялата страна);
-  8. какъв най-голям договор може да поеме;
-  9. какво иска да развие с европейски пари (няколко отговора: техника и оборудване, склад или производствена база, софтуер и дигитализация, енергийна ефективност и фотоволтаици, обучения, иновации, износ);
-  10. какъв бюджет мисли за тази инвестиция;
-  11. може ли да осигури собствено съфинансиране (обикновено 30–50 %);
-  12. има ли собствен терен или сграда за инвестицията, ако иска да строи;
-  13. получавала ли е фирмата европейски пари или държавна помощ (de minimis) последните 3 години.
-  Всеки въпрос е кратък, на „вие“, с 2 до 6 кратки готови отговора (options), които покриват честите случаи. Сумите са в евро (България е в еврозоната от 1 януари 2026 г.), например „до 250 000 €“. multi = true само когато има смисъл да се изберат няколко отговора (например какво иска да развие); иначе false.`;
+Как съставяш анкетата (между 10 и 15 въпроса):
+1. Задължителните въпроси, които всяко бюро задава (пропусни само онези, на които описанието вече отговаря ясно):
+   Общи: правна форма (ЕООД, ООД, ЕТ, АД, клон на чуждестранна фирма); колко приключени финансови години има фирмата; брой служители; годишен оборот; дали има свързани или партньорски предприятия (например фирма-майка в чужбина — това променя дали е МСП); дали има просрочени задължения към държавата (НАП, общината).
+   Обществени поръчки: в каква роля (изпълнител, доставчик, подизпълнител, в обединение с други фирми); опит с изпълнени подобни договори — за строителство за последните 5 години, за доставки и услуги за последните 3 години, с приблизителна стойност; регистрации и лицензи за бранша (например ЦПРС с група и категория за строителство); сертификати (ISO 9001, 14001, 45001 и други за бранша); собствена техника и ключов персонал; какъв най-голям договор може да поеме; дали има квалифициран електронен подпис (КЕП) и регистрация в ЦАИС ЕОП.
+   Европейски програми: какво иска да финансира (няколко отговора); ориентировъчен бюджет на инвестицията; може ли да осигури собствено участие (обикновено 30–50 %) и откъде (собствени средства, кредит); при строеж — собствен терен или сграда и разрешение за строеж; в коя област ще е инвестицията (за регионалните програми); получавана ли е държавна помощ de minimis или европейско финансиране последните 3 години; има ли вече проектна идея и оферти от доставчици.
+2. Въпроси за конкретните възможности от списъка: ако някоя поръчка или програма има условие, което решава дали фирмата може да участва (например само за МСП, само за производствени предприятия, минимум години, определена област, вид разходи, размер на поръчката), задай въпрос, който го проверява. Не повтаряй задължителен въпрос — обедини ги.
+3. Всеки въпрос е за различна тема (topic). Никога два въпроса за едно и също.
 
-/** Анкетата: от краткото описание → 8–12 въпроса за фирмата. */
+За всеки въпрос:
+- track: "общи", "обществени поръчки" или "европейски програми".
+- text: кратък въпрос на „вие“.
+- why: едно кратко изречение защо питаш, конкретно — ако е заради определена поръчка или програма от списъка, назови я накратко (например „Питаме, защото „Зелени технологии в МСП“ е само за малки и средни предприятия.“).
+- options: 2 до 6 кратки готови отговора, които покриват честите случаи за този бранш. Сумите са в евро (България е в еврозоната от 1 януари 2026 г.), например „до 250 000 €“.
+- multi: true само когато има смисъл да се изберат няколко отговора; иначе false.
+Подреди: първо общите, после за обществените поръчки, после за европейските програми.`;
+
+/**
+ * Анкетата: краткото описание → бърз профил → кои поръчки и програми
+ * изобщо са за тази фирма → 10–15 въпроса, които решават дали тя реално
+ * може да участва в тях (като на първа среща в бюро за проекти).
+ */
 export async function buildSurvey(description: string, regionHint?: string) {
+  const first = await profileCall(description, [], regionHint);
+  const store = getStore();
+  const [tenders, grants] = await Promise.all([
+    store.matchTenders(first.filters, 20).catch(() => [] as MatchedTender[]),
+    businessGrants().catch(() => [] as GrantCall[]),
+  ]);
+  const context = [
+    `Как разбрах фирмата: ${first.profile.summary}`,
+    "",
+    `Отворени обществени поръчки, които приличат на дейността (${tenders.length}):`,
+    ...tenders.map(tenderLine),
+    "",
+    `Европейски и национални програми, по които фирми могат да кандидатстват (${grants.length}):`,
+    ...grants.slice(0, 40).map(grantLine),
+  ].join("\n");
+
   const s = await askStructured({
     schema: SurveySchema,
     system: SURVEY_SYSTEM,
-    content: `${companyBlock(description, [])}${regionHint ? `\n\nИзбрана област: ${REGIONS[regionHint] ?? regionHint}.` : ""}`,
-    effort: "low",
-    maxTokens: 6000,
+    content: `${companyBlock(description, [])}\n\n${context}`,
+    effort: "medium",
+    maxTokens: 12000,
   });
   const seen = new Set<string>();
+  const order = { "общи": 0, "обществени поръчки": 1, "европейски програми": 2 } as const;
   const questions = s.questions
     .filter((q) => q.text.trim() && q.options.length >= 2)
     .filter((q) => {
@@ -191,15 +209,18 @@ export async function buildSurvey(description: string, regionHint?: string) {
       seen.add(key);
       return true;
     })
-    .slice(0, 12)
+    .sort((a, b) => order[a.track] - order[b.track])
+    .slice(0, 15)
     .map((q, i) => ({
       id: `q${i + 1}`,
       topic: q.topic.trim(),
+      track: q.track,
       text: q.text.trim(),
+      why: q.why.trim(),
       options: q.options.map((o) => o.trim()).filter(Boolean).slice(0, 6),
       multi: q.multi,
     }));
-  return { summary: s.company_summary, questions };
+  return { ...first, questions };
 }
 
 function companyBlock(description: string, answers: AdvisorAnswer[]) {
@@ -284,6 +305,26 @@ export async function businessGrants(): Promise<GrantCall[]> {
   return all.filter((g) => g.for_business !== false);
 }
 
+/** Описание + отговори → разбиране за фирмата и филтри за търсене. */
+async function profileCall(description: string, answers: AdvisorAnswer[], regionHint?: string) {
+  const p = await askStructured({
+    schema: ProfileSchema,
+    system: PROFILE_SYSTEM,
+    content: `${companyBlock(description, answers)}${regionHint ? `\n\nИзбрана област: ${REGIONS[regionHint] ?? regionHint}.` : ""}`,
+    effort: "low",
+    maxTokens: 6000,
+  });
+  return {
+    enoughInfo: p.enough_info,
+    profile: {
+      summary: p.company_summary,
+      fitAreas: p.fit_areas.slice(0, 5),
+      growthAreas: p.growth_areas.slice(0, 4),
+    },
+    filters: cleanFilters(p, regionHint),
+  };
+}
+
 export type AdvisorRun = {
   profile: AdvisorProfile;
   filters: AdvisorFilters;
@@ -309,17 +350,9 @@ export async function runAdvisor(input: {
   let filters: AdvisorFilters;
 
   if (input.reprofile || !input.previous) {
-    const p = await askStructured({
-      schema: ProfileSchema,
-      system: PROFILE_SYSTEM,
-      content: `${company}${input.regionHint ? `\n\nИзбрана област: ${REGIONS[input.regionHint] ?? input.regionHint}.` : ""}`,
-      effort: "low",
-      maxTokens: 6000,
-    });
+    const p = await profileCall(input.description, input.answers, input.regionHint);
     profile = {
-      summary: p.company_summary,
-      fitAreas: p.fit_areas.slice(0, 5),
-      growthAreas: p.growth_areas.slice(0, 4),
+      ...p.profile,
       // Анкетата остава същата — въпросите не се генерират наново, за да
       // не се повтарят.
       questions: input.previous?.profile.questions ?? [],
@@ -328,7 +361,7 @@ export async function runAdvisor(input: {
     // Какво търсим (поръчки/програми) и бюджетът, ако човекът ги е
     // задал ръчно, остават; останалото идва от новия профил.
     const prev = input.previous?.filters;
-    const fresh = cleanFilters(p, input.regionHint);
+    const fresh = p.filters;
     filters = {
       tenders: prev?.tenders ?? true,
       grants: prev?.grants ?? true,
@@ -336,7 +369,7 @@ export async function runAdvisor(input: {
       minValue: prev?.minValue ?? fresh.minValue,
       maxValue: prev?.maxValue ?? fresh.maxValue,
     };
-    if (!p.enough_info) {
+    if (!p.enoughInfo) {
       return {
         profile,
         filters,

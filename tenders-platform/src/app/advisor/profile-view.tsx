@@ -166,7 +166,7 @@ function GrantCard({ grant: g, pick }: { grant: GrantCall; pick: GrantPick }) {
 
 function Chip({ name, value, label }: { name: string; value: string; label: string }) {
   return (
-    <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-sm text-brand-800 has-[:not(:checked)]:border-slate-200 has-[:not(:checked)]:bg-white has-[:not(:checked)]:text-slate-400 has-[:not(:checked)]:line-through">
+    <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-sm text-brand-800 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 has-[:not(:checked)]:border-slate-200 has-[:not(:checked)]:bg-white has-[:not(:checked)]:text-slate-400 has-[:not(:checked)]:line-through">
       <input type="checkbox" name={name} value={value} defaultChecked className="sr-only" />
       {label}
       <span aria-hidden="true" className="text-xs">
@@ -199,7 +199,9 @@ function FiltersForm({ profile }: { profile: SavedProfile }) {
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-slate-900">Браншове</legend>
-        <p className="text-xs text-slate-500">Натиснете, за да махнете. Отдолу добавяте нов.</p>
+        <p className="text-xs text-slate-500">
+          Отметнатите браншове се търсят. Махнете отметката, за да изключите бранш; нов добавяте отдолу.
+        </p>
         <div className="flex flex-wrap gap-2">
           {f.cpvPrefixes.map((p) => (
             <Chip key={p} name="cpv" value={p} label={prefixLabel(p)} />
@@ -217,6 +219,9 @@ function FiltersForm({ profile }: { profile: SavedProfile }) {
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-semibold text-slate-900">Ключови думи</legend>
+        <p className="text-xs text-slate-500">
+          Отметнатите думи се търсят. Махнете отметката, за да изключите дума; нови добавяте отдолу.
+        </p>
         <div className="flex flex-wrap gap-2">
           {f.keywords.map((k) => (
             <Chip key={k} name="kw" value={k} label={k} />
