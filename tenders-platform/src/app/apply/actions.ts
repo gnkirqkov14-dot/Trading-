@@ -53,21 +53,37 @@ export async function makeTenderGuide(_prev: AdvisorState, form: FormData): Prom
   const token = await currentToken();
   const saved = token ? await store.getProfile(token) : null;
 
+  // Логовете на Vercel не винаги са под ръка: ходът на последния разбор
+  // на поръчката се пази до разборите (ключ run:…), без лични данни. Ако
+  // остане „started“, функцията е спряна по време (maxDuration).
+  const started = Date.now();
+  const trace = (status: string, detail = "") =>
+    store
+      .saveGuide(`run:tender:${id}`, "", { status, detail: detail.slice(0, 500), ms: Date.now() - started, at: new Date().toISOString() } as never)
+      .catch(() => {});
   const state = await withQuota(async () => {
-    const found = await noticeForTender(tender).catch((error) => {
-      console.error("Обявлението не се изтегли:", error);
-      throw new AiError("Не успяхме да изтеглим обявлението от ЦАИС ЕОП. Опитайте пак след малко.");
-    });
-    const { notice, noticeTenderId } = found;
-    const guide = await buildTenderGuide({
-      tender,
-      notice,
-      noticeTenderId,
-      company: saved?.company ?? null,
-      description: saved?.description ?? null,
-      answers: saved?.answers ?? [],
-    });
-    await store.saveGuide(guideKey(id, saved ? token : null), guide.noticeHash, guide);
+    await trace("started");
+    try {
+      const found = await noticeForTender(tender).catch((error) => {
+        console.error("Обявлението не се изтегли:", error);
+        throw new AiError("Не успяхме да изтеглим обявлението от ЦАИС ЕОП. Опитайте пак след малко.");
+      });
+      const { notice, noticeTenderId } = found;
+      const guide = await buildTenderGuide({
+        tender,
+        notice,
+        noticeTenderId,
+        company: saved?.company ?? null,
+        description: saved?.description ?? null,
+        answers: saved?.answers ?? [],
+      });
+      guide.ms = Date.now() - started;
+      await store.saveGuide(guideKey(id, saved ? token : null), guide.noticeHash, guide);
+      await trace("ok");
+    } catch (error) {
+      await trace("error", error instanceof Error ? `${error.name}: ${error.message}` : String(error));
+      throw error;
+    }
   });
   if (state) return state;
   revalidatePath(tenderPath(id));
