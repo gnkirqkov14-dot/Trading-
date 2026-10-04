@@ -60,6 +60,9 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .btn.pick[aria-pressed="true"]{background:var(--accent-soft);color:var(--fg)}
 .btn:disabled{opacity:.5;cursor:default}
 .open-ig{font-size:12px;color:var(--muted)}
+.file .media{aspect-ratio:auto;background:#000}
+.file .media img,.file .media video{width:100%;height:auto;max-height:520px;object-fit:contain;display:block}
+.fnote{font-size:12px;color:var(--muted)}
 .empty{grid-column:1/-1;padding:48px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
 .note{font-size:12px;color:var(--muted);padding-top:18px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s,box-shadow .15s}}
@@ -89,7 +92,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 <script>
 const TABS=[["new","Нови"],["selected","Избрани"],["done","Обработени"],["skipped","Пропуснати"],["all","Всички"]];
 const TYPE={video:"Видео",carousel:"Галерия",image:"Снимка"};
-let rows=[], tab="new", partner="all", kind="all", dbRef=null, busy=new Set();
+let rows=[], dl=null, tab="new", partner="all", kind="all", dbRef=null, busy=new Set();
 try{ tab=localStorage.getItem("tab")||"new"; partner=localStorage.getItem("partner")||"all"; kind=localStorage.getItem("kind")||"all"; }catch(e){}
 
 const $=s=>document.querySelector(s);
@@ -132,16 +135,40 @@ function card(r){
   </article>`;
 }
 
+function fileCard(r,f){
+  const src="/_blob/"+encodeURIComponent(f.id);
+  const media=f.kind==="video"?`<video src="${src}" controls preload="metadata" playsinline></video>`:`<img src="${src}" alt="${esc(f.name)}" loading="lazy">`;
+  return `<article class="card file">
+    <div class="media">${media}</div>
+    <div class="body">
+      <div class="meta"><span class="who">@${esc(r.partner)} · ${esc(r.country)}</span><span>${fmtDate(r.date)}</span></div>
+      ${f.note?`<div class="fnote">${esc(f.note)}</div>`:""}
+      <a class="open-ig" href="${esc(r.url)}" target="_blank" rel="noopener">Оригиналът в Instagram ↗</a>
+      <div class="acts"><button class="btn pick" data-dl="${esc(f.id)}" data-name="${esc(f.name)}" ${dl?"":"disabled"}>Изтегли ${f.kind==="video"?"видеото":"снимката"}</button></div>
+    </div>
+  </article>`;
+}
+
 function render(){
   renderBars();
   const list=rows.filter(r=>(tab==="all"||r.status===tab)&&(partner==="all"||r.partner===partner)&&kindOk(r));
   const info=tab==="selected"?`<div class="info"><b>Тук не е нужно да правиш нищо.</b> Избраните постове се обработват автоматично всяка сутрин в 07:53: снимките се свалят в пълно качество и се почистват от надписи, видеата се свалят както са. След това минават в „Обработени“. Ако размислиш, натисни „Избрано ✓“ и постът се връща в „Нови“.</div>`:"";
+  if(tab==="done"){
+    const files=list.flatMap(r=>(r.files||[]).map(f=>[r,f]));
+    const head=`<div class="info"><b>Това е папката с готовия материал.</b> Тук са изчистените снимки и видеа от избраните постове, в пълно качество. Натисни „Изтегли“ под файла, за да го запазиш.</div>`;
+    $("#grid").innerHTML=head+(files.length?files.map(([r,f])=>fileCard(r,f)).join(""):`<div class="empty">Още няма обработени файлове. Избраните постове се обработват всяка сутрин в 07:53.</div>`);
+    return;
+  }
   $("#grid").innerHTML=info+(list.length?list.map(card).join(""):
     `<div class="empty">${rows.length?"Няма постове тук.":"Още няма постове. Всяка сутрин тук се добавят новите постове на партньорите."}</div>`);
 }
 
 document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-tab]"); if(t){ tab=t.dataset.tab; try{localStorage.setItem("tab",tab)}catch(_){}; render(); return; }
+  const d=e.target.closest("[data-dl]"); if(d){ if(!dl) return; const old=d.textContent; d.disabled=true; d.textContent="Подготвям…";
+    try{ const b=await (await fetch("/_blob/"+encodeURIComponent(d.dataset.dl))).blob(); await dl.save({filename:d.dataset.name,data:b}); d.textContent="Изтеглено ✓"; }
+    catch(err){ d.textContent=err&&err.code==="declined"?old:"Неуспешно, опитай пак"; }
+    finally{ d.disabled=false; } return; }
   const k=e.target.closest("[data-kind]"); if(k){ kind=k.dataset.kind; try{localStorage.setItem("kind",kind)}catch(_){}; render(); return; }
   const p=e.target.closest("[data-p]"); if(p){ partner=p.dataset.p; try{localStorage.setItem("partner",partner)}catch(_){}; render(); return; }
   const m=e.target.closest("[data-more]"); if(m){ const c=document.getElementById("cap-"+m.dataset.more); c.classList.toggle("open"); m.textContent=c.classList.contains("open")?"По-малко":"Още"; return; }
@@ -159,6 +186,7 @@ render();
   const db = window.claude ? await claude.use("db") : null;
   if(!db){ $("#grid").innerHTML='<div class="empty">Влез в claude.ai, за да виждаш и избираш постове.</div>'; return; }
   dbRef=db.collection("posts");
+  claude.use("downloads").then(x=>{ dl=x; render(); });
   dbRef.orderBy("date","desc").onSnapshot(s=>{ rows=s.docs.map(d=>({id:d.id,...d.data()})); render(); },
     ()=>{ $("#note").textContent="Връзката с данните прекъсна. Презареди страницата."; });
 })();
