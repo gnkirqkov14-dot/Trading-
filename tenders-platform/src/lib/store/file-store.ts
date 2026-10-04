@@ -31,7 +31,7 @@ type Db = {
   grants?: Record<string, GrantCall & { last_seen_at: string }>;
   grantSources?: Record<string, { pdf_url: string | null }>;
   profiles?: Record<string, SavedProfile>;
-  guides?: Record<string, { source_hash: string; guide: TenderGuide; updated_at: string }>;
+  guides?: Record<string, { source_hash: string; guide: unknown; updated_at: string }>;
 };
 
 export class FileStore implements Store {
@@ -373,12 +373,12 @@ export class FileStore implements Store {
       .sort((a, b) => a - b);
   }
 
-  async getGuide(key: string) {
+  async getGuide<T = TenderGuide>(key: string) {
     const db = await this.load();
-    return db.guides?.[key] ?? null;
+    return (db.guides?.[key] as { source_hash: string; guide: T; updated_at: string } | undefined) ?? null;
   }
 
-  async saveGuide(key: string, sourceHash: string, guide: TenderGuide) {
+  async saveGuide(key: string, sourceHash: string, guide: unknown) {
     const db = await this.load();
     (db.guides ??= {})[key] = { source_hash: sourceHash, guide, updated_at: new Date().toISOString() };
     await this.save(db);

@@ -110,5 +110,57 @@ export type GuideBlock =
   | { kind: "list"; items: string[] }
   | { kind: "steps"; items: string[] }
   | { kind: "field"; label: string; value: string }
-  | { kind: "quote"; quote: Quote }
+  | { kind: "quote"; quote: Quote; source?: string }
   | { kind: "warn"; text: string };
+
+/** Откъс от документите на процедура: в кой документ е („УК“, „ЕФ“, „КР“). */
+export type DocQuote = Quote & { doc: string };
+
+export type GrantItem = { text: string; quote: DocQuote | null; badNumbers?: string[] };
+
+/** Разборът на условията на процедура в ИСУН. Общ за всички фирми (не зависи от профила). */
+export type GrantGuide = {
+  version: 1;
+  grantId: string;
+  code: string | null;
+  title: string;
+  programme: string | null;
+  url: string;
+  deadline: string | null;
+  createdAt: string;
+  docsHash: string;
+  /** Кои документи са прочетени: етикет → име на файла. */
+  docs: { label: string; name: string; chars: number; truncated: boolean }[];
+  files: string[];
+  amendments: string[];
+  /** „конкурентна“ или „директно предоставяне“ (само за посочени бенефициенти). */
+  procedureKind: string;
+  summary: string;
+  whoCanApply: GrantItem[];
+  cannotApply: GrantItem[];
+  money: (GrantItem & { what: string })[];
+  aidRegime: GrantItem | null;
+  activities: GrantItem[];
+  costsOk: GrantItem[];
+  costsNot: GrantItem[];
+  duration: GrantItem | null;
+  deadlines: (GrantItem & { what: string })[];
+  criteria: (GrantItem & { points: string; tip: string })[];
+  formSections: (GrantItem & { section: string; tips: string[] })[];
+  documents: (GrantItem & { name: string; signs: string })[];
+  submission: GrantItem[];
+  watchOut: GrantItem[];
+  unverified: number;
+  ms?: number;
+};
+
+/** Оценка доколко процедурата е за конкретната фирма — отделно, по профила. */
+export type GrantFit = {
+  createdAt: string;
+  guideCreatedAt: string;
+  verdict: "подходяща" | "може би" | "не е подходяща";
+  why: string;
+  checks: { requirement: string; fit: CompanyFit; why: string }[];
+  prepare: string[];
+  clarify: string[];
+};

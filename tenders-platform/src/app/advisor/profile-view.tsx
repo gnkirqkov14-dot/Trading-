@@ -164,6 +164,13 @@ function GrantCard({ grant: g, pick }: { grant: GrantCall; pick: GrantPick }) {
           {g.kind === "planned" ? "Плана на програмата →" : "Официалната страница →"}
         </a>
       ) : null}
+      {g.kind === "open" && g.id.startsWith("isun:") ? (
+        <p>
+          <Link href={`/apply/grant/${g.id.slice(5)}`} className="text-sm font-semibold text-brand-700 hover:underline">
+            Помощ за кандидатстване →
+          </Link>
+        </p>
+      ) : null}
     </article>
   );
 }

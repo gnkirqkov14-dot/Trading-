@@ -232,6 +232,8 @@ export function docxToText(bytes: Buffer): string | null {
     if (!xml) return null;
     return decodeEntities(
       strFromU8(xml)
+        // Кодовете на полетата (съдържание, препратки) не са текст на документа.
+        .replace(/<w:instrText[^>]*>[\s\S]*?<\/w:instrText>/g, "")
         .replace(/<\/w:p>/g, "\n")
         .replace(/<w:tab\/>/g, " ")
         .replace(/<[^>]+>/g, ""),

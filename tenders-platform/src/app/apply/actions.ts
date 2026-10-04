@@ -20,11 +20,12 @@ function readId(form: FormData) {
 
 /** Данните на фирмата за документите — без AI, безплатно. */
 export async function saveCompanyData(form: FormData) {
-  const id = readId(form);
+  // Връщаме се само на страница на помощника — не на произволен адрес.
+  const back = String(form.get("return_to") ?? "");
+  const returnTo = /^\/apply\/(tender\/\d+|grant\/[0-9a-f-]{36})$/i.test(back) ? back : "/advisor";
   const token = await currentToken();
   const saved = token ? await getStore().getProfile(token) : null;
-  if (!id) redirect("/advisor");
-  if (!token || !saved) redirect(tenderPath(id));
+  if (!token || !saved) redirect(returnTo);
 
   const company: Partial<CompanyData> = {};
   for (const f of COMPANY_FIELDS) {
@@ -36,8 +37,8 @@ export async function saveCompanyData(form: FormData) {
   const size = String(form.get("size") ?? "");
   company.size = (COMPANY_SIZES as readonly string[]).includes(size) ? (size as CompanyData["size"]) : "";
   await getStore().saveCompany(token, company);
-  revalidatePath(tenderPath(id));
-  redirect(`${tenderPath(id)}#danni`);
+  revalidatePath(returnTo);
+  redirect(`${returnTo}#danni`);
 }
 
 /** Разбор на обявлението с AI — брои се като едно питане към съветника. */
@@ -59,7 +60,7 @@ export async function makeTenderGuide(_prev: AdvisorState, form: FormData): Prom
   const started = Date.now();
   const trace = (status: string, detail = "") =>
     store
-      .saveGuide(`run:tender:${id}`, "", { status, detail: detail.slice(0, 500), ms: Date.now() - started, at: new Date().toISOString() } as never)
+      .saveGuide(`run:tender:${id}`, "", { status, detail: detail.slice(0, 500), ms: Date.now() - started, at: new Date().toISOString() })
       .catch(() => {});
   const state = await withQuota(async () => {
     await trace("started");

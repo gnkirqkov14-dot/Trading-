@@ -50,8 +50,8 @@ export function GuideView({ blocks }: { blocks: GuideBlock[] }) {
               >
                 <figcaption className="font-medium">
                   {b.quote.verified
-                    ? "Точният текст от обявлението:"
-                    : "Внимание, този откъс не беше намерен дословно в обявлението — проверете го:"}
+                    ? `Точният текст от ${b.source ? b.source.replace(/^У/, "у").replace(/^К/, "к") : "обявлението"}:`
+                    : `Внимание, този откъс не беше намерен дословно в ${b.source ? "документите" : "обявлението"} — проверете го:`}
                 </figcaption>
                 <blockquote className="italic">„{b.quote.text}“</blockquote>
               </figure>

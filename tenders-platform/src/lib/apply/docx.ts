@@ -43,8 +43,8 @@ export async function guideToDocx(title: string, subtitle: string, blocks: Guide
             children: [
               new TextRun({
                 text: block.quote.verified
-                  ? "Точният текст от обявлението: "
-                  : "Внимание, този откъс не беше намерен дословно в обявлението — проверете го: ",
+                  ? `Точният текст от ${block.source ? block.source.replace(/^У/, "у").replace(/^К/, "к") : "обявлението"}: `
+                  : `Внимание, този откъс не беше намерен дословно в ${block.source ? "документите" : "обявлението"} — проверете го: `,
                 bold: true,
               }),
               new TextRun({ text: `„${block.quote.text}“`, italics: true }),

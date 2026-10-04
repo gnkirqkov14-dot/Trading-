@@ -296,16 +296,16 @@ export class SupabaseStore implements Store {
     return (ids ?? []).map(Number);
   }
 
-  async getGuide(key: string) {
+  async getGuide<T = TenderGuide>(key: string) {
     return (
-      (await this.rpc<{ source_hash: string; guide: TenderGuide; updated_at: string } | null>("tenders_guide_get", {
+      (await this.rpc<{ source_hash: string; guide: T; updated_at: string } | null>("tenders_guide_get", {
         p_secret: this.requireSecret(),
         p_key: key,
       })) ?? null
     );
   }
 
-  async saveGuide(key: string, sourceHash: string, guide: TenderGuide) {
+  async saveGuide(key: string, sourceHash: string, guide: unknown) {
     await this.rpc("tenders_guide_save", {
       p_secret: this.requireSecret(),
       p_key: key,

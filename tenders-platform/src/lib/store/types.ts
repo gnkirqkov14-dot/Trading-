@@ -116,6 +116,7 @@ export interface Store {
   // Помощник за кандидатстване (0005_apply_guides.sql).
   /** Всички tenderId-та на едно обявление (обособените позиции). */
   noticeTenderIds(noticeId: number): Promise<number[]>;
-  getGuide(key: string): Promise<{ source_hash: string; guide: TenderGuide; updated_at: string } | null>;
-  saveGuide(key: string, sourceHash: string, guide: TenderGuide): Promise<void>;
+  /** Запазени разбори: `tender:…` (TenderGuide), `grant:…` (GrantGuide), `grantfit:…` (GrantFit), `run:`/`err:` (диагностика). */
+  getGuide<T = TenderGuide>(key: string): Promise<{ source_hash: string; guide: T; updated_at: string } | null>;
+  saveGuide(key: string, sourceHash: string, guide: unknown): Promise<void>;
 }
