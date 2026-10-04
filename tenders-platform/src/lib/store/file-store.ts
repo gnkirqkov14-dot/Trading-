@@ -3,6 +3,7 @@ import path from "node:path";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
 import type { GrantCall } from "@/lib/grants/types";
 import type { SavedProfile } from "@/lib/advisor/types";
+import type { CompanyData, TenderGuide } from "@/lib/apply/types";
 import { EMPTY_RESULTS } from "@/lib/advisor/types";
 import type {
   AdvisorQuota,
@@ -30,6 +31,7 @@ type Db = {
   grants?: Record<string, GrantCall & { last_seen_at: string }>;
   grantSources?: Record<string, { pdf_url: string | null }>;
   profiles?: Record<string, SavedProfile>;
+  guides?: Record<string, { source_hash: string; guide: TenderGuide; updated_at: string }>;
 };
 
 export class FileStore implements Store {
@@ -351,6 +353,34 @@ export class FileStore implements Store {
       last_run_at: ran ? now : (old?.last_run_at ?? null),
       updated_at: now,
     };
+    await this.save(db);
+  }
+
+  async saveCompany(token: string, company: Partial<CompanyData>) {
+    const db = await this.load();
+    const p = db.profiles?.[token];
+    if (!p) return;
+    p.company = company;
+    p.updated_at = new Date().toISOString();
+    await this.save(db);
+  }
+
+  async noticeTenderIds(noticeId: number) {
+    const db = await this.load();
+    return Object.values(db.tenders)
+      .filter((t) => t.notice_id === noticeId)
+      .map((t) => t.id)
+      .sort((a, b) => a - b);
+  }
+
+  async getGuide(key: string) {
+    const db = await this.load();
+    return db.guides?.[key] ?? null;
+  }
+
+  async saveGuide(key: string, sourceHash: string, guide: TenderGuide) {
+    const db = await this.load();
+    (db.guides ??= {})[key] = { source_hash: sourceHash, guide, updated_at: new Date().toISOString() };
     await this.save(db);
   }
 }

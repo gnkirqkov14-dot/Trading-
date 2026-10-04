@@ -1,29 +1,21 @@
 "use server";
 
-import { createHash, randomBytes } from "node:crypto";
-import Anthropic from "@anthropic-ai/sdk";
-import { cookies, headers } from "next/headers";
+import { randomBytes } from "node:crypto";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ADVISOR_LIMITS, AdvisorError, advisorEnabled, buildSurvey, runAdvisor } from "@/lib/advisor";
+import { ADVISOR_LIMITS, buildSurvey, runAdvisor } from "@/lib/advisor";
 import { EMPTY_RESULTS, normalizeQuestions, type AdvisorAnswer, type AdvisorFilters } from "@/lib/advisor/types";
 import { CPV_DIVISIONS } from "@/lib/eop/cpv";
 import { REGIONS } from "@/lib/eop/regions";
 import { numParam } from "@/lib/format";
 import { getStore } from "@/lib/store";
+import { withQuota, type AdvisorState } from "./quota";
 
-export type AdvisorState = { message: string } | null;
+export type { AdvisorState };
 
 const COOKIE = "advisor_profile";
 const YEAR = 60 * 60 * 24 * 365;
-
-/** Броим по хеш на IP адреса, не по самия адрес — за 5 въпроса на ден хешът стига. */
-async function visitorId() {
-  const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
-  const salt = process.env.ADVISOR_IP_SALT || process.env.CRON_SECRET || "local";
-  return createHash("sha256").update(`${salt}:${ip}`).digest("hex").slice(0, 32);
-}
 
 async function rememberToken(token: string) {
   (await cookies()).set(COOKIE, token, {
@@ -37,47 +29,6 @@ async function rememberToken(token: string) {
 
 export async function currentToken() {
   return (await cookies()).get(COOKIE)?.value ?? null;
-}
-
-/**
- * Обща рамка за всичко, което вика AI: лимит, връщане на въпроса при
- * грешка, приятелски съобщения. Връща съобщение при неуспех; при успех
- * `run` сам записва и пренасочва.
- */
-async function withQuota(run: () => Promise<void>, free = false): Promise<AdvisorState> {
-  if (!advisorEnabled) return { message: "Съветникът се включва скоро." };
-  const store = getStore();
-  const visitor = await visitorId();
-  let left: number;
-  try {
-    // Анкетата е продължение на същото питане — не се брои отделно.
-    left = free ? 1 : await store.consumeAdvisorQuota(visitor, ADVISOR_LIMITS.perVisitorPerDay, ADVISOR_LIMITS.perDay);
-  } catch (error) {
-    // Без брояч не пускаме заявка към модела: по-добре съветникът да
-    // мълчи, отколкото сметката да е отворена.
-    console.error("Лимитът на съветника не се провери:", error);
-    return { message: "Съветникът временно не работи. Опитайте след малко." };
-  }
-  if (left === -1) {
-    return {
-      message: `Днес сте питали съветника ${ADVISOR_LIMITS.perVisitorPerDay} пъти — толкова е дневният лимит. Филтрите работят и без него; утре може да питате пак.`,
-    };
-  }
-  if (left === -2) {
-    return { message: "Съветникът е много натоварен днес. Опитайте утре; филтрите работят и сега." };
-  }
-  try {
-    await run();
-    return null;
-  } catch (error) {
-    if (!free) await store.refundAdvisorQuota(visitor).catch(() => {});
-    if (error instanceof AdvisorError) return { message: error.message };
-    if (error instanceof Anthropic.RateLimitError || error instanceof Anthropic.InternalServerError) {
-      return { message: "Съветникът е претоварен в момента. Опитайте пак след минута." };
-    }
-    console.error("Съветникът гръмна:", error);
-    return { message: "Нещо се обърка. Опитайте пак след малко." };
-  }
 }
 
 function readDescription(form: FormData) {

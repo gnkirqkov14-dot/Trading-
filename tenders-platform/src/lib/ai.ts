@@ -28,17 +28,23 @@ export async function askStructured<T extends z.ZodType>(opts: {
   effort: "low" | "medium" | "high";
   maxTokens: number;
 }): Promise<z.infer<T>> {
-  const response = await anthropic().beta.messages.parse({
+  const params = {
     model: AI_MODEL,
     max_tokens: opts.maxTokens,
     // Ако класификаторите на модела откажат безобиден текст, заявката сама
     // минава през резервен модел.
     betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    fallbacks: "default" as const,
     system: opts.system,
     output_config: { effort: opts.effort, format: betaZodOutputFormat(opts.schema) },
-    messages: [{ role: "user", content: opts.content }],
-  });
+    messages: [{ role: "user" as const, content: opts.content }],
+  };
+  // Над 16 000 токена SDK-то иска поток (иначе заявката може да надхвърли
+  // 10 минути); резултатът е същият.
+  const response =
+    opts.maxTokens > 16000
+      ? await anthropic().beta.messages.stream(params).finalMessage()
+      : await anthropic().beta.messages.parse(params);
   if (response.stop_reason === "refusal") {
     throw new AiError("Съветникът не можа да обработи този текст. Опитайте с други думи.");
   }

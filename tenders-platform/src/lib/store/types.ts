@@ -1,6 +1,7 @@
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
 import type { GrantCall, GrantKnown } from "@/lib/grants/types";
 import type { SavedProfile } from "@/lib/advisor/types";
+import type { CompanyData, TenderGuide } from "@/lib/apply/types";
 
 export type AlertSubscription = {
   id: number;
@@ -110,4 +111,11 @@ export interface Store {
     patch: Partial<Omit<SavedProfile, "token" | "last_run_at" | "updated_at">>,
     ran: boolean,
   ): Promise<void>;
+  saveCompany(token: string, company: Partial<CompanyData>): Promise<void>;
+
+  // Помощник за кандидатстване (0005_apply_guides.sql).
+  /** Всички tenderId-та на едно обявление (обособените позиции). */
+  noticeTenderIds(noticeId: number): Promise<number[]>;
+  getGuide(key: string): Promise<{ source_hash: string; guide: TenderGuide; updated_at: string } | null>;
+  saveGuide(key: string, sourceHash: string, guide: TenderGuide): Promise<void>;
 }
