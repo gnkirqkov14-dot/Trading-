@@ -242,7 +242,7 @@ export interface Database {
     Views: Record<string, never>;
     Functions: {
       process_listing_reminders: {
-        Args: Record<PropertyKey, never>;
+        Args: { p_secret: string };
         Returns: {
           listing_id: string;
           owner_email: string | null;
