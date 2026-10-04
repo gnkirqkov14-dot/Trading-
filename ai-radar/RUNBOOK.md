@@ -55,8 +55,10 @@ commit-ва).
    брой“ с usage_mode prompt, „AI Радар — пълни статии“ с auto), закача ги към
    агента (agents_update, body → conversation_config.agent.prompt.knowledge_base;
    промптът се праща непроменен), изтрива старите документи по id от
-   `work/voice_state.json` и записва новите id там. Главната сесия не чете
-   текстовете — пести контекст.
+   `work/voice_state.json` и записва новите id там (ако файлът липсва след нов
+   контейнер — старите id се виждат с agents_get в knowledge_base). Главната
+   сесия не чете текстовете — пести контекст. Гласът на агента е Milena
+   (`M1ydWt7KnBCiuv4CnEDC`, избран от потребителя) — не го сменяй.
 9. Имейл: Gmail `send_message` до собственика, тема
    `work/email_subject.txt`, тяло `work/email.html` (HTML) / `email.txt`.
    Само при сутрешния брой — при ръчно обновяване от таблото не се праща.
