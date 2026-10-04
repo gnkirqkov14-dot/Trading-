@@ -4,7 +4,7 @@
  *   npm run import -- 2026-10-01              един ден
  *   npm run import -- 2026-09-01 2026-10-03   период
  *
- * С `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` в средата пише в
+ * С `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` и `TENDERS_DB_SECRET` в средата пише в
  * Supabase (така се пълни базата първия път с история). Без тях пише в
  * `data/db.json` за локален преглед на сайта.
  */

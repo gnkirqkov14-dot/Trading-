@@ -2,84 +2,78 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
 import type { AlertSubscription, NewSubscription, Store } from "./types";
 
-const UPSERT_CHUNK = 500;
+const UPSERT_CHUNK = 300;
 
-/** Знаците, които PostgREST третира специално във филтрите. */
-function escapeLike(q: string) {
-  return q.replace(/[%_,()\\]/g, " ").trim();
-}
-
+/**
+ * Достъп до Supabase само през функциите `public.tenders_*` (виж
+ * supabase/migrations/0001_init.sql). Таблиците са в затворена схема
+ * `tenders` в базата на imotpoint, затова тук е публичният (publishable)
+ * ключ, а не service role: сайтът за поръчки не може да стигне до
+ * таблиците на imotpoint. Записът и абонатите искат `TENDERS_DB_SECRET`.
+ */
 export class SupabaseStore implements Store {
   readonly kind = "supabase" as const;
   private db: SupabaseClient;
+  private secret: string;
 
-  constructor(url: string, serviceKey: string) {
-    // Ключът е service role — само на сървъра, никога в браузъра.
-    this.db = createClient(url, serviceKey, {
+  constructor(url: string, publishableKey: string, secret: string) {
+    this.db = createClient(url, publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+    this.secret = secret;
+  }
+
+  private async rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+    const { data, error } = await this.db.rpc(fn, args);
+    if (error) throw new Error(`Supabase ${fn}: ${error.message}`);
+    return data as T;
+  }
+
+  private requireSecret() {
+    if (!this.secret) throw new Error("TENDERS_DB_SECRET липсва");
+    return this.secret;
   }
 
   async searchTenders(filters: TenderFilters): Promise<SearchResult> {
-    const limit = Math.min(Math.max(filters.limit ?? 20, 1), 100);
-    const offset = Math.max(filters.offset ?? 0, 0);
-
-    let query = this.db.from("tenders").select("*", { count: "exact" });
-
-    if (filters.openOnly !== false) {
-      query = query.gte("deadline_at", new Date().toISOString()).eq("is_cancelled", false);
-    }
-    if (filters.q) {
-      for (const word of escapeLike(filters.q).toLowerCase().split(/\s+/).filter(Boolean)) {
-        query = query.ilike("search_text", `%${word}%`);
-      }
-    }
-    if (filters.region) query = query.eq("region_code", filters.region);
-    if (filters.category) query = query.eq("cpv_division", filters.category);
-    if (filters.minValue !== undefined) query = query.gte("value_eur", filters.minValue);
-    if (filters.maxValue !== undefined) query = query.lte("value_eur", filters.maxValue);
-    if (filters.updatedSince) query = query.gt("updated_at", filters.updatedSince);
-
-    if (filters.sort === "value") {
-      query = query.order("value_eur", { ascending: false, nullsFirst: false });
-    } else if (filters.sort === "newest") {
-      query = query.order("published_at", { ascending: false, nullsFirst: false });
-    } else {
-      query = query.order("deadline_at", { ascending: true, nullsFirst: false });
-    }
-
-    const { data, error, count } = await query
-      .order("id", { ascending: false })
-      .range(offset, offset + limit - 1);
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    return { rows: (data ?? []) as Tender[], total: count ?? 0 };
+    const result = await this.rpc<{ rows: Tender[]; total: number }>("tenders_search", {
+      p_q: filters.q ?? null,
+      p_region: filters.region ?? null,
+      p_category: filters.category ?? null,
+      p_min: filters.minValue ?? null,
+      p_max: filters.maxValue ?? null,
+      p_open_only: filters.openOnly !== false,
+      p_updated_since: filters.updatedSince ?? null,
+      p_sort: filters.sort ?? "deadline",
+      p_limit: filters.limit ?? 20,
+      p_offset: filters.offset ?? 0,
+    });
+    return {
+      rows: (result?.rows ?? []).map(numericFix),
+      total: Number(result?.total ?? 0),
+    };
   }
 
   async getTender(id: number): Promise<Tender | null> {
-    const { data, error } = await this.db.from("tenders").select("*").eq("id", id).maybeSingle();
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    return (data as Tender | null) ?? null;
+    const row = await this.rpc<Tender | null>("tenders_get", { p_id: id });
+    return row ? numericFix(row) : null;
   }
 
   async upsertTenders(rows: Tender[]): Promise<number> {
+    const secret = this.requireSecret();
     let written = 0;
     for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
-      const chunk = rows.slice(i, i + UPSERT_CHUNK);
-      const { error } = await this.db.from("tenders").upsert(chunk, { onConflict: "id" });
-      if (error) throw new Error(`Supabase: ${error.message}`);
-      written += chunk.length;
+      written += await this.rpc<number>("tenders_upsert", {
+        p_secret: secret,
+        p_rows: rows.slice(i, i + UPSERT_CHUNK),
+      });
     }
     return written;
   }
 
   async recentTenderIds(limit: number) {
-    const { data, error } = await this.db
-      .from("tenders")
-      .select("id, updated_at")
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .limit(limit);
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    return (data ?? []) as { id: number; updated_at: string | null }[];
+    return (await this.rpc<{ id: number; updated_at: string | null }[]>("tenders_recent_ids", {
+      p_limit: limit,
+    })) ?? [];
   }
 
   async recordImportRun(run: {
@@ -88,58 +82,66 @@ export class SupabaseStore implements Store {
     rows_count: number;
     message?: string;
   }) {
-    const { error } = await this.db.from("import_runs").insert(run);
-    if (error) throw new Error(`Supabase: ${error.message}`);
+    await this.rpc("tenders_record_import", {
+      p_secret: this.requireSecret(),
+      p_date: run.source_date,
+      p_status: run.status,
+      p_rows: run.rows_count,
+      p_message: run.message ?? null,
+    });
   }
 
   async lastImportedDate() {
-    const { data, error } = await this.db
-      .from("import_runs")
-      .select("source_date")
-      .eq("status", "ok")
-      .order("source_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    return (data?.source_date as string | undefined) ?? null;
+    return (await this.rpc<string | null>("tenders_last_import", {})) ?? null;
   }
 
   async createSubscription(sub: NewSubscription) {
-    const { error } = await this.db.from("alert_subscriptions").insert(sub);
-    if (error) throw new Error(`Supabase: ${error.message}`);
+    await this.rpc("tenders_alert_create", {
+      p_secret: this.requireSecret(),
+      p_email: sub.email,
+      p_q: sub.q,
+      p_region: sub.region_code,
+      p_category: sub.cpv_division,
+      p_min: sub.min_value,
+      p_token: sub.token,
+    });
   }
 
   async findSubscriptionByToken(token: string) {
-    const { data, error } = await this.db
-      .from("alert_subscriptions")
-      .select("*")
-      .eq("token", token)
-      .maybeSingle();
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    return (data as AlertSubscription | null) ?? null;
+    return (
+      (await this.rpc<AlertSubscription | null>("tenders_alert_by_token", {
+        p_secret: this.requireSecret(),
+        p_token: token,
+      })) ?? null
+    );
   }
 
   async setSubscriptionStatus(token: string, status: AlertSubscription["status"]) {
-    const patch: Partial<AlertSubscription> = { status };
-    if (status === "active") patch.confirmed_at = new Date().toISOString();
-    const { error } = await this.db.from("alert_subscriptions").update(patch).eq("token", token);
-    if (error) throw new Error(`Supabase: ${error.message}`);
+    await this.rpc("tenders_alert_set_status", {
+      p_secret: this.requireSecret(),
+      p_token: token,
+      p_status: status,
+    });
   }
 
   async activeSubscriptions() {
-    const { data, error } = await this.db
-      .from("alert_subscriptions")
-      .select("*")
-      .eq("status", "active");
-    if (error) throw new Error(`Supabase: ${error.message}`);
-    return (data ?? []) as AlertSubscription[];
+    return (
+      (await this.rpc<AlertSubscription[]>("tenders_alert_active", {
+        p_secret: this.requireSecret(),
+      })) ?? []
+    ).map((s) => ({ ...s, min_value: s.min_value === null ? null : Number(s.min_value) }));
   }
 
   async markSubscriptionSent(id: number, at: string) {
-    const { error } = await this.db
-      .from("alert_subscriptions")
-      .update({ last_sent_at: at })
-      .eq("id", id);
-    if (error) throw new Error(`Supabase: ${error.message}`);
+    await this.rpc("tenders_alert_mark_sent", {
+      p_secret: this.requireSecret(),
+      p_id: id,
+      p_at: at,
+    });
   }
+}
+
+/** numeric от Postgres може да дойде като низ; страниците искат число. */
+function numericFix(t: Tender): Tender {
+  return { ...t, value_eur: t.value_eur === null ? null : Number(t.value_eur) };
 }
