@@ -41,7 +41,7 @@ async function recordError(error: unknown) {
         status: e?.status ?? null,
         message: String(e?.message ?? error).slice(0, 800),
         at: new Date().toISOString(),
-      } as never,
+      },
     )
     .catch(() => {});
 }
