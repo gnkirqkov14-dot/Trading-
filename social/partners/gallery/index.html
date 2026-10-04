@@ -28,7 +28,11 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(20px,3.2vw,28px);m
 .stats{display:flex;gap:16px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
 .stats b{color:var(--fg);font-weight:600}
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
-.tabs,.chips{display:flex;flex-wrap:wrap;gap:6px}
+.tabs,.chips,.kinds{display:flex;flex-wrap:wrap;gap:6px}
+.kind{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 14px;cursor:pointer}
+.kind[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.info{grid-column:1/-1;background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:14px;max-width:none}
+.info b{font-weight:600}
 .tab,.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer}
 .tab[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
@@ -72,6 +76,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 
   <div class="bar">
     <div class="tabs" id="tabs" role="group" aria-label="Статус"></div>
+    <div class="kinds" id="kinds" role="group" aria-label="Вид"></div>
     <div class="chips" id="chips" role="group" aria-label="Партньор"></div>
   </div>
 
@@ -84,18 +89,22 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 <script>
 const TABS=[["new","Нови"],["selected","Избрани"],["done","Обработени"],["skipped","Пропуснати"],["all","Всички"]];
 const TYPE={video:"Видео",carousel:"Галерия",image:"Снимка"};
-let rows=[], tab="new", partner="all", dbRef=null, busy=new Set();
-try{ tab=localStorage.getItem("tab")||"new"; partner=localStorage.getItem("partner")||"all"; }catch(e){}
+let rows=[], tab="new", partner="all", kind="all", dbRef=null, busy=new Set();
+try{ tab=localStorage.getItem("tab")||"new"; partner=localStorage.getItem("partner")||"all"; kind=localStorage.getItem("kind")||"all"; }catch(e){}
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate=d=>{ if(!d) return ""; const [y,m,dd]=d.split("-"); return `${dd}.${m}.${y}`; };
 
-function counts(){ const c={new:0,selected:0,done:0,skipped:0,all:rows.length}; rows.forEach(r=>c[r.status]=(c[r.status]||0)+1); return c; }
+const isVideo=r=>r.type==="video";
+const kindOk=r=>kind==="all"||(kind==="video"?isVideo(r):!isVideo(r));
+function counts(){ const v=rows.filter(kindOk); const c={new:0,selected:0,done:0,skipped:0,all:v.length}; v.forEach(r=>c[r.status]=(c[r.status]||0)+1); return c; }
 
 function renderBars(){
   const c=counts();
   $("#tabs").innerHTML=TABS.map(([k,l])=>`<button class="tab" data-tab="${k}" aria-pressed="${tab===k}">${l}<span class="n">${c[k]||0}</span></button>`).join("");
+  const kc={all:rows.length,photo:rows.filter(r=>!isVideo(r)).length,video:rows.filter(isVideo).length};
+  $("#kinds").innerHTML=[["all","Всичко"],["photo","Само снимки"],["video","Само видеа"]].map(([k,l])=>`<button class="kind" data-kind="${k}" aria-pressed="${kind===k}">${l} <span class="n">${kc[k]}</span></button>`).join("");
   const ps=[...new Map(rows.map(r=>[r.partner,r.country])).entries()].sort();
   $("#chips").innerHTML=`<button class="chip" data-p="all" aria-pressed="${partner==="all"}">Всички партньори</button>`+
     ps.map(([p,c])=>`<button class="chip" data-p="${esc(p)}" aria-pressed="${partner===p}">@${esc(p)} · ${esc(c)}</button>`).join("");
@@ -125,13 +134,15 @@ function card(r){
 
 function render(){
   renderBars();
-  const list=rows.filter(r=>(tab==="all"||r.status===tab)&&(partner==="all"||r.partner===partner));
-  $("#grid").innerHTML=list.length?list.map(card).join(""):
-    `<div class="empty">${rows.length?"Няма постове тук.":"Още няма постове. Всяка сутрин тук се добавят новите постове на партньорите."}</div>`;
+  const list=rows.filter(r=>(tab==="all"||r.status===tab)&&(partner==="all"||r.partner===partner)&&kindOk(r));
+  const info=tab==="selected"?`<div class="info"><b>Тук не е нужно да правиш нищо.</b> Избраните постове се обработват автоматично всяка сутрин в 07:53: снимките се свалят в пълно качество и се почистват от надписи, видеата се свалят както са. След това минават в „Обработени“. Ако размислиш, натисни „Избрано ✓“ и постът се връща в „Нови“.</div>`:"";
+  $("#grid").innerHTML=info+(list.length?list.map(card).join(""):
+    `<div class="empty">${rows.length?"Няма постове тук.":"Още няма постове. Всяка сутрин тук се добавят новите постове на партньорите."}</div>`);
 }
 
 document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-tab]"); if(t){ tab=t.dataset.tab; try{localStorage.setItem("tab",tab)}catch(_){}; render(); return; }
+  const k=e.target.closest("[data-kind]"); if(k){ kind=k.dataset.kind; try{localStorage.setItem("kind",kind)}catch(_){}; render(); return; }
   const p=e.target.closest("[data-p]"); if(p){ partner=p.dataset.p; try{localStorage.setItem("partner",partner)}catch(_){}; render(); return; }
   const m=e.target.closest("[data-more]"); if(m){ const c=document.getElementById("cap-"+m.dataset.more); c.classList.toggle("open"); m.textContent=c.classList.contains("open")?"По-малко":"Още"; return; }
   const a=e.target.closest("[data-act]"); if(!a||!dbRef) return;
