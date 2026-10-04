@@ -10,7 +10,7 @@ import { sendListingReminderEmail } from "@/lib/email";
 // regardless of whether email is configured.
 //
 // The function returns owners' emails, so the database only runs it with
-// REMINDERS_DB_SECRET (0034_lock_listing_reminders.sql) — the anon key alone
+// REMINDERS_DB_SECRET (20261004090000_lock_listing_reminders.sql) — the anon key alone
 // is not enough. Without the env var we fail here with a clear message
 // instead of a bare "forbidden" from Postgres.
 export async function GET(request: Request) {

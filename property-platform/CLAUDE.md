@@ -206,7 +206,8 @@ supabase/migrations/
   0013_listing_reminder_schedule.sql — 3-степенна схема + process_listing_reminders()
   0014_missing_region_cities.sql     — 10 области без нито един seed-нат град
   0015_backfill_neighborhood_coordinates.sql — 0005 беше пропусната ръчно (виж по-долу)
-  0034_lock_listing_reminders.sql   — security fix: напомнянията само с таен низ
+  2026092…_*.sql                    — три миграции, пуснати през MCP без файл (виж по-долу)
+  20261004090000_lock_listing_reminders.sql — security fix: напомнянията само с таен низ
 docs/PLAN.md                         — пълната бизнес спецификация + фази
 vercel.json                          — Cron конфигурация
 .github/workflows/supabase-migrations.yml — авто-пускане на миграциите (виж по-долу)
@@ -238,6 +239,20 @@ repo** (не в `property-platform/`, защото GitHub Actions гледа с�
 
 Ако workflow-ът fail-не (грешни secrets, забравен secret и т.н.), проверка
 е в GitHub → repo → Actions таб → последния run на "Supabase migrations".
+
+⚠️ **Номерата на новите миграции са с дата и час, не 0034, 0035…**
+На 23 и 29.09 три миграции (`assistant_account_quota`,
+`admin_signup_notice`, `admin_signup_stats`) са пуснати направо в базата
+през Supabase MCP (`apply_migration`) и файловете им не са влезли в
+repo-то. Историята в базата получи версии `2026092…`, които липсват
+локално, и `supabase db push` отказваше всичко след това — открито чак
+на 04.10, когато следващата миграция тръгна през workflow-а. Файловете
+вече са възстановени от `supabase_migrations.schema_migrations`
+(съдържанието съвпада байт по байт). Понеже последната версия в базата
+е `20260929171233`, нов файл с номер `0034` би бил „по-стар“ от нея и
+CLI-ят пак би отказал. Затова: **нов файл = `ГГГГММДДЧЧММСС_име.sql`**,
+по-голям от последния. И ако пускаш SQL през MCP с `apply_migration`,
+сложи същия файл със същата версия в repo-то в същия commit.
 
 **Важен урок оттук**: при първото пускане излезе, че `0005_neighborhood_
 coordinates.sql` никога не е била пусната ръчно преди автоматизацията —
@@ -644,7 +659,7 @@ OG таговете и имейлите, докато не се направи �
   `confirmListingActive`), `reminder_count` се нулира и цикълът
   започва отначало.
 
-  ⚠️ **Функцията е заключена с таен низ** (`0034_lock_listing_reminders.sql`).
+  ⚠️ **Функцията е заключена с таен низ** (`20261004090000_lock_listing_reminders.sql`).
   До тогава всеки с публичния ключ можеше да я извика през
   `/rest/v1/rpc/process_listing_reminders`, да получи имейлите на
   собствениците и да придвижи напомнянията им. Cron-ът ползва същия
