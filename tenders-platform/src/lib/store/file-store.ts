@@ -1,6 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
+import type { GrantCall } from "@/lib/grants/types";
+import type { SavedProfile } from "@/lib/advisor/types";
+import { EMPTY_RESULTS } from "@/lib/advisor/types";
 import type {
   AdvisorQuota,
   AlertSubscription,
@@ -24,6 +27,9 @@ type Db = {
   runs: { source_date: string; status: string; rows_count: number; message?: string }[];
   subscriptions: AlertSubscription[];
   advisorUsage?: Record<string, number>;
+  grants?: Record<string, GrantCall & { last_seen_at: string }>;
+  grantSources?: Record<string, { pdf_url: string | null }>;
+  profiles?: Record<string, SavedProfile>;
 };
 
 export class FileStore implements Store {
@@ -234,5 +240,117 @@ export class FileStore implements Store {
       db.advisorUsage[key] -= 1;
       await this.save(db);
     }
+  }
+
+  async grantsKnown() {
+    const db = await this.load();
+    return Object.values(db.grants ?? {})
+      .filter((g) => g.kind !== "planned")
+      .map((g) => ({ id: g.id, source_hash: g.source_hash, enriched: Boolean(g.enriched_at) }));
+  }
+
+  /** Същото сливане като tenders_grants_upsert: null не трие стара стойност. */
+  async upsertGrants(rows: Partial<GrantCall>[]) {
+    const db = await this.load();
+    const grants = (db.grants ??= {});
+    const now = new Date().toISOString();
+    for (const row of rows) {
+      if (!row.id) continue;
+      const old = grants[row.id];
+      const merged = { ...old } as GrantCall & { last_seen_at: string };
+      for (const [k, v] of Object.entries(row)) {
+        if (v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0)) {
+          (merged as Record<string, unknown>)[k] = v;
+        }
+      }
+      merged.applicant_types ??= [];
+      merged.is_active = true;
+      merged.last_seen_at = now;
+      merged.updated_at = now;
+      grants[row.id] = merged;
+    }
+    await this.save(db);
+    return rows.length;
+  }
+
+  async deactivateGrants(seenBefore: string) {
+    const db = await this.load();
+    let n = 0;
+    for (const g of Object.values(db.grants ?? {})) {
+      if (g.kind !== "planned" && g.is_active && g.last_seen_at < seenBefore) {
+        g.is_active = false;
+        n++;
+      }
+    }
+    await this.save(db);
+    return n;
+  }
+
+  async replacePlannedGrants(source: string, rows: Partial<GrantCall>[]) {
+    const db = await this.load();
+    for (const g of Object.values(db.grants ?? {})) {
+      if (g.kind === "planned" && g.source === source) g.is_active = false;
+    }
+    await this.save(db);
+    return this.upsertGrants(rows);
+  }
+
+  async getGrantSource(id: string) {
+    const db = await this.load();
+    return db.grantSources?.[id] ?? null;
+  }
+
+  async setGrantSource(src: { id: string; pdf_url: string }) {
+    const db = await this.load();
+    (db.grantSources ??= {})[src.id] = { pdf_url: src.pdf_url };
+    await this.save(db);
+  }
+
+  async listGrants(businessOnly: boolean) {
+    const db = await this.load();
+    const now = new Date().toISOString();
+    const month = `${now.slice(0, 7)}-01`;
+    return Object.values(db.grants ?? {})
+      .filter((g) => g.is_active && (!businessOnly || g.for_business))
+      .filter(
+        (g) =>
+          (g.kind === "open" && (!g.deadline_at || g.deadline_at >= now)) ||
+          g.kind === "discussion" ||
+          (g.kind === "planned" && (g.opens_at ?? "") >= month),
+      );
+  }
+
+  async getProfile(token: string) {
+    const db = await this.load();
+    return db.profiles?.[token] ?? null;
+  }
+
+  async saveProfile(
+    token: string,
+    patch: Partial<Omit<SavedProfile, "token" | "last_run_at" | "updated_at">>,
+    ran: boolean,
+  ) {
+    const db = await this.load();
+    const profiles = (db.profiles ??= {});
+    const now = new Date().toISOString();
+    const old = profiles[token];
+    const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+    const base: SavedProfile = old ?? {
+      token,
+      description: "",
+      answers: [],
+      profile: { summary: "", fitAreas: [], growthAreas: [], questions: [] },
+      filters: { tenders: true, grants: true, cpvPrefixes: [], keywords: [], regions: [] },
+      results: EMPTY_RESULTS,
+      last_run_at: null,
+    };
+    profiles[token] = {
+      ...base,
+      ...defined,
+      token,
+      last_run_at: ran ? now : (old?.last_run_at ?? null),
+      updated_at: now,
+    };
+    await this.save(db);
   }
 }

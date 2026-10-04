@@ -1,4 +1,6 @@
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
+import type { GrantCall, GrantKnown } from "@/lib/grants/types";
+import type { SavedProfile } from "@/lib/advisor/types";
 
 export type AlertSubscription = {
   id: number;
@@ -83,4 +85,29 @@ export interface Store {
   matchTenders(profile: MatchProfile, limit: number): Promise<MatchedTender[]>;
   consumeAdvisorQuota(visitor: string, perVisitor: number, perDay: number): Promise<AdvisorQuota>;
   refundAdvisorQuota(visitor: string): Promise<void>;
+
+  // Грантове (lib/grants). Записът иска TENDERS_DB_SECRET, четенето не.
+  grantsKnown(): Promise<GrantKnown[]>;
+  upsertGrants(rows: Partial<GrantCall>[]): Promise<number>;
+  deactivateGrants(seenBefore: string): Promise<number>;
+  replacePlannedGrants(source: string, rows: Partial<GrantCall>[]): Promise<number>;
+  getGrantSource(id: string): Promise<{ pdf_url: string | null } | null>;
+  setGrantSource(src: {
+    id: string;
+    programme: string;
+    page_url: string;
+    pdf_url: string;
+    rows: number;
+    message: string | null;
+  }): Promise<void>;
+  listGrants(businessOnly: boolean): Promise<GrantCall[]>;
+
+  // Запазен профил на фирма в съветника (0004_company_profiles.sql).
+  getProfile(token: string): Promise<SavedProfile | null>;
+  /** Полета, които са undefined, не се пипат. `ran` = минал е AI. */
+  saveProfile(
+    token: string,
+    patch: Partial<Omit<SavedProfile, "token" | "last_run_at" | "updated_at">>,
+    ran: boolean,
+  ): Promise<void>;
 }
