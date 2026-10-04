@@ -1,7 +1,14 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
-import type { AlertSubscription, NewSubscription, Store } from "./types";
+import type {
+  AdvisorQuota,
+  AlertSubscription,
+  MatchedTender,
+  MatchProfile,
+  NewSubscription,
+  Store,
+} from "./types";
 
 /**
  * Хранилище в JSON файлове под `data/` — само за локална разработка и
@@ -16,6 +23,7 @@ type Db = {
   tenders: Record<string, StoredTender>;
   runs: { source_date: string; status: string; rows_count: number; message?: string }[];
   subscriptions: AlertSubscription[];
+  advisorUsage?: Record<string, number>;
 };
 
 export class FileStore implements Store {
@@ -151,6 +159,79 @@ export class FileStore implements Store {
     const sub = db.subscriptions.find((s) => s.id === id);
     if (sub) {
       sub.last_sent_at = at;
+      await this.save(db);
+    }
+  }
+
+  /** Същото точкуване като tenders_match в 0002_advisor.sql. */
+  async matchTenders(profile: MatchProfile, limit: number): Promise<MatchedTender[]> {
+    const db = await this.load();
+    const now = Date.now();
+    const prefixes = profile.cpvPrefixes.filter((p) => /^\d{2,8}$/.test(p));
+    const words = profile.keywords.map((w) => w.trim().toLowerCase()).filter((w) => w.length >= 3);
+    if (!prefixes.length && !words.length) return [];
+
+    const scored: MatchedTender[] = [];
+    for (const t of Object.values(db.tenders)) {
+      if (t.is_cancelled || !t.deadline_at || Date.parse(t.deadline_at) < now) continue;
+      if (profile.minValue !== undefined && t.value_eur !== null && t.value_eur < profile.minValue) continue;
+      if (profile.maxValue !== undefined && t.value_eur !== null && t.value_eur > profile.maxValue) continue;
+      const cpvHit = Math.max(0, ...prefixes.filter((p) => (t.cpv_code ?? "").startsWith(p)).map((p) => p.length));
+      const hay = [t.title, t.lot_title, t.buyer_name, t.cpv_label, t.buyer_locality, t.description]
+        .join(" ")
+        .toLowerCase();
+      const wordHits = words.filter((w) => hay.includes(w)).length;
+      if (!cpvHit && !wordHits) continue;
+      const score =
+        (cpvHit >= 5 ? 6 : cpvHit >= 3 ? 4 : cpvHit === 2 ? 2 : 0) +
+        Math.min(wordHits, 4) * 2 +
+        (profile.regions.length && t.region_code && profile.regions.includes(t.region_code) ? 2 : 0);
+      scored.push({
+        id: t.id,
+        title: t.title,
+        lot_number: t.lot_number,
+        lot_title: t.lot_title,
+        description: t.description ? t.description.slice(0, 500) : null,
+        cpv_code: t.cpv_code,
+        cpv_label: t.cpv_label,
+        cpv_division: t.cpv_division,
+        buyer_name: t.buyer_name,
+        buyer_locality: t.buyer_locality,
+        region_code: t.region_code,
+        value_eur: t.value_eur,
+        deadline_at: t.deadline_at,
+        published_at: t.published_at,
+        procedure_type: t.procedure_type,
+        notice_type: t.notice_type,
+        contract_type: t.contract_type,
+        eu_funded: t.eu_funded,
+        score,
+      });
+    }
+    return scored
+      .sort((a, b) => b.score - a.score || Date.parse(a.deadline_at!) - Date.parse(b.deadline_at!))
+      .slice(0, limit);
+  }
+
+  async consumeAdvisorQuota(visitor: string, perVisitor: number, perDay: number): Promise<AdvisorQuota> {
+    const db = await this.load();
+    const day = new Date().toISOString().slice(0, 10);
+    const usage = (db.advisorUsage ??= {});
+    const total = Object.entries(usage)
+      .filter(([k]) => k.startsWith(`${day}:`))
+      .reduce((sum, [, n]) => sum + n, 0);
+    if (total >= perDay) return -2;
+    const key = `${day}:${visitor}`;
+    usage[key] = (usage[key] ?? 0) + 1;
+    await this.save(db);
+    return usage[key] > perVisitor ? -1 : perVisitor - usage[key];
+  }
+
+  async refundAdvisorQuota(visitor: string) {
+    const db = await this.load();
+    const key = `${new Date().toISOString().slice(0, 10)}:${visitor}`;
+    if (db.advisorUsage?.[key]) {
+      db.advisorUsage[key] -= 1;
       await this.save(db);
     }
   }

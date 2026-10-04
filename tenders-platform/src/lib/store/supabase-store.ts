@@ -1,6 +1,13 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
-import type { AlertSubscription, NewSubscription, Store } from "./types";
+import type {
+  AdvisorQuota,
+  AlertSubscription,
+  MatchedTender,
+  MatchProfile,
+  NewSubscription,
+  Store,
+} from "./types";
 
 const UPSERT_CHUNK = 300;
 
@@ -138,6 +145,37 @@ export class SupabaseStore implements Store {
       p_id: id,
       p_at: at,
     });
+  }
+
+  async matchTenders(profile: MatchProfile, limit: number): Promise<MatchedTender[]> {
+    const rows = await this.rpc<MatchedTender[]>("tenders_match", {
+      p_cpv_prefixes: profile.cpvPrefixes,
+      p_keywords: profile.keywords,
+      p_regions: profile.regions.length ? profile.regions : null,
+      p_min: profile.minValue ?? null,
+      p_max: profile.maxValue ?? null,
+      p_limit: limit,
+    });
+    return (rows ?? []).map((r) => ({
+      ...r,
+      value_eur: r.value_eur === null ? null : Number(r.value_eur),
+      score: Number(r.score),
+    }));
+  }
+
+  async consumeAdvisorQuota(visitor: string, perVisitor: number, perDay: number): Promise<AdvisorQuota> {
+    return Number(
+      await this.rpc<number>("tenders_advisor_consume", {
+        p_secret: this.requireSecret(),
+        p_visitor: visitor,
+        p_max_per_visitor: perVisitor,
+        p_max_per_day: perDay,
+      }),
+    );
+  }
+
+  async refundAdvisorQuota(visitor: string) {
+    await this.rpc("tenders_advisor_refund", { p_secret: this.requireSecret(), p_visitor: visitor });
   }
 }
 
