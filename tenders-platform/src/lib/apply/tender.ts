@@ -6,7 +6,7 @@ import { fetchNotice, type Notice } from "@/lib/eop/notice";
 import type { Tender } from "@/lib/eop/types";
 import { getStore } from "@/lib/store";
 import { makeNumberChecker, makeQuoteChecker } from "./quotes";
-import type { CompanyData, CompanyFit, TenderGuide } from "./types";
+import type { CompanyData, CompanyFit, Quote, TenderGuide } from "./types";
 
 /**
  * Разбор на обявлението на поръчка за ЕЕДОП и офертата.
@@ -64,6 +64,10 @@ const SYSTEM = `Ти си опитен консултант по обществ�
 Най-важното правило: всичко, което пишеш, трябва да идва от обявлението. Не добавяй изисквания, суми, срокове или членове от закона, които ги няма в текста. Ако нещо липсва в обявлението, не го измисляй — пропусни го или кажи, че е в документацията.
 
 Към всяко изискване даваш "quote" — дословен откъс от обявлението, който го доказва: копирай точно (същите думи, цифри и препинателни знаци), един непрекъснат откъс до 300 знака, без многоточия и без собствени думи. Кодът проверява всеки откъс и ако го няма в текста, фирмата ще бъде предупредена.
+
+Много обявления са във формат eForms: етикетът на полето е на един ред (често с код като „(BT-751-Lot)“), а стойността — на следващия. Тогава цитирай етикета заедно със стойността, напр. „Изисква се гаранция за участие(BT-751-Lot) не“ — само етикет не доказва нищо.
+
+Ако нещо не е казано изрично в обявлението, а го заключаваш (напр. че незадължителните основания по чл. 55 не се прилагат, защото не са изброени), отговори „не е ясно“.
 
 Текстът може да съдържа няколко публикации една след друга (решение, обявление, изменения), разделени с „— — —“. По-късните изменения отменят по-ранните — ползвай действащия текст.
 
@@ -166,13 +170,13 @@ export async function buildTenderGuide(input: GuideInput): Promise<TenderGuide> 
     createdAt: new Date().toISOString(),
     noticeHash: noticeHash(notice),
     procedure: { type: out.procedure_type, quote: must(out.procedure_quote) },
-    espdRequired: { answer: out.espd_required, quote: check(out.espd_quote) },
+    espdRequired: confirmed(out.espd_required, check(out.espd_quote), "да"),
     lots: out.lots.slice(0, 60),
     deadlines: out.deadlines
       .slice(0, 8)
       .map((d) => ({ what: d.what, when: d.when, quote: must(d.quote), badNumbers: numbers(d.when) })),
     exclusion: out.exclusion.slice(0, 20).map((e) => ({ ground: e.ground, part: e.espd_part, quote: must(e.quote) })),
-    art55: { answer: out.art55, quote: check(out.art55_quote) },
+    art55: confirmed(out.art55, check(out.art55_quote)),
     generalSelectionOnly: out.general_selection_only,
     selection: out.selection.slice(0, 20).map((s) => ({
       part: s.espd_part,
@@ -201,6 +205,16 @@ export async function buildTenderGuide(input: GuideInput): Promise<TenderGuide> 
   };
   guide.unverified = countUnverified(guide);
   return guide;
+}
+
+/**
+ * Отговор „да/не“ се приема само с потвърден цитат; иначе „не е ясно“ —
+ * по-добре фирмата да провери, отколкото да разчита на извод на модела.
+ * `free` — отговор, който е безопасен и без цитат (ЕЕДОП „да“ е по закон).
+ */
+function confirmed<A extends string>(answer: A, quote: Quote | null, free?: A) {
+  if (answer === "не е ясно" || answer === free || quote?.verified) return { answer, quote };
+  return { answer: "не е ясно" as A, quote: null };
 }
 
 function countUnverified(g: TenderGuide) {
