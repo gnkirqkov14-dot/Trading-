@@ -32,6 +32,46 @@ function val(v: string | undefined, missing = "попълнете — не е в
   return v && v.trim() ? v.trim() : missing;
 }
 
+const MONTHS = ["януари", "февруари", "март", "април", "май", "юни", "юли", "август", "септември", "октомври", "ноември", "декември"];
+
+/** Датите (ден, месец, година) в текст: „26-октомври-2026“, „26 октомври 2026“, „26.10.2026“. */
+function datesIn(text: string): string[] {
+  const out: string[] = [];
+  const re = new RegExp(`(\\d{1,2})[\\s.\\-/]+(${MONTHS.join("|")}|\\d{1,2})[\\s.\\-/]+(\\d{4})`, "giu");
+  for (const m of text.matchAll(re)) {
+    const month = /^\d+$/.test(m[2]) ? Number(m[2]) : MONTHS.indexOf(m[2].toLowerCase()) + 1;
+    if (month >= 1 && month <= 12) out.push(`${m[3]}-${String(month).padStart(2, "0")}-${m[1].padStart(2, "0")}`);
+  }
+  return out;
+}
+
+function sofiaDay(iso: string) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(new Date(iso));
+}
+
+/**
+ * Срокът в ЦАИС ЕОП (системата приема оферти до него) може да е различен
+ * от датата в текста на обявлението — напр. удължен с отделно решение.
+ * Тогава фирмата трябва да знае и за двете.
+ */
+export function deadlineConflict(guide: TenderGuide): string | null {
+  if (!guide.deadline) return null;
+  const official = sofiaDay(guide.deadline);
+  const inText = new Set<string>();
+  for (const d of guide.deadlines) {
+    const what = d.what.toLowerCase();
+    if (!what.includes("оферт") || /валидност|отваряне/.test(what)) continue;
+    for (const day of [...datesIn(d.when), ...datesIn(d.quote.text)]) inText.add(day);
+  }
+  const other = [...inText].filter((d) => d !== official);
+  if (!other.length) return null;
+  const human = (day: string) => {
+    const [y, m, dd] = day.split("-").map(Number);
+    return `${dd} ${MONTHS[m - 1]} ${y} г.`;
+  };
+  return `В текста на обявлението крайният срок за оферти е ${other.map(human).join(", ")}, а в системата ЦАИС ЕОП е ${human(official)} Срокът вероятно е променен с отделно решение. Проверете на страницата на поръчката в ЦАИС ЕОП кой срок важи — и за всеки случай подайте преди по-ранната дата.`;
+}
+
 export function buildEspdBlocks(guide: TenderGuide, company: Partial<CompanyData>, lot: string | null): GuideBlock[] {
   const b: GuideBlock[] = [];
   const warnNumbers = (badNumbers?: string[]) => {
@@ -70,6 +110,14 @@ export function buildEspdBlocks(guide: TenderGuide, company: Partial<CompanyData
           : "Обявлението не го казва ясно. По закон ЕЕДОП се подава и при събиране на оферти (чл. 192, ал. 3 ЗОП).",
   });
   quoteOf(guide.espdRequired.quote);
+  const conflict = deadlineConflict(guide);
+  if (conflict) b.push({ kind: "warn", text: conflict });
+  if (guide.truncated) {
+    b.push({
+      kind: "warn",
+      text: "Обявлението е много дълго и прочетохме само началото му. Възможно е да липсват условия, особено за обособените позиции накрая. Проверете в официалния текст.",
+    });
+  }
   if (guide.unverified > 0) {
     b.push({
       kind: "warn",
@@ -96,6 +144,7 @@ export function buildEspdBlocks(guide: TenderGuide, company: Partial<CompanyData
   // — Срокове —
   if (guide.deadlines.length) {
     b.push({ kind: "h2", text: "Срокове", id: "srokove" });
+    if (conflict) b.push({ kind: "warn", text: conflict });
     for (const d of guide.deadlines) {
       b.push({ kind: "field", label: d.what, value: d.when });
       quoteOf(d.quote, d.badNumbers);
