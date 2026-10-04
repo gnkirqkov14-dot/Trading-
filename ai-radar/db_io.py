@@ -35,13 +35,19 @@ def cmd_import(dbread: Path, work: Path) -> None:
 
 
 def cmd_statuses(work: Path) -> None:
+    """Само промените: статус/канал/RSS, които се различават от записаното в базата (иначе batch-ът расте с всеки източник)."""
+    cur = {s["doc_id"]: s for s in json.loads((work / "user_sources.json").read_text(encoding="utf-8"))}
     ups = []
     for r in json.loads((work / "resolved_sources.json").read_text(encoding="utf-8")):
         if not r.get("doc_id"):
             continue
-        data = {k: r.get(k) for k in ("status", "error", "channel_id", "resolved_name", "feed_url") if k in r}
-        data["checked_at"] = json.loads((work / "raw.json").read_text(encoding="utf-8"))["generated_at"]
-        ups.append({"doc_id": r["doc_id"], "data": data})
+        data = {k: r[k] for k in ("status", "error", "channel_id", "resolved_name", "feed_url") if r.get(k) is not None}
+        old = cur.get(r["doc_id"], {})
+        changed = {k: v for k, v in data.items() if old.get(k) != v}
+        if old.get("error") and r.get("status") == "ok":
+            changed["error"] = {"__delete__": True}
+        if changed:
+            ups.append({"doc_id": r["doc_id"], "data": changed})
     (work / "source_updates.json").write_text(json.dumps(ups, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{len(ups)} обновявания на източници → {work / 'source_updates.json'}")
 
