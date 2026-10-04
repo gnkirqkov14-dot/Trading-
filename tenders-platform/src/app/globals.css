@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans-brand);
+}
+
+/* Тъмносиньо за доверие (държавни пари), зелено за „може да кандидатстваш“. */
+@theme {
+  --color-brand-50: #eff5fb;
+  --color-brand-100: #dbe8f5;
+  --color-brand-500: #2563a8;
+  --color-brand-600: #1d4f8a;
+  --color-brand-700: #173f6e;
+  --color-brand-900: #0f2846;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

@@ -1,0 +1,37 @@
+{
+  "name": "tenders-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "import": "tsx scripts/import.ts",
+    "x402:test": "tsx scripts/x402-client.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.114.0",
+    "@vercel/analytics": "^2.0.1",
+    "@x402/core": "^2.28.0",
+    "@x402/evm": "^2.28.0",
+    "@x402/extensions": "^2.28.0",
+    "@x402/next": "^2.28.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@x402/fetch": "^2.28.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "viem": "^2.57.2"
+  }
+}
