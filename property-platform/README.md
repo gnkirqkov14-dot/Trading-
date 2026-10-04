@@ -95,6 +95,14 @@ supabase/
   migrations/0001_init.sql          — цялата схема + RLS policies
 ```
 
+## Данни за AI агенти (x402)
+
+Под `/api/agent` сайтът продава структурирани данни за обявите на AI
+агенти по протокола x402 (HTTP 402 + USDC микроплащания). Каталогът
+`/api/agent` е безплатен; `/api/agent/listings` и `/api/agent/price-index`
+са платени. Виж `docs/X402-АГЕНТИ.md` (за собственика) и
+`src/lib/x402/server.ts` (за програмисти). Тест: `npm run x402:test`.
+
 ## Следващи фази
 
 Виж [`docs/PLAN.md`](docs/PLAN.md) за пълния план (Фаза 2: обяви +
