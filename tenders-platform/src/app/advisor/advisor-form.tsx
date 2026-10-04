@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import type { AdvisorQuestion } from "@/lib/advisor/types";
+import type { AdvisorAnswer, AdvisorQuestion } from "@/lib/advisor/types";
 import { REGION_OPTIONS } from "@/lib/eop/regions";
 import {
   adoptProfile,
@@ -10,6 +10,7 @@ import {
   refineAdvisor,
   rerunAdvisor,
   startAdvisor,
+  submitSurvey,
   type AdvisorState,
 } from "./actions";
 import { field } from "./styles";
@@ -120,9 +121,9 @@ export function StartForm({ enabled }: { enabled: boolean }) {
           disabled={pending || !enabled}
           className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          {pending ? "Съветникът мисли…" : "Намери за мен"}
+          {pending ? "Подготвям въпросите…" : "Продължи към анкетата"}
         </button>
-        <span className="text-xs text-slate-500">До 5 питания на ден. Профилът се запазва.</span>
+        <span className="text-xs text-slate-500">След това — кратка анкета от 8–12 въпроса. Профилът се запазва.</span>
       </div>
       {pending ? <Progress /> : null}
       <ErrorBox state={state} />
@@ -130,41 +131,87 @@ export function StartForm({ enabled }: { enabled: boolean }) {
   );
 }
 
-/** Уточняващите въпроси с готови отговори + свободно поле. */
-export function QuestionsForm({ questions, enabled }: { questions: AdvisorQuestion[]; enabled: boolean }) {
-  const [state, action, pending] = useActionState<AdvisorState, FormData>(refineAdvisor, null);
+/**
+ * Анкетата: 8–12 въпроса наведнъж, с готови отговори (един или няколко)
+ * и свободно поле. При редакция по-късно отговорите са попълнени.
+ */
+export function SurveyForm({
+  questions,
+  answers,
+  done,
+  enabled,
+}: {
+  questions: AdvisorQuestion[];
+  answers: AdvisorAnswer[];
+  done: boolean;
+  enabled: boolean;
+}) {
+  const [state, action, pending] = useActionState<AdvisorState, FormData>(submitSurvey, null);
+  const previous = new Map(answers.map((a) => [a.question, a.answer.split(", ")]));
+  const extra = answers.find((a) => a.question === "Допълнително от фирмата")?.answer ?? "";
   return (
-    <form action={action} className="space-y-4">
-      {questions.map((q, i) => (
-        <fieldset key={q.text} className="space-y-2">
-          <legend className="text-sm font-medium text-slate-800">{q.text}</legend>
-          <input type="hidden" name={`q${i}`} value={q.text} />
-          <div className="flex flex-wrap gap-2">
-            {q.options.map((o) => (
-              <label
-                key={o}
-                className="cursor-pointer rounded-full border border-slate-300 bg-white px-3 py-1 text-sm text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-600 has-[:checked]:text-white"
-              >
-                <input type="radio" name={`a${i}`} value={o} className="sr-only" />
-                {o}
-              </label>
-            ))}
-          </div>
-          <input name={`a${i}_other`} className={`${field} sm:max-w-sm`} placeholder="или напишете друго…" />
-        </fieldset>
-      ))}
+    <form action={action} className="space-y-6">
+      <ol className="space-y-6">
+        {questions.map((q, i) => {
+          const prev = previous.get(q.text) ?? [];
+          const other = prev.filter((p) => !q.options.includes(p)).join(", ");
+          return (
+            <li key={q.id}>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-slate-900">
+                  <span className="mr-1 text-slate-400">{i + 1}.</span>
+                  {q.text}
+                  {q.multi ? <span className="ml-1 text-xs font-normal text-slate-500">(може няколко)</span> : null}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {q.options.map((o) => (
+                    <label
+                      key={o}
+                      className="cursor-pointer rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-600 has-[:checked]:text-white"
+                    >
+                      <input
+                        type={q.multi ? "checkbox" : "radio"}
+                        name={q.id}
+                        value={o}
+                        defaultChecked={prev.includes(o)}
+                        className="sr-only"
+                      />
+                      {o}
+                    </label>
+                  ))}
+                </div>
+                <input
+                  name={`${q.id}_other`}
+                  defaultValue={other}
+                  maxLength={200}
+                  className={`${field} sm:max-w-sm`}
+                  placeholder="или напишете друго…"
+                />
+              </fieldset>
+            </li>
+          );
+        })}
+      </ol>
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-slate-800">Нещо друго, което да знам? (по избор)</span>
-        <input name="extra" maxLength={300} className={field} placeholder="напр. искаме да построим склад; имаме ISO 9001" />
+        <span className="mb-1 block text-sm font-medium text-slate-900">Нещо друго, което да знам? (по избор)</span>
+        <input
+          name="extra"
+          defaultValue={extra}
+          maxLength={300}
+          className={field}
+          placeholder="напр. имаме ISO 9001; търсим партньор за проектиране"
+        />
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <button
           disabled={pending || !enabled}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
         >
-          {pending ? "Подбирам наново…" : "Подбери по-точно"}
+          {pending ? "Подбирам за вас…" : done ? "Обнови с новите отговори" : "Покажи поръчките и програмите за мен"}
         </button>
-        <span className="text-xs text-slate-500">Брои се като едно питане.</span>
+        <span className="text-xs text-slate-500">
+          {done ? "Брои се като едно питане." : "Може да пропуснете въпрос. Не се брои като ново питане."}
+        </span>
       </div>
       {pending ? <Progress /> : null}
       <ErrorBox state={state} />

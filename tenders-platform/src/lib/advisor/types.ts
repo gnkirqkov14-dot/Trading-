@@ -14,7 +14,8 @@ export type AdvisorFilters = {
   maxValue?: number;
 };
 
-export type AdvisorQuestion = { text: string; options: string[] };
+/** Въпрос от анкетата. `multi` — може да се изберат няколко отговора. */
+export type AdvisorQuestion = { id: string; topic: string; text: string; options: string[]; multi: boolean };
 export type AdvisorAnswer = { question: string; answer: string };
 
 /** Какво AI е разбрало за фирмата (стъпка 1). */
@@ -23,7 +24,10 @@ export type AdvisorProfile = {
   fitAreas: { title: string; why: string }[];
   /** Какви европейски пари могат да търсят — „за развитие“. */
   growthAreas: { title: string; why: string }[];
+  /** Анкетата — генерира се веднъж, от описанието. */
   questions: AdvisorQuestion[];
+  /** false — анкетата още не е попълнена и подборът не е правен. */
+  surveyDone?: boolean;
 };
 
 export type TenderPick = { id: number; fit: "high" | "medium"; why: string; check: string[] };
@@ -49,3 +53,14 @@ export type SavedProfile = {
 };
 
 export const EMPTY_RESULTS: AdvisorResults = { tenders: [], tendersNote: null, grants: [], grantsNote: null };
+
+/** Профили от първата версия нямат id/topic/multi на въпросите. */
+export function normalizeQuestions(questions: Partial<AdvisorQuestion>[] | undefined): AdvisorQuestion[] {
+  return (questions ?? []).map((q, i) => ({
+    id: q.id ?? `q${i + 1}`,
+    topic: q.topic ?? "",
+    text: q.text ?? "",
+    options: q.options ?? [],
+    multi: q.multi ?? false,
+  }));
+}
