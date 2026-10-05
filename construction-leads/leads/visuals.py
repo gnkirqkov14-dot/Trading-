@@ -24,7 +24,8 @@ NO_IMAGE_DOMAINS = {
     "papagal.bg", "registryagency.bg", "yox.bg", "finansi.bg", "companybook.bg", "bulstat.bg",
     "sofia.bg", "eufunds.bg", "fico.bg", "bgfirma.com", "firmi.bg", "kik-info.com",
     "opencorporates.com", "ksb.bg", "kab.bg", "aop.bg", "eop.bg", "lex.bg", "ciela.net",
-    "egov.bg", "bcc.bg", "rabota.bg", "jobs.bg", "zaplata.bg", "linkedin.com", "wikipedia.org",
+    "egov.bg", "bcc.bg", "gestapo.bg", "topograph.co", "govalert.eu", "firma.bg", "firmlocator.com",
+    "company.guru", "uic.bg", "vat-search.eu", "justice.bg", "daibau.bg", "wherewework.bg", "rabota.bg", "jobs.bg", "zaplata.bg", "linkedin.com", "wikipedia.org",
 }
 # Сайтове за имоти и строителни новини, където има реални визуализации на проекти.
 PROJECT_SITES = {

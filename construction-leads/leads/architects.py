@@ -26,10 +26,11 @@ STOP = {"столична", "софия", "главен", "главния", "о�
 MENTION = re.compile(
     r"(?i:(?<![а-я])архитект(?:ът|и)?|архитектурн[оа]\s+(?:студио|бюро)|проектант(?:ът|и)?|"
     r"автор(?:и)?\s+на\s+проекта|architects?|architecture\s+by|designed\s+by)"
-    r"\s*[:\-–—]?\s*"
+    r"(?![а-яА-Яa-zA-Z])\s*[:\-–—]?\s*"
     r"((?:арх\.\s*)?(?:[А-Я]\.\s*)?[„\"«]?[А-ЯA-Z][\wА-Яа-я\-]+(?:[ \t]+[„\"«]?[А-ЯA-Z0-9][\wА-Яа-я\-\"“”»]*){0,3}"
     r"(?:\s+(?:ЕООД|ООД|ЕАД|АД))?)",
 )
+NAV_JUNK = re.compile(r"English|Начало|Изписване|Search|Вход|Меню|Menu|Home|Контакти|Cookie", re.I)
 INITIAL_NAME = re.compile(r"арх\.\s*([А-Я])\.\s*([А-Я][а-я]+(?:-[А-Я][а-я]+)?)")
 
 
@@ -50,7 +51,10 @@ def mentions(text: str) -> list[str]:
         words = [w.strip(".„\"«»“”").lower() for w in name.split()]
         if not words or all(w in STOP or len(w) < 3 for w in words if w != "арх"):
             continue
-        if re.fullmatch(r"(арх\.\s*)?[А-ЯA-Z][а-яa-z]+", name) and not name.startswith("арх"):
+        if NAV_JUNK.search(name):
+            continue
+        studio = re.match(r"(?i)архитектурн[оа]\s+(?:студио|бюро)", m.group(0))
+        if re.fullmatch(r"(арх\.\s*)?[А-ЯA-Z][а-яa-z]+", name) and not name.startswith("арх") and not studio:
             continue  # единична дума без „арх.“ – твърде шумно
         out.append(name)
     for m in INITIAL_NAME.finditer(text or ""):
