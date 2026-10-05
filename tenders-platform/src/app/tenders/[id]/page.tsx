@@ -7,6 +7,10 @@ import { regionName } from "@/lib/eop/regions";
 import { deadlineLabel, formatDateTime, formatEur } from "@/lib/format";
 import { officialUrl } from "@/lib/site";
 import { getStore } from "@/lib/store";
+import { cookies } from "next/headers";
+import { requirementsBlocks } from "@/lib/apply/espd";
+import { guideKey } from "@/lib/apply/tender";
+import { GuideView } from "@/app/apply/guide-view";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +53,14 @@ export default async function TenderPage({ params }: { params: Promise<{ id: str
     ["Европейско финансиране", tender.eu_funded ? tender.eu_program ?? "Да" : "Не"],
     ["Публикувана", formatDateTime(tender.published_at)],
   ];
+
+  // Ако помощникът вече е разгледал поръчката — изискванията накратко.
+  const raw = (await cookies()).get("advisor_profile")?.value ?? null;
+  const token = raw && /^[0-9a-f]{48}$/.test(raw) ? raw : null;
+  const store = getStore();
+  const guide =
+    (token ? await store.getGuide(guideKey(tender.id, token)).catch(() => null) : null) ??
+    (await store.getGuide(guideKey(tender.id, null)).catch(() => null));
 
   const similar = new URLSearchParams();
   if (tender.cpv_division) similar.set("category", tender.cpv_division);
@@ -93,6 +105,25 @@ export default async function TenderPage({ params }: { params: Promise<{ id: str
           </p>
         </section>
       ) : null}
+
+      {guide ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <GuideView blocks={requirementsBlocks(guide.guide, { detailsBelow: false }).map((b) => (b.kind === "h2" ? { ...b, id: undefined } : b))} />
+          <p className="mt-3">
+            <Link href={`/apply/tender/${tender.id}#iziskvania`} className="font-semibold text-brand-700 underline">
+              Цялата помощ за ЕЕДОП и офертата →
+            </Link>
+          </p>
+        </section>
+      ) : (
+        <p className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-700">
+          Какво се иска от фирмата (оборот, опит, регистрации, гаранции) пише в официалното обявление.{" "}
+          <Link href={`/apply/tender/${tender.id}`} className="font-semibold text-brand-700 underline">
+            Извади изискванията накратко
+          </Link>{" "}
+          — помощникът ги чете от обявлението за около минута.
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <a
