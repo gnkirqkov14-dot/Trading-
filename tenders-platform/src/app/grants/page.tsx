@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { KindBadge, KindPrefix } from "@/components/kind-label";
 import { SectionSwitch } from "@/components/section-switch";
 import { formatDate, numParam, strParam } from "@/lib/format";
-import { grantMoney, grantStatus } from "@/lib/grants/display";
+import { grantKindLabel, grantMoney, grantStatus } from "@/lib/grants/display";
 import type { GrantCall } from "@/lib/grants/types";
 import { getStore } from "@/lib/store";
 
@@ -86,12 +87,16 @@ function GrantListCard({ grant: g }: { grant: GrantCall }) {
   return (
     <article className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
+        <KindBadge text={grantKindLabel(g)} tone="grant" />
         <span className={`rounded-full px-2 py-0.5 font-medium ${toneClass[status.tone]}`}>{status.text}</span>
         {g.for_business === false ? (
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Не е за фирми сами</span>
         ) : null}
       </div>
-      <h2 className="text-base font-semibold leading-snug text-slate-900">{g.title}</h2>
+      <h2 className="text-base font-semibold leading-snug text-slate-900">
+        <KindPrefix text={grantKindLabel(g)} />
+        {g.title}
+      </h2>
       <p className="text-xs text-slate-500">
         {g.programme}
         {g.code ? ` · ${g.code}` : ""}

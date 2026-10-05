@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { KindBadge, KindPrefix } from "@/components/kind-label";
 import type { GrantPick, SavedProfile, TenderPick } from "@/lib/advisor/types";
 import { CPV_DIVISIONS, CPV_OPTIONS, divisionName } from "@/lib/eop/cpv";
 import { REGION_OPTIONS, regionName } from "@/lib/eop/regions";
 import type { Tender } from "@/lib/eop/types";
 import { deadlineLabel, formatDate, formatEur } from "@/lib/format";
-import { grantMoney, grantStatus } from "@/lib/grants/display";
+import { grantKindLabel, grantMoney, grantStatus } from "@/lib/grants/display";
 import type { GrantCall } from "@/lib/grants/types";
 import type { MatchedTender } from "@/lib/store/types";
 import { saveFilters } from "./actions";
@@ -36,6 +37,7 @@ function TenderCard({ tender: t, pick, isNew }: { tender: TenderLike; pick?: Ten
   return (
     <article className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
+        <KindBadge text="Обществена поръчка" tone="tender" />
         {pick ? <FitBadge fit={pick.fit} /> : null}
         {isNew ? <span className="rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-800">Нова</span> : null}
         <span className={`rounded-full px-2 py-0.5 font-medium ${toneClass[deadline.tone]}`}>{deadline.text}</span>
@@ -44,6 +46,7 @@ function TenderCard({ tender: t, pick, isNew }: { tender: TenderLike; pick?: Ten
       </div>
       <h3 className="font-semibold leading-snug text-slate-900">
         <Link href={`/tenders/${t.id}`} className="hover:text-brand-600">
+          <KindPrefix text="Обществена поръчка" />
           {t.title}
         </Link>
       </h3>
@@ -104,10 +107,12 @@ function GrantCard({ grant: g, pick }: { grant: GrantCall; pick: GrantPick }) {
   return (
     <article className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
+        <KindBadge text={grantKindLabel(g)} tone="grant" />
         <FitBadge fit={pick.fit} />
         <span className={`rounded-full px-2 py-0.5 font-medium ${toneClass[status.tone]}`}>{status.text}</span>
       </div>
       <h3 className="font-semibold leading-snug text-slate-900">
+        <KindPrefix text={grantKindLabel(g)} />
         {g.url ? (
           <a href={g.url} target="_blank" rel="noopener" className="hover:text-brand-600">
             {g.title}
@@ -379,9 +384,21 @@ export function ProfileView({
       </details>
 
       <div id="results" className="scroll-mt-4 space-y-8">
+        {profile.filters.tenders && profile.filters.grants ? (
+          <nav aria-label="Резултати" className="flex flex-wrap gap-2">
+            <a href="#za-vas-porachki" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-brand-700 hover:border-brand-500">
+              Към обществените поръчки
+            </a>
+            <a href="#za-vas-programi" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-brand-700 hover:border-brand-500">
+              Към европейските програми
+            </a>
+          </nav>
+        ) : null}
         {profile.filters.tenders ? (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-slate-900">Обществени поръчки за вас</h2>
+          <section aria-labelledby="za-vas-porachki" className="space-y-3">
+            <h2 id="za-vas-porachki" tabIndex={-1} className="scroll-mt-4 text-lg font-semibold text-slate-900">
+              Обществени поръчки за вас
+            </h2>
             {r.tendersNote ? <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{r.tendersNote}</p> : null}
             {pickedTenders.map(({ pick, tender }) => (
               <TenderCard key={tender.id} tender={tender} pick={pick} />
@@ -398,8 +415,10 @@ export function ProfileView({
         ) : null}
 
         {profile.filters.grants ? (
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-slate-900">Европейски и национални пари за развитие</h2>
+          <section aria-labelledby="za-vas-programi" className="space-y-3">
+            <h2 id="za-vas-programi" tabIndex={-1} className="scroll-mt-4 text-lg font-semibold text-slate-900">
+              Европейски програми за вас (и национални)
+            </h2>
             <p className="text-sm text-slate-600">
               Безвъзмездна помощ за вашата фирма — отворени процедури и такива, които предстоят по плана
               на програмите. Прегледахме {grantsTotal} процедури, по които фирми могат да кандидатстват.

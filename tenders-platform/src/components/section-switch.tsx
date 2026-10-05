@@ -11,7 +11,11 @@ const SECTIONS = [
  */
 export function SectionSwitch({ current }: { current: (typeof SECTIONS)[number]["key"] }) {
   return (
-    <nav aria-label="Какво търсите" className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
+    <nav aria-labelledby="izbor" className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5">
+      {/* Заглавие за екранния четец: стига се и с навигация по заглавия. */}
+      <h2 id="izbor" className="sr-only">
+        Изберете: обществени поръчки или европейски програми
+      </h2>
       {SECTIONS.map((s) => {
         const active = s.key === current;
         return (

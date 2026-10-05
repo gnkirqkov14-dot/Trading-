@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KindBadge, KindPrefix } from "@/components/kind-label";
 import { divisionName } from "@/lib/eop/cpv";
 import { regionName } from "@/lib/eop/regions";
 import type { Tender } from "@/lib/eop/types";
@@ -15,6 +16,7 @@ export function TenderCard({ tender }: { tender: Tender }) {
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-500">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+        <KindBadge text="Обществена поръчка" tone="tender" />
         <span className={`rounded-full px-2 py-0.5 font-medium ${toneClass[deadline.tone]}`}>
           {deadline.text}
         </span>
@@ -27,6 +29,7 @@ export function TenderCard({ tender }: { tender: Tender }) {
       </div>
       <h2 className="text-base font-semibold leading-snug text-slate-900">
         <Link href={`/tenders/${tender.id}`} className="hover:text-brand-600">
+          <KindPrefix text="Обществена поръчка" />
           {tender.title}
         </Link>
       </h2>
