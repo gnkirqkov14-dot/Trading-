@@ -246,13 +246,22 @@ fill($("#region"), P.map(p => p.region));
 
 function scoreCls(s) { return s >= 60 ? "s-hi" : s >= 40 ? "s-mid" : "s-lo"; }
 const href = (u) => /^https?:\/\//.test(u) ? u : "https://" + u;
-const fmtPhone = (p) => { const m = /^\+359(\d{2,3})(\d{3})(\d{3,4})$/.exec(p || ""); return m ? `+359 ${m[1]} ${m[2]} ${m[3]}` : p; };
+const fmtPhone = (p) => {
+  let m = /^\+3592(\d{3})(\d{4})$/.exec(p || "");            // София: +359 2 915 1858
+  if (m) return `+359 2 ${m[1]} ${m[2]}`;
+  m = /^\+359(8[789]|9[89])(\d{3})(\d{4})$/.exec(p || "");     // мобилен: +359 88 812 3456
+  if (m) return `+359 ${m[1]} ${m[2]} ${m[3]}`;
+  m = /^\+359(\d{2,3})(\d{2,3})(\d{3})$/.exec(p || "");        // други градове
+  return m ? `+359 ${m[1]} ${m[2]} ${m[3]}` : p;
+};
 function person(c, cls) {
   const lines = [`<span class="role">${esc(c.role)}</span>`, `<span class="nm">${esc(c.name)}${c.eik ? ` <span class="src">ЕИК ${esc(c.eik)}</span>` : ""}</span>`];
   (c.phones || []).slice(0, 3).forEach(ph => lines.push(`<span class="sel">${esc(fmtPhone(ph))}</span>`));
   (c.emails || []).slice(0, 3).forEach(em => lines.push(`<span class="sel">${esc(em)}</span>`));
   if (c.website) lines.push(`<a href="${esc(href(c.website))}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>`);
   if ((c.managers || []).length) lines.push(`<span>Упр.: ${esc(c.managers.slice(0, 2).join(", "))}</span>`);
+  if ((c.group || []).length > 1) lines.push(`<span class="src" title="${esc(c.group.join(", "))}">Група: ${c.group.length} фирми с общ телефон/имейл${c.group_objects > 1 ? ` · ${c.group_objects} обекта` : ""}</span>`);
+  else if (c.group_objects > 1) lines.push(`<span class="src">${c.group_objects} обекта в списъка</span>`);
   if (c.evidence) lines.push(`<a class="src" href="${esc(c.evidence.url)}" target="_blank" rel="noopener">откъде: ${esc(c.evidence.title.slice(0, 60))}</a>`);
   const src = Object.entries(c.links || {}).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(k)}</a>`);
   if (src.length) lines.push(`<span class="src">${src.join(" · ")}</span>`);
@@ -283,7 +292,7 @@ function render() {
     <td><span class="score ${scoreCls(p.score)}">${p.score}</span>${p.stage ? `<span class="stage ${p.facade_window ? "on" : ""}">${esc(p.stage)}${p.act16 ? ` · ${esc(fmtDate(p.act16.date))}` : ""}</span>` : ""}${(p.stage_hints || []).map(h => `<a class="stage on" href="${esc(h.url)}" target="_blank" rel="noopener">„${esc(h.text)}“</a>`).join("")}</td>
     <td class="obj">${p.visual ? `<a class="visual" href="${esc(p.visual.page)}" target="_blank" rel="noopener"><img src="${p.visual.thumb}" alt="Визуализация: ${esc(p.visual.title)}" loading="lazy"><span>Източник: ${esc(p.visual.page.replace(/^https?:\/\/(www\.)?/, "").split("/")[0])}</span></a>` : ""}<p>${esc(p.object)}</p>
       <div class="links" style="margin-top:4px"><span class="chip">${esc(p.kind)}</span>${p.building_type ? `<span class="chip plain">${esc(p.building_type)}</span>` : ""}
-      <a href="${esc(p.url)}" target="_blank" rel="noopener">№ ${esc(p.number)}</a>${p.pdf_url ? `<a href="${esc(p.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}<a href="${esc(p.map_url)}" target="_blank" rel="noopener">карта</a></div></td>
+      <a href="${esc(p.url)}" target="_blank" rel="noopener">№ ${esc(p.number)}</a>${p.pdf_url ? `<a href="${esc(p.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}<a href="${esc(p.map_url)}" target="_blank" rel="noopener">карта</a></div>${(p.other_permits || []).length ? `<div class="small" style="margin-top:4px">Още ${p.other_permits.length} ${p.other_permits.length === 1 ? "разрешение" : "разрешения"} за същия имот: ${p.other_permits.slice(0, 4).map(o => `<a href="${esc(o.url)}" target="_blank" rel="noopener" title="${esc(o.object)}">№ ${esc(o.number)}</a>`).join(", ")}</div>` : ""}</td>
     <td class="num">${p.category ? "кат. " + p.category : "–"}<br>${fmtNum(p.rzp_with_basement || p.rzp)}</td>
     <td>${esc(p.region)}<div class="small">${esc(p.address || p.locality)}</div></td>
     <td>${contact(p)}</td>

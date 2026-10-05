@@ -23,7 +23,9 @@ from leads.stage import facade_window, mark_act16, stage
 from leads.ksb import normalize_name
 from leads.visuals import _loose
 from leads.web import _clean_phone, domain_of
+from leads.dedupe import dedupe_architects, dedupe_permits, group_investors, normalize_phone
 from leads.export import write_architects, write_leads
+from leads.visuals import filter_visuals
 from leads.report import write_html
 
 ROOT = Path(__file__).parent
@@ -55,8 +57,7 @@ def builders_for_report(out: Path) -> list[dict]:
     rows = []
     for b in json.loads(path.read_text(encoding="utf-8")):
         blocks = [b.get("office") or {}, b.get("seat") or {}]
-        phones = list(dict.fromkeys(filter(None, (_clean_phone(x.get("phone", "")) or x.get("phone", "").strip()
-                                                   for x in blocks))))
+        phones = list(dict.fromkeys(filter(None, (normalize_phone(x.get("phone", "")) for x in blocks))))
         emails = list(dict.fromkeys(x.get("email", "").strip().lower() for x in blocks if "@" in x.get("email", "")))
         rows.append({
             "name": b.get("name", ""), "eik": b.get("eik", ""), "ksb_url": b.get("ksb_url", ""),
@@ -89,6 +90,7 @@ def architects_for_report(out: Path) -> list[dict]:
             "emails": [e for e in a.get("emails", []) if not e.endswith("@kab.bg")],
         })
     merge_maps(rows, out)
+    rows = dedupe_architects(rows)
     rows.sort(key=lambda r: (not (r["phones"] or r["emails"]), r["name"].lower().strip('"„ ')))
     return rows
 
@@ -134,13 +136,39 @@ def merge_maps(rows: list[dict], out: Path) -> None:
         r["category"] = cat
 
 
+def finalize(permits: list[dict]) -> list[dict]:
+    """Отчетът и Excel: без повторения на обекти, фирми и телефони; групи инвеститори."""
+    final = dedupe_permits(permits)
+    # Едно изписване на фирма навсякъде (по ЕИК): „Прайм Контрол“ = „ПРАЙМ КОНТРОЛ“
+    eik_name = {}
+    for p in final:
+        for c in p.get("contacts", []):
+            if c.get("eik"):
+                eik_name.setdefault(c["eik"], c["name"])
+    for p in final:
+        for c in p.get("contacts", []):
+            if c.get("eik"):
+                c["name"] = eik_name[c["eik"]]
+    group_investors(final)
+    filter_visuals(final)
+    for p in final:
+        inv = [c for c in p.get("contacts", []) if c.get("role", "").startswith("Инвеститор")]
+        p["investor_phone"] = ", ".join(dict.fromkeys(x for c in inv for x in c["phones"][:2]))
+        p["investor_email"] = ", ".join(dict.fromkeys(x for c in inv for x in c["emails"][:2]))
+        p["investor_website"] = next((c["website"] for c in inv if c.get("website")), "")
+        p["investor_eik"] = ", ".join(dict.fromkeys(c["eik"] for c in inv if c.get("eik")))
+    final.sort(key=lambda p: p.get("in_force") or "", reverse=True)
+    final.sort(key=lambda p: p.get("score", 0), reverse=True)
+    return final
+
+
 def log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--days", type=int, default=540, help="колко дни назад (по дата на влизане в сила)")
+    ap.add_argument("--days", type=int, default=730, help="колко дни назад (по дата на влизане в сила)")
     ap.add_argument("--limit", type=int, default=None, help="макс. брой разрешения (за тест)")
     ap.add_argument("--no-details", action="store_true", help="без детайлите (РЗП, категория, надзор)")
     ap.add_argument("--no-contacts", action="store_true", help="без търсене на контакти")
@@ -174,9 +202,11 @@ def main() -> None:
         if dates:  # началото на данните, а не на --days
             since = date.fromisoformat(min(dates))
         architects = architects_for_report(out)
-        write_html(out / "report.html", permits, load("visas.json"), load("oesut.json"),
+        final = finalize(permits)
+        log(f"Без повторения: {len(permits)} -> {len(final)} обекта")
+        write_html(out / "report.html", final, load("visas.json"), load("oesut.json"),
                    since, builders_for_report(out), architects)
-        log(f"Excel: {write_leads(out / 'phomi_obekti.csv', permits)} обекта за фасада, "
+        log(f"Excel: {write_leads(out / 'phomi_obekti.csv', final)} обекта за фасада, "
             f"{write_architects(out / 'arhitekti.csv', architects)} архитектурни бюра")
         log(f"Готово: {out / 'report.html'}")
         return
@@ -248,8 +278,9 @@ def main() -> None:
             w.writerow({**v, "files": " ".join(v["files"])})
 
     architects = architects_for_report(out)
-    write_html(out / "report.html", permits, visas, protocols, since, builders_for_report(out), architects)
-    log(f"Excel: {write_leads(out / 'phomi_obekti.csv', permits)} обекта за фасада, "
+    final = finalize(permits)
+    write_html(out / "report.html", final, visas, protocols, since, builders_for_report(out), architects)
+    log(f"Excel: {write_leads(out / 'phomi_obekti.csv', final)} обекта за фасада, "
         f"{write_architects(out / 'arhitekti.csv', architects)} архитектурни бюра")
     log(f"Готово: {out}")
 

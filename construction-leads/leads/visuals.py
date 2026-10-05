@@ -156,3 +156,49 @@ def add_visuals(permits: list[dict], results_by_query: dict[str, list], queries_
                 break
     log(f"  визуализации: {found}")
     return found
+
+
+# --------------------------------------------------------------------------
+# Последна проверка: по-добре без снимка, отколкото грешна снимка
+# --------------------------------------------------------------------------
+
+TYPE_WORDS = {
+    "Жилищна – многофамилна": r"жилищ|residen|резиденс|апартамент|комплекс|homes?\b|living|сграда",
+    "Смесено предназначение": r"жилищ|residen|резиденс|апартамент|комплекс|офис|office|mixed|сграда",
+    "Жилищна – еднофамилна": r"къщ|house|villa|вил|резиденс|residen",
+    "Офис / административна": r"офис|office|business|бизнес",
+    "Логистика / промишленост": r"склад|логист|industr|warehouse|производ",
+    "Търговска": r"търгов|retail|mall|мол\b|магазин|shop",
+    "Хотел": r"хотел|hotel",
+}
+
+
+def visual_ok(p: dict) -> bool:
+    """Снимката е от страница за конкретен проект и типът на сградата съвпада."""
+    from urllib.parse import unquote, urlparse
+    v = p.get("visual")
+    if not v:
+        return False
+    path = unquote(urlparse(v.get("page", "")).path).strip("/").lower()
+    if path in ("", "bg", "en", "ru", "index.php", "index.html", "home", "начало"):
+        return False  # началната страница на фирмата – обща снимка, не на този обект
+    need = TYPE_WORDS.get(p.get("building_type", ""))
+    if not need:
+        return False
+    text = " ".join([v.get("title", ""), path]).lower()
+    return bool(re.search(need, text))
+
+
+def filter_visuals(permits: list[dict]) -> int:
+    """Маха несигурните снимки и тези, които се повтарят за различни обекти."""
+    from collections import Counter
+    for p in permits:
+        if p.get("visual") and not visual_ok(p):
+            p.pop("visual")
+    used = Counter(p["visual"]["page"] for p in permits if p.get("visual"))
+    used_img = Counter(p["visual"]["image"] for p in permits if p.get("visual"))
+    for p in permits:
+        v = p.get("visual")
+        if v and (used[v["page"]] > 1 or used_img[v["image"]] > 1):
+            p.pop("visual")  # една и съща снимка за няколко обекта – значи е обща
+    return sum(1 for p in permits if p.get("visual"))

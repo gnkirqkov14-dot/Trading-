@@ -20,7 +20,8 @@ def write_leads(path: Path, permits: list[dict]) -> int:
             "Инвеститор", "ЕИК", "Управител", "Телефон инвеститор", "Имейл инвеститор", "Сайт инвеститор",
             "Строителен надзор", "Телефон надзор", "Имейл надзор",
             "Архитект", "Телефон архитект", "Имейл архитект",
-            "Разрешение", "Линк към разрешението"]
+            "Група инвеститори (общ телефон/имейл)", "Обекти на инвеститора в списъка",
+            "Разрешение", "Още разрешения за същия имот", "Линк към разрешението"]
     rows = [p for p in permits if p.get("facade_window")]
     rows.sort(key=lambda p: (-p.get("score", 0), p.get("in_force") or ""))
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
@@ -42,7 +43,9 @@ def write_leads(path: Path, permits: list[dict]) -> int:
                 _join(sum((c.get("emails", []) for c in sup), [])),
                 _join([c.get("name") for c in arch], 2), _join(sum((c.get("phones", []) for c in arch), [])),
                 _join(sum((c.get("emails", []) for c in arch), [])),
-                p.get("number", ""), p.get("url", ""),
+                _join(sorted({n for c in inv for n in (c.get("group") or [])}), 6),
+                max([c.get("group_objects") or 1 for c in inv] or [""]),
+                p.get("number", ""), _join([o["number"] for o in p.get("other_permits", [])], 6), p.get("url", ""),
             ])
     return len(rows)
 
