@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SearchForm } from "@/components/search-form";
+import { SectionSwitch } from "@/components/section-switch";
 import { TenderCard } from "@/components/tender-card";
 import { filtersFromParams } from "@/lib/filters";
 import { numParam } from "@/lib/format";
@@ -39,8 +40,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     min: filters.minValue !== undefined ? String(filters.minValue) : undefined,
   });
 
+  // Известията пазят само думи, бранш, област и бюджет от — казваме го.
+  const alertsPartial = Boolean(
+    filters.kind || filters.buyer || filters.buyerType || filters.euOnly || filters.smallOnly || filters.minDays ||
+      filters.newDays || filters.maxValue !== undefined,
+  );
+
   return (
     <div className="space-y-6">
+      <SectionSwitch current="tenders" />
+
       <section className="space-y-2">
         <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
           Обществените поръчки в България, всяка сутрин
@@ -78,7 +87,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           {lastDate ? ` · данни до ${lastDate.split("-").reverse().join(".")}` : ""}
         </p>
         <Link href={`/alerts${alertParams}`} className="font-medium text-brand-600 hover:underline">
-          Получавайте тези поръчки по имейл →
+          {alertsPartial
+            ? "Известия по имейл (по думи, бранш, област и бюджет) →"
+            : "Получавайте тези поръчки по имейл →"}
         </Link>
       </div>
 
