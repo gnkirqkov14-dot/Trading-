@@ -88,6 +88,28 @@ export default async function ApplyGrantPage({ params }: { params: Promise<{ gui
         </p>
       ) : null}
 
+      {!guide && open && !expired ? (
+        <section aria-labelledby="kakvo" className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 id="kakvo" className="text-xl font-bold text-slate-900">
+            Какво ще получите
+          </h2>
+          <ul className="list-disc space-y-1 pl-6 text-slate-800">
+            <li>Условията на процедурата на прост език — всяко с точния текст от официалните документи под него.</li>
+            <li>Кой може да кандидатства, колко пари дават, за какви дейности и разходи.</li>
+            <li>Как се оценява проектът и как да вземете повече точки.</li>
+            <li>Формулярът в ИСУН раздел по раздел, документите и как се подписва и подава.</li>
+            <li>Дали процедурата е за вашата фирма — ако сте я описали в съветника.</li>
+            <li>Всичко това и като Word файл.</li>
+          </ul>
+          <p className="text-sm text-slate-600">
+            Четем официалните документи на процедурата от ИСУН: условията за кандидатстване, указанията за
+            формуляра и критериите за оценка. Брои се като едно питане от дневния лимит.
+          </p>
+          <GrantButton guid={guid} mode="guide" enabled={advisorEnabled} label="Направи помощта за тази процедура" />
+          {!advisorEnabled ? <p className="text-sm text-slate-600">Помощникът се включва скоро.</p> : null}
+        </section>
+      ) : null}
+
       {guide ? (
         <nav aria-label="Съдържание" className="rounded-2xl border border-slate-200 bg-white p-4">
           <h2 className="text-base font-semibold text-slate-900">Съдържание</h2>
@@ -156,26 +178,6 @@ export default async function ApplyGrantPage({ params }: { params: Promise<{ gui
             </section>
           ) : null}
         </>
-      ) : open && !expired ? (
-        <section aria-labelledby="kakvo" className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-          <h2 id="kakvo" className="text-xl font-bold text-slate-900">
-            Какво ще получите
-          </h2>
-          <ul className="list-disc space-y-1 pl-6 text-slate-800">
-            <li>Условията на процедурата на прост език — всяко с точния текст от официалните документи под него.</li>
-            <li>Кой може да кандидатства, колко пари дават, за какви дейности и разходи.</li>
-            <li>Как се оценява проектът и как да вземете повече точки.</li>
-            <li>Формулярът в ИСУН раздел по раздел, документите и как се подписва и подава.</li>
-            <li>Дали процедурата е за вашата фирма — ако сте я описали в съветника.</li>
-            <li>Всичко това и като Word файл.</li>
-          </ul>
-          <p className="text-sm text-slate-600">
-            Четем официалните документи на процедурата от ИСУН: условията за кандидатстване, указанията за
-            формуляра и критериите за оценка. Брои се като едно питане от дневния лимит.
-          </p>
-          <GrantButton guid={guid} mode="guide" enabled={advisorEnabled} label="Направи помощта за тази процедура" />
-          {!advisorEnabled ? <p className="text-sm text-slate-600">Помощникът се включва скоро.</p> : null}
-        </section>
       ) : null}
 
       {grant.url ? (

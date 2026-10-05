@@ -30,12 +30,16 @@ export function CompanyForm({
   return (
     <section aria-labelledby="danni" className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
       <h2 id="danni" tabIndex={-1} className="scroll-mt-4 text-xl font-bold text-slate-900">
-        Данни на фирмата за документите
+        Данни на фирмата за документите (по желание)
       </h2>
       {hasProfile ? (
-        <details open={!hasCompany} className="space-y-3">
+        // Сгънато: помощта работи и без тях, а дългият формуляр не бива да
+        // стои между екранния четец и бутона за помощта.
+        <details className="space-y-3">
           <summary className="cursor-pointer font-medium text-brand-700">
-            {hasCompany ? `Въведени: ${company.name || company.eik}. Промяна на данните` : "Попълнете данните на фирмата"}
+            {hasCompany
+              ? `Въведени: ${company.name || company.eik}. Промяна на данните`
+              : `Попълнете данните на фирмата — за готов текст в ${purpose}`}
           </summary>
           <p className="mt-2 text-sm text-slate-600">
             С тях ще ви покажем готов текст за преписване в {purpose}. Пазят се в профила ви и не се
