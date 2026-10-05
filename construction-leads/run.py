@@ -23,6 +23,7 @@ from leads.stage import facade_window, mark_act16, stage
 from leads.ksb import normalize_name
 from leads.visuals import _loose
 from leads.web import _clean_phone, domain_of
+from leads.export import write_architects, write_leads
 from leads.report import write_html
 
 ROOT = Path(__file__).parent
@@ -162,11 +163,21 @@ def main() -> None:
     if args.report_only:
         load = lambda n: json.loads((out / n).read_text(encoding="utf-8"))
         permits = load("permits.json")
+        for p in permits:  # най-новите правила за вид, оценка и етап
+            p["kind"], p["building_type"] = classify(p["object"])
+            p["score"] = score(p)
+            p["stage"], p["stage_code"] = stage(p)
+            p["facade_window"] = facade_window(p)
+        permits.sort(key=lambda p: p.get("in_force") or "", reverse=True)
+        permits.sort(key=lambda p: p["score"], reverse=True)
         dates = [p["in_force"] for p in permits if p.get("in_force")]
         if dates:  # началото на данните, а не на --days
             since = date.fromisoformat(min(dates))
+        architects = architects_for_report(out)
         write_html(out / "report.html", permits, load("visas.json"), load("oesut.json"),
-                   since, builders_for_report(out), architects_for_report(out))
+                   since, builders_for_report(out), architects)
+        log(f"Excel: {write_leads(out / 'phomi_obekti.csv', permits)} обекта за фасада, "
+            f"{write_architects(out / 'arhitekti.csv', architects)} архитектурни бюра")
         log(f"Готово: {out / 'report.html'}")
         return
     http = Http()
@@ -236,8 +247,10 @@ def main() -> None:
         for v in visas:
             w.writerow({**v, "files": " ".join(v["files"])})
 
-    write_html(out / "report.html", permits, visas, protocols, since, builders_for_report(out),
-               architects_for_report(out))
+    architects = architects_for_report(out)
+    write_html(out / "report.html", permits, visas, protocols, since, builders_for_report(out), architects)
+    log(f"Excel: {write_leads(out / 'phomi_obekti.csv', permits)} обекта за фасада, "
+        f"{write_architects(out / 'arhitekti.csv', architects)} архитектурни бюра")
     log(f"Готово: {out}")
 
 
