@@ -77,6 +77,28 @@ export default async function ApplyTenderPage({ params }: { params: Promise<{ id
         </p>
       ) : null}
 
+      {!cached && !expired ? (
+        <section aria-labelledby="kakvo" className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 id="kakvo" className="text-xl font-bold text-slate-900">
+            Какво ще получите
+          </h2>
+          <ul className="list-disc space-y-1 pl-6 text-slate-800">
+            <li>Най-отгоре: изискванията накратко — за да решите бързо дали можете да участвате.</li>
+            <li>Изискванията от официалното обявление на прост език — всяко с точния текст от обявлението под него.</li>
+            <li>ЕЕДОП част по част: какво пишете във всяко поле, с вашите данни, където ги имаме.</li>
+            <li>Дали фирмата ви покрива критериите за подбор, според отговорите ви в съветника.</li>
+            <li>Какво съдържа офертата, гаранциите и как се подава в ЦАИС ЕОП.</li>
+            <li>Всичко това и като Word файл, удобен за екранен четец.</li>
+          </ul>
+          <p className="text-sm text-slate-600">
+            Четем само официалното обявление от ЦАИС ЕОП. Документацията (образци и спецификации) иска вход в системата
+            и трябва да я прочетете сами. Брои се като едно питане от дневния лимит.
+          </p>
+          <GuideButton tenderId={id} enabled={advisorEnabled} label="Направи помощта за тази поръчка" />
+          {!advisorEnabled ? <p className="text-sm text-slate-600">Помощникът се включва скоро.</p> : null}
+        </section>
+      ) : null}
+
       {cached ? (
         <nav aria-label="Съдържание" className="rounded-2xl border border-slate-200 bg-white p-4">
           <h2 className="text-base font-semibold text-slate-900">Съдържание</h2>
@@ -134,26 +156,7 @@ export default async function ApplyTenderPage({ params }: { params: Promise<{ id
             </section>
           ) : null}
         </>
-      ) : expired ? null : (
-        <section aria-labelledby="kakvo" className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-          <h2 id="kakvo" className="text-xl font-bold text-slate-900">
-            Какво ще получите
-          </h2>
-          <ul className="list-disc space-y-1 pl-6 text-slate-800">
-            <li>Изискванията от официалното обявление на прост език — всяко с точния текст от обявлението под него.</li>
-            <li>ЕЕДОП част по част: какво пишете във всяко поле, с вашите данни, където ги имаме.</li>
-            <li>Дали фирмата ви покрива критериите за подбор, според отговорите ви в съветника.</li>
-            <li>Какво съдържа офертата, гаранциите и как се подава в ЦАИС ЕОП.</li>
-            <li>Всичко това и като Word файл, удобен за екранен четец.</li>
-          </ul>
-          <p className="text-sm text-slate-600">
-            Четем само официалното обявление от ЦАИС ЕОП. Документацията (образци и спецификации) иска вход в системата
-            и трябва да я прочетете сами. Брои се като едно питане от дневния лимит.
-          </p>
-          <GuideButton tenderId={id} enabled={advisorEnabled} label="Направи помощта за тази поръчка" />
-          {!advisorEnabled ? <p className="text-sm text-slate-600">Помощникът се включва скоро.</p> : null}
-        </section>
-      )}
+      ) : null}
 
       <p className="text-sm text-slate-500">
         Официалната страница на поръчката:{" "}
