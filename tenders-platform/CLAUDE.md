@@ -62,7 +62,8 @@ storage.eop.bg/open-data-ГГГГ-ММ-ДД/   (около 06:00 UTC, за пр�
 | Официалното обявление от ЦАИС ЕОП | `src/lib/eop/notice.ts` |
 | Търсене с филтри (вид, възложител, срок…) | `src/lib/filters.ts`, `tenders_search_ext` (0006) |
 | Списък с програми и филтри (`/grants`) | `src/app/grants/page.tsx` |
-| Схема на базата | `supabase/migrations/0001`–`0006` |
+| Разход на всяка заявка към AI (токени, $) | `src/lib/ai.ts` → `tenders.ai_usage` (0007) |
+| Схема на базата | `supabase/migrations/0001`–`0007` |
 
 ## Решения и капани
 
@@ -135,6 +136,17 @@ storage.eop.bg/open-data-ГГГГ-ММ-ДД/   (около 06:00 UTC, за пр�
 (`KindPrefix`, sr-only), а видимият надпис е `aria-hidden` — така при
 навигация по заглавия (VO+Cmd+H) веднага се знае какво е. В съветника
 има и връзки „Към обществените поръчки“ / „Към европейските програми“.
+
+## Разход на AI (`tenders.ai_usage`, 0007)
+
+Собственикът иска абонамент и пита колко струва всяка услуга. Всяка
+заявка (`askStructured` иска `label`) записва модел, токени, цена в $ и
+време — без лични данни. Цените са в `PRICES` (ai.ts; Opus 5.5: 4 $ вход,
+20 $ изход за милион токена, мисленето се брои в изхода). Отказ и
+недовършен отговор също се плащат — записват се с `ok = false`.
+Етикети: `advisor.survey|profile|rank_tenders|rank_grants`,
+`apply.tender|grant_a|grant_b|grant_fit`, `cron.grant_call|grant_plan`.
+Справка: `select label, count(*), avg(cost_usd) from tenders.ai_usage group by 1`.
 
 ## Грантове (`lib/grants`, cron `/api/cron/grants`)
 

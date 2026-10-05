@@ -5,6 +5,7 @@ import type { SavedProfile } from "@/lib/advisor/types";
 import type { CompanyData, TenderGuide } from "@/lib/apply/types";
 import type {
   AdvisorQuota,
+  AiUsageRow,
   AlertSubscription,
   MatchedTender,
   MatchProfile,
@@ -322,6 +323,10 @@ export class SupabaseStore implements Store {
       p_hash: sourceHash,
       p_guide: guide,
     });
+  }
+
+  async logAiUsage(row: AiUsageRow) {
+    await this.rpc("tenders_ai_usage_log", { p_secret: this.requireSecret(), p_row: row });
   }
 }
 

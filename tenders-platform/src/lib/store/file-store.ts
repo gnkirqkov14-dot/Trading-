@@ -7,6 +7,7 @@ import type { CompanyData, TenderGuide } from "@/lib/apply/types";
 import { EMPTY_RESULTS } from "@/lib/advisor/types";
 import type {
   AdvisorQuota,
+  AiUsageRow,
   AlertSubscription,
   MatchedTender,
   MatchProfile,
@@ -40,6 +41,7 @@ type Db = {
   grantSources?: Record<string, { pdf_url: string | null }>;
   profiles?: Record<string, SavedProfile>;
   guides?: Record<string, { source_hash: string; guide: unknown; updated_at: string }>;
+  aiUsage?: (AiUsageRow & { at: string })[];
 };
 
 export class FileStore implements Store {
@@ -402,6 +404,12 @@ export class FileStore implements Store {
   async saveGuide(key: string, sourceHash: string, guide: unknown) {
     const db = await this.load();
     (db.guides ??= {})[key] = { source_hash: sourceHash, guide, updated_at: new Date().toISOString() };
+    await this.save(db);
+  }
+
+  async logAiUsage(row: AiUsageRow) {
+    const db = await this.load();
+    (db.aiUsage ??= []).push({ ...row, at: new Date().toISOString() });
     await this.save(db);
   }
 }

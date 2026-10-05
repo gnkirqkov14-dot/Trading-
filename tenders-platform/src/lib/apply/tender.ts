@@ -154,7 +154,7 @@ export async function buildTenderGuide(input: GuideInput): Promise<TenderGuide> 
     .filter(Boolean)
     .join("\n\n");
 
-  const out = await askStructured({ schema: GuideSchema, system: SYSTEM, content, effort: "medium", maxTokens: 32000 });
+  const out = await askStructured({ label: "apply.tender", schema: GuideSchema, system: SYSTEM, content, effort: "medium", maxTokens: 32000 });
 
   const check = makeQuoteChecker(notice.text);
   const numbers = makeNumberChecker(notice.text);
