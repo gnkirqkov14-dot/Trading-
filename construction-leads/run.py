@@ -9,6 +9,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -58,6 +59,29 @@ def builders_for_report(out: Path) -> list[dict]:
     return rows
 
 
+def architects_for_report(out: Path) -> list[dict]:
+    """Справочникът от architects.py (КАБ), почистен за отчета."""
+    path = out / "architects.json"
+    if not path.exists():
+        return []
+    rows = []
+    for a in json.loads(path.read_text(encoding="utf-8")):
+        address, website = a.get("address", ""), a.get("website", "")
+        m = re.search(r"\s*(?:България\s*)?Уебсайт\s*(\S+)", address)
+        if m:
+            website = website or m.group(1)
+            address = address[:m.start()]
+        rows.append({
+            **{k: a.get(k) for k in ("name", "college", "reg_no", "kab_url", "owners", "staff", "contact_person")},
+            "address": address.strip(" ,"),
+            "website": website,
+            "phones": a.get("phones", []),
+            "emails": [e for e in a.get("emails", []) if not e.endswith("@kab.bg")],
+        })
+    rows.sort(key=lambda r: (not (r["phones"] or r["emails"]), r["name"].lower().strip('"„ ')))
+    return rows
+
+
 def log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
@@ -79,7 +103,7 @@ def main() -> None:
     if args.report_only:
         load = lambda n: json.loads((out / n).read_text(encoding="utf-8"))
         write_html(out / "report.html", load("permits.json"), load("visas.json"), load("oesut.json"),
-                   since, builders_for_report(out))
+                   since, builders_for_report(out), architects_for_report(out))
         log(f"Готово: {out / 'report.html'}")
         return
     http = Http()
@@ -139,7 +163,8 @@ def main() -> None:
         for v in visas:
             w.writerow({**v, "files": " ".join(v["files"])})
 
-    write_html(out / "report.html", permits, visas, protocols, since, builders_for_report(out))
+    write_html(out / "report.html", permits, visas, protocols, since, builders_for_report(out),
+               architects_for_report(out))
     log(f"Готово: {out}")
 
 

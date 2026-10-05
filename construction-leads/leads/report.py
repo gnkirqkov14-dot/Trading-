@@ -89,6 +89,7 @@ a { color: var(--accent); }
   <nav class="tabs" role="tablist">
     <button role="tab" id="tab-permits" aria-selected="true" data-tab="permits">Разрешения за строеж</button>
     <button role="tab" id="tab-builders" aria-selected="false" data-tab="builders">Строители и подизпълнители</button>
+    <button role="tab" id="tab-arch" aria-selected="false" data-tab="arch">Архитектурни бюра</button>
     <button role="tab" id="tab-visas" aria-selected="false" data-tab="visas">Визи за проектиране</button>
     <button role="tab" id="tab-oesut" aria-selected="false" data-tab="oesut">Протоколи ОЕСУТ</button>
     <button role="tab" id="tab-about" aria-selected="false" data-tab="about">Как се събира</button>
@@ -124,6 +125,20 @@ a { color: var(--accent); }
     </table><div class="more" id="bmore" hidden></div></div>
   </section>
 
+  <section id="pane-arch" hidden>
+    <p class="sub">Проектантските бюра от регистъра на Камарата на архитектите (КАБ) в София, с архитектите в тях и контактите, които са публикували.</p>
+    <div class="filters">
+      <label>Търсене<input type="search" id="aq" placeholder="бюро, архитект, адрес…"></label>
+      <label>Колегия<select id="acol"><option value="">Всички</option></select></label>
+      <label>Контакт<select id="acontact"><option value="">Всички</option><option value="phone">С телефон</option><option value="email">С имейл</option></select></label>
+      <span class="count" id="acount"></span>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Бюро</th><th>Архитекти</th><th>Контакти</th><th>Адрес</th></tr></thead>
+      <tbody id="arows"></tbody>
+    </table><div class="more" id="amore" hidden></div></div>
+  </section>
+
   <section id="pane-visas" hidden>
     <p class="sub">Визата за проектиране е най-ранният етап: собственикът още няма проект и тепърва търси архитект. Името на заявителя е заличено, но имотът (УПИ, КККР) се вижда и може да се проследи.</p>
     <div class="tablebox"><table>
@@ -149,6 +164,7 @@ a { color: var(--accent); }
       <li><b>Контакти на инвеститори и надзор</b> – Търговски регистър (телефон, имейл, управители, адрес), регистърът на КСБ и сайтът на фирмата, намерен чрез Google.</li>
       <li><b>Вероятен архитект</b> – архитектурно студио, което се появява в Google заедно с името на инвеститора. Проверете връзката преди да се обадите.</li>
       <li><b>Строители и подизпълнители</b> – Централен професионален регистър на строителя (КСБ).</li>
+      <li><b>Архитектурни бюра</b> – регистър „Проектантски бюра“ на Камарата на архитектите (kab.bg).</li>
     </ul>
     <h2 style="margin-top:14px">Оценка 0–100</h2>
     <ul>
@@ -178,6 +194,7 @@ $("#stats").innerHTML = [
   [withContact.length, "с телефон/имейл на инвеститора"],
   [P.filter(p => (p.architects || []).length).length, "с вероятен архитект"],
   [DATA.builders.length.toLocaleString("bg-BG"), "строители и подизпълнители"],
+  [DATA.architects.length.toLocaleString("bg-BG"), "архитектурни бюра (КАБ)"],
   [DATA.visas.length, "визи за проектиране"],
   [DATA.oesut.length, "протокола ОЕСУТ"],
 ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join("");
@@ -258,6 +275,26 @@ function renderBuilders() {
 ["#bq","#bgroup","#bwork","#bcontact"].forEach(s => $(s).addEventListener("input", renderBuilders));
 renderBuilders();
 
+const A = DATA.architects;
+[...new Set(A.map(a => a.college))].sort().forEach(c => $("#acol").insertAdjacentHTML("beforeend", `<option>${esc(c)}</option>`));
+function renderArch() {
+  const q = $("#aq").value.trim().toLowerCase(), col = $("#acol").value, c = $("#acontact").value;
+  const rows = A.filter(a => (!col || a.college === col) && (!c || (c === "phone" ? a.phones.length : a.emails.length))
+    && (!q || [a.name, a.address, a.contact_person, ...(a.owners || []), ...(a.staff || [])].join(" ").toLowerCase().includes(q)));
+  $("#acount").textContent = `${rows.length} от ${A.length}`;
+  const shown = rows.slice(0, 300);
+  $("#arows").innerHTML = shown.map(a => `<tr>
+    <td><b>${esc(a.name)}</b><div class="small">Рег. № ${esc(a.reg_no)} · ${esc(a.college)} · <a href="${esc(a.kab_url)}" target="_blank" rel="noopener">профил в КАБ</a></div></td>
+    <td class="small">${[...(a.owners || []), ...(a.staff || []).slice(0, 4)].map(esc).join("<br>")}</td>
+    <td><div class="contact">${a.contact_person ? `<span>${esc(a.contact_person)}</span>` : ""}${a.phones.map(p => `<span class="sel">${esc(p)}</span>`).join("")}${a.emails.map(e => `<span class="sel">${esc(e)}</span>`).join("")}${a.website ? `<a href="${esc(href(a.website))}" target="_blank" rel="noopener">${esc(a.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : ""}${!a.phones.length && !a.emails.length ? `<span class="src">няма публикуван контакт</span>` : ""}</div></td>
+    <td class="small">${esc(a.address)}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="empty">Няма бюра с тези филтри.</td></tr>`;
+  $("#amore").hidden = rows.length <= shown.length;
+  $("#amore").textContent = `Показани са първите ${shown.length}. Стеснете търсенето, за да видите останалите.`;
+}
+["#aq","#acol","#acontact"].forEach(s => $(s).addEventListener("input", renderArch));
+renderArch();
+
 $("#visas").innerHTML = DATA.visas.map(v => `<tr><td class="num">${fmtDate(v.issued)}</td><td class="num">${esc(v.number)}</td>
   <td>${esc(v.region)}</td><td class="small">${esc(v.scope)}</td><td class="small">${esc(v.basis)}</td>
   <td>${(v.files||[]).map((f,i) => `<a href="${esc(f)}" target="_blank" rel="noopener">виза${v.files.length>1?" "+(i+1):""}</a>`).join(" ")}</td></tr>`).join("")
@@ -268,14 +305,14 @@ $("#oesut").innerHTML = DATA.oesut.map(o => `<tr><td class="num">${fmtDate(o.dat
 
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["permits","builders","visas","oesut","about"].forEach(t => $("#pane-" + t).hidden = t !== b.dataset.tab);
+  ["permits","builders","arch","visas","oesut","about"].forEach(t => $("#pane-" + t).hidden = t !== b.dataset.tab);
 }));
 </script>
 """
 
 
 def write_html(path: Path, permits: list, visas: list, protocols: list, since: date,
-               builders: list | None = None) -> None:
+               builders: list | None = None, architects: list | None = None) -> None:
     data = {
         "since": since.isoformat(),
         "generated": datetime.now().isoformat(timespec="minutes"),
@@ -283,6 +320,7 @@ def write_html(path: Path, permits: list, visas: list, protocols: list, since: d
         "visas": visas,
         "oesut": protocols,
         "builders": builders or [],
+        "architects": architects or [],
     }
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     path.write_text(TEMPLATE.replace("__DATA__", blob), encoding="utf-8")
