@@ -87,6 +87,13 @@ class KabIndex:
         n = normalize_name(name.replace("арх.", ""))
         if n in self.by_name:
             return self.by_name[n]
+        # Съкращения: „ИПА“ -> „IPA - Architecture and more“ (само при едно съвпадение)
+        if re.fullmatch(r"[A-ZА-Я]{2,5}", name.strip()):
+            from .visuals import _loose
+            ab = _loose(name)
+            hits = [b for bn, b in self.by_name.items() if _loose(bn).startswith(ab)]
+            if len(hits) == 1:
+                return hits[0]
         for bname, b in self.by_name.items():
             if len(n) >= 6 and (n in bname or bname in n):
                 return b
@@ -123,6 +130,7 @@ ACT_HINT = re.compile(
     r"(?i)(?:очакван\w*\s+|предвид\w*\s+|планиран\w*\s+|издаден\w*\s+|получен\w*\s+)?"
     r"акт\s*(?:обр(?:азец|\.)\s*)?(?:№\s*)?(14|15|16)\b[^.;\n]{0,70}")
 YEAR = re.compile(r"20(2[4-9]|3[0-2])")
+JUNK_HINT = re.compile(r"(?i)разрешения\s*\d|документи|без такса|филт|търсене|сортир")
 
 
 def stage_hints(text: str) -> list[str]:
@@ -131,8 +139,11 @@ def stage_hints(text: str) -> list[str]:
     for m in ACT_HINT.finditer(text or ""):
         frag = re.sub(r"\s+", " ", m.group(0)).strip(" ,:-–")
         before = (text[max(0, m.start() - 6):m.start()] or "").lower()
-        if re.search(r"(?:^|\s)(?:на|има|с)\s*$", before):  # „сградата е на Акт 14“
+        if re.search(r"(?:^|\s)(?:на|има)\s*$", before):  # „сградата е на Акт 14“
             frag = before.strip().split()[-1] + " " + frag
-        if YEAR.search(frag) or re.search(r"(?i)издаден|получен|въведен|^(на|има|с) акт", frag):
+        if JUNK_HINT.search(frag):
+            continue  # менюта и филтри на сайтове за имоти, статистики
+        several = len(re.findall(r"(?i)акт\s*1[456]", frag)) > 1
+        if YEAR.search(frag) or (not several and re.search(r"(?i)издаден|получен|въведен|^(на|има) акт", frag)):
             out.append(frag[:90])
     return list(dict.fromkeys(out))[:3]

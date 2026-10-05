@@ -54,6 +54,14 @@ def candidate_pages(p: dict, results: dict, queries: list[str]) -> list[dict]:
     return out[:MAX_PAGES]
 
 
+def safe_page_text(http: Http, url: str) -> str:
+    """Текстът на страницата или "" – и неуспехът се кешира, за да не се пробва всеки път."""
+    try:
+        return page_text(http, url)
+    except Exception:
+        return ""
+
+
 def resolve(name: str, kab: KabIndex, http: Http, results_by_name: dict) -> dict:
     """Име на архитект/бюро -> контакт (КАБ или сайт от Google)."""
     c = _new_contact(name)
@@ -93,6 +101,7 @@ def main(min_score: int = 50) -> None:
     targets = sorted((p for p in permits if p.get("kind") == "Ново строителство" and p.get("score", 0) >= min_score
                       and p.get("facade_window", True)), key=lambda p: -p.get("score", 0))
     http = Http()
+    page_http = Http(retries=1, timeout=15)  # чужди сайтове: без дълги повторни опити
 
     queries = {p["number"]: [address_query(p)] + (visual_queries(p) if p.get("investor_companies") else [])
                for p in targets}
@@ -103,9 +112,8 @@ def main(min_score: int = 50) -> None:
     for i, p in enumerate(targets, 1):
         names = []
         for r in candidate_pages(p, results, queries[p["number"]]):
-            try:
-                text = cached("pagetext", r["url"], lambda: page_text(http, r["url"]))
-            except Exception:
+            text = cached("pagetext", r["url"], lambda: safe_page_text(page_http, r["url"]))
+            if not text:
                 continue
             for n in mentions(text):
                 names.append((n, {"url": r["url"], "title": r.get("title", "")}))

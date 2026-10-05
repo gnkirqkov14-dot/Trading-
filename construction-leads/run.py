@@ -149,7 +149,11 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     if args.report_only:
         load = lambda n: json.loads((out / n).read_text(encoding="utf-8"))
-        write_html(out / "report.html", load("permits.json"), load("visas.json"), load("oesut.json"),
+        permits = load("permits.json")
+        dates = [p["in_force"] for p in permits if p.get("in_force")]
+        if dates:  # началото на данните, а не на --days
+            since = date.fromisoformat(min(dates))
+        write_html(out / "report.html", permits, load("visas.json"), load("oesut.json"),
                    since, builders_for_report(out), architects_for_report(out))
         log(f"Готово: {out / 'report.html'}")
         return

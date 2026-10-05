@@ -25,7 +25,8 @@ NO_IMAGE_DOMAINS = {
     "sofia.bg", "eufunds.bg", "fico.bg", "bgfirma.com", "firmi.bg", "kik-info.com",
     "opencorporates.com", "ksb.bg", "kab.bg", "aop.bg", "eop.bg", "lex.bg", "ciela.net",
     "egov.bg", "bcc.bg", "gestapo.bg", "topograph.co", "govalert.eu", "firma.bg", "firmlocator.com",
-    "company.guru", "uic.bg", "vat-search.eu", "justice.bg", "daibau.bg", "wherewework.bg", "rabota.bg", "jobs.bg", "zaplata.bg", "linkedin.com", "wikipedia.org",
+    "company.guru", "uic.bg", "vat-search.eu", "justice.bg", "daibau.bg", "wherewework.bg",
+    "akt16.bg", "stroitelite.eu", "rabota.bg", "jobs.bg", "zaplata.bg", "linkedin.com", "wikipedia.org",
 }
 # Сайтове за имоти и строителни новини, където има реални визуализации на проекти.
 PROJECT_SITES = {
@@ -45,6 +46,22 @@ def _loose(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", t)
 
 
+# Имена на квартали и места: „Изгрев Премиум“ не бива да съвпада с всяка обява в Изгрев
+PLACE_WORDS = {_w for _w in """
+софия sofia изгрев лозенец младост люлин витоша бояна драгалевци симеоново овча купел банкя
+надежда красна поляна красно село лагера манастирски ливади студентски дружба слатина подуяне
+оборище сердика средец триадица възраждане илинден връбница нови искър панчарево кремиковци
+гоце делчев хиподрума стрелбище яворов изток иван вазов белите брези борово гео милев редута
+хладилника бъкстон павлово княжево горна баня кръстова вада малинова долина полигона суха река
+център premium премиум residence резиденс park парк tower тауър garden гардън city сити
+""".split()}
+# Обяви за отделни имоти – не са визуализация на новата сграда
+SINGLE_UNIT = re.compile(r"(?i)\b(?:едностаен|двустаен|тристаен|четиристаен|многостаен|мезонет|"
+                         r"гарсониера|ателие|апартамент|стая|къща под наем|офис под наем)\b")
+PROJECT_WORDS = re.compile(r"(?i)ново строителство|комплекс|сграда|проект|residence|резиденс|"
+                           r"жилищна|building|complex|визуализац")
+
+
 def relevant(result: dict, company: str) -> bool:
     url = result.get("url") or ""
     host = web.domain_of(url)
@@ -53,7 +70,8 @@ def relevant(result: dict, company: str) -> bool:
     hay = _loose(" ".join([url, result.get("title", ""), result.get("description", "")]))
     toks = [_loose(t) for t in re.split(r"[\s\-./]+", normalize_name(company)) if len(t) >= 4]
     toks = [t for t in toks if len(t) >= 4 and t not in {"invest", "group", "grup", "bild", "build",
-                                                         "stroy", "stroi", "consult", "consult"}]
+                                                         "stroy", "stroi", "consult", "consult"}
+            and t not in {_loose(w) for w in PLACE_WORDS}]
     return bool(toks) and any(t in hay for t in toks)
 
 
@@ -69,7 +87,11 @@ def trusted_page(result: dict, company: str, extra_domains: set) -> bool:
         return False
     if web.matches_company(url, company) and not web.is_directory(url):
         return True
-    return (_site_in(host, PROJECT_SITES) or host in extra_domains) and relevant(result, company)
+    if not ((_site_in(host, PROJECT_SITES) or host in extra_domains) and relevant(result, company)):
+        return False
+    title = " ".join([result.get("title", ""), result.get("description", "")])
+    # Обява за един апартамент без дума за проект/сграда – това не е визуализация на обекта
+    return not (SINGLE_UNIT.search(title) and not PROJECT_WORDS.search(result.get("title", "")))
 
 
 def og_image(http: Http, page_url: str) -> dict | None:

@@ -52,6 +52,18 @@ def site_key(region: str, kvartal: str, upi: str) -> str:
     return f"{(region or '').strip().lower()}|{kv}|{upi_num}"
 
 
+def _words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[а-яa-z]{4,}", (text or "").lower())}
+
+
+def similar(a: str, b: str, threshold: float = 0.4) -> bool:
+    """Еднакъв обект: поне 40% общи думи (един парцел може да има няколко строежа)."""
+    wa, wb = _words(a), _words(b)
+    if not wa or not wb:
+        return False
+    return len(wa & wb) / min(len(wa), len(wb)) >= threshold
+
+
 def mark_act16(permits: list[dict], certificates: list[dict]) -> int:
     """Свързва удостоверенията с разрешенията по КККР или район+квартал+УПИ."""
     by_kkkr = {c["kkkr"]: c for c in certificates if c.get("kkkr")}
@@ -64,7 +76,8 @@ def mark_act16(permits: list[dict], certificates: list[dict]) -> int:
             key = site_key(p.get("region", ""), kv.group(1) if kv else "", p.get("upi", ""))
             if not key.endswith("|"):
                 cert = by_site.get(key)
-        if cert and (cert.get("date") or "") >= (p.get("in_force") or ""):
+        if cert and (cert.get("date") or "") >= (p.get("in_force") or "") \
+                and similar(p.get("object", ""), cert.get("object", "")):
             p["act16"] = {"number": cert["number"], "date": cert["date"]}
             hits += 1
     return hits
