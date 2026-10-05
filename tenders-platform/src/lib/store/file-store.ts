@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
+import type { BuyerType, SearchResult, Tender, TenderFilters } from "@/lib/eop/types";
 import type { GrantCall } from "@/lib/grants/types";
 import type { SavedProfile } from "@/lib/advisor/types";
 import type { CompanyData, TenderGuide } from "@/lib/apply/types";
@@ -22,6 +22,14 @@ import type {
  */
 
 type StoredTender = Tender & { updated_at: string };
+
+/** Същото групиране като в tenders_search_ext (0006). */
+const BUYER_TYPE_PREFIXES: Record<BuyerType, string[]> = {
+  municipal: ["Местен орган"],
+  state: ["Орган на централната власт", "Регионален орган"],
+  company: ["Публично предприятие"],
+  public: ["Публичноправна организация"],
+};
 
 type Db = {
   tenders: Record<string, StoredTender>;
@@ -75,6 +83,19 @@ export class FileStore implements Store {
       if (filters.minValue !== undefined && (t.value_eur ?? -1) < filters.minValue) return false;
       if (filters.maxValue !== undefined && (t.value_eur ?? Infinity) > filters.maxValue) return false;
       if (filters.updatedSince && t.updated_at <= filters.updatedSince) return false;
+      if (filters.kind && t.contract_type !== filters.kind) return false;
+      if (filters.buyer && !t.buyer_name.toLowerCase().includes(filters.buyer.toLowerCase())) return false;
+      if (filters.buyerType && !BUYER_TYPE_PREFIXES[filters.buyerType].some((p) => t.buyer_type?.startsWith(p))) return false;
+      if (filters.euOnly && !t.eu_funded) return false;
+      if (
+        filters.smallOnly &&
+        t.procedure_type !== "Събиране на оферти с обява" &&
+        !t.notice_type?.startsWith("Обява за събиране на оферти")
+      ) {
+        return false;
+      }
+      if (filters.minDays && (!t.deadline_at || Date.parse(t.deadline_at) < now + filters.minDays * 86_400_000)) return false;
+      if (filters.newDays && (!t.published_at || Date.parse(t.published_at) < now - filters.newDays * 86_400_000)) return false;
       return true;
     });
 

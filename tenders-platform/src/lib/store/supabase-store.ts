@@ -45,17 +45,27 @@ export class SupabaseStore implements Store {
   }
 
   async searchTenders(filters: TenderFilters): Promise<SearchResult> {
-    const result = await this.rpc<{ rows: Tender[]; total: number }>("tenders_search", {
-      p_q: filters.q ?? null,
-      p_region: filters.region ?? null,
-      p_category: filters.category ?? null,
-      p_min: filters.minValue ?? null,
-      p_max: filters.maxValue ?? null,
-      p_open_only: filters.openOnly !== false,
-      p_updated_since: filters.updatedSince ?? null,
-      p_sort: filters.sort ?? "deadline",
-      p_limit: filters.limit ?? 20,
-      p_offset: filters.offset ?? 0,
+    // tenders_search_ext (0006): същото като tenders_search плюс новите филтри.
+    const result = await this.rpc<{ rows: Tender[]; total: number }>("tenders_search_ext", {
+      p: {
+        q: filters.q ?? null,
+        region: filters.region ?? null,
+        category: filters.category ?? null,
+        min: filters.minValue ?? null,
+        max: filters.maxValue ?? null,
+        open_only: filters.openOnly !== false,
+        updated_since: filters.updatedSince ?? null,
+        sort: filters.sort ?? "deadline",
+        kind: filters.kind ?? null,
+        buyer: filters.buyer ?? null,
+        buyer_type: filters.buyerType ?? null,
+        eu_only: filters.euOnly ?? false,
+        small_only: filters.smallOnly ?? false,
+        min_days: filters.minDays ?? null,
+        new_days: filters.newDays ?? null,
+        limit: filters.limit ?? 20,
+        offset: filters.offset ?? 0,
+      },
     });
     return {
       rows: (result?.rows ?? []).map(numericFix),

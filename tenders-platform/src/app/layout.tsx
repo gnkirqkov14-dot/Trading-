@@ -33,6 +33,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/" className="hidden hover:text-brand-600 sm:inline">
                 Поръчки
               </Link>
+              <Link href="/grants" className="hidden hover:text-brand-600 sm:inline">
+                Програми
+              </Link>
               <Link href="/advisor" className="whitespace-nowrap hover:text-brand-600">
                 Съветник
               </Link>

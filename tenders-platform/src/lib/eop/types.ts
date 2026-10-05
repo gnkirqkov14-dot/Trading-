@@ -40,8 +40,32 @@ export type TenderFilters = {
   /** Само записи, вкарани или обновени след този момент (за известията). */
   updatedSince?: string;
   sort?: "deadline" | "newest" | "value";
+  /** Вид поръчка, както е в данните: Доставки / Услуги / Строителство. */
+  kind?: ContractKind;
+  /** Част от името на възложителя („община варна“). */
+  buyer?: string;
+  buyerType?: BuyerType;
+  euOnly?: boolean;
+  /** Само събиране на оферти с обява (по-малка стойност, чл. 20, ал. 3 ЗОП). */
+  smallOnly?: boolean;
+  /** Поне толкова дни до срока за оферти — време за подготовка. */
+  minDays?: number;
+  /** Публикувани през последните толкова дни. */
+  newDays?: number;
   limit?: number;
   offset?: number;
 };
+
+export const CONTRACT_KINDS = ["Доставки", "Услуги", "Строителство"] as const;
+export type ContractKind = (typeof CONTRACT_KINDS)[number];
+
+/** Групи възложители по `buyer_type` от данните (виж 0006_search_filters.sql). */
+export const BUYER_TYPES = {
+  municipal: "Общини",
+  state: "Министерства, агенции и други държавни органи",
+  company: "Държавни и общински дружества",
+  public: "Публичноправни организации (напр. училища, университети, болници)",
+} as const;
+export type BuyerType = keyof typeof BUYER_TYPES;
 
 export type SearchResult = { rows: Tender[]; total: number };

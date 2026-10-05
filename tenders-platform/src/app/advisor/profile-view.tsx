@@ -4,6 +4,7 @@ import { CPV_DIVISIONS, CPV_OPTIONS, divisionName } from "@/lib/eop/cpv";
 import { REGION_OPTIONS, regionName } from "@/lib/eop/regions";
 import type { Tender } from "@/lib/eop/types";
 import { deadlineLabel, formatDate, formatEur } from "@/lib/format";
+import { grantMoney, grantStatus } from "@/lib/grants/display";
 import type { GrantCall } from "@/lib/grants/types";
 import type { MatchedTender } from "@/lib/store/types";
 import { saveFilters } from "./actions";
@@ -17,8 +18,6 @@ const toneClass = {
   ok: "bg-emerald-100 text-emerald-800",
   muted: "bg-slate-100 text-slate-600",
 };
-
-const monthFmt = new Intl.DateTimeFormat("bg-BG", { timeZone: "Europe/Sofia", month: "long", year: "numeric" });
 
 function FitBadge({ fit }: { fit: "high" | "medium" }) {
   return (
@@ -97,28 +96,6 @@ function TenderCard({ tender: t, pick, isNew }: { tender: TenderLike; pick?: Ten
       </p>
     </article>
   );
-}
-
-function grantStatus(g: GrantCall) {
-  if (g.kind === "open") {
-    const d = deadlineLabel(g.deadline_at);
-    return { text: g.deadline_at ? `Отворена · ${d.text.toLowerCase()}` : "Отворена", tone: d.tone };
-  }
-  if (g.kind === "discussion") return { text: "Предстои скоро (на обсъждане)", tone: "ok" as const };
-  return {
-    text: g.opens_at ? `Предстои: ${monthFmt.format(new Date(g.opens_at))} (по план)` : "Предстои (по план)",
-    tone: "muted" as const,
-  };
-}
-
-function grantMoney(g: GrantCall) {
-  const parts: string[] = [];
-  if (g.grant_min_eur && g.grant_max_eur) parts.push(`${formatEur(g.grant_min_eur)} – ${formatEur(g.grant_max_eur)} на проект`);
-  else if (g.grant_max_eur) parts.push(`до ${formatEur(g.grant_max_eur)} на проект`);
-  else if (g.grant_min_eur) parts.push(`от ${formatEur(g.grant_min_eur)} на проект`);
-  if (g.max_aid_pct) parts.push(`до ${g.max_aid_pct}% безвъзмездно`);
-  if (g.budget_eur) parts.push(`общ бюджет ${formatEur(g.budget_eur)}`);
-  return parts.join(" · ");
 }
 
 function GrantCard({ grant: g, pick }: { grant: GrantCall; pick: GrantPick }) {
