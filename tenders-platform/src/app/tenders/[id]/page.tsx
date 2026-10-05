@@ -74,7 +74,7 @@ export default async function TenderPage({ params }: { params: Promise<{ id: str
 
       <header className="space-y-3">
         <p className="text-sm font-medium text-slate-500">
-          {deadline.text}
+          Обществена поръчка · {deadline.text}
           {tender.is_cancelled ? " · Прекратена" : ""}
         </p>
         <h1 className="text-2xl font-bold leading-tight text-slate-900">{tender.title}</h1>

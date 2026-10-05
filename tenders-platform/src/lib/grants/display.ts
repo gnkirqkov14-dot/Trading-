@@ -25,3 +25,12 @@ export function grantMoney(g: GrantCall) {
   if (g.budget_eur) parts.push(`общ бюджет ${formatEur(g.budget_eur)}`);
   return parts.join(" · ");
 }
+
+/**
+ * Какво е — казва се на всяка картичка и в заглавието (за екранен четец).
+ * Националните (ФНИ, „Стартъп виза“, министерства) идват от отделния
+ * списък на ИСУН; всичко останало е по европейски програми.
+ */
+export function grantKindLabel(g: Pick<GrantCall, "source">) {
+  return g.source === "isun_nims" ? "Национална програма" : "Европейска програма";
+}
