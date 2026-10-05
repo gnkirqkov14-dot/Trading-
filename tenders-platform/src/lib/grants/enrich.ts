@@ -129,12 +129,13 @@ export async function enrichCall(input: {
   const content: AiContent = input.pdf
     ? [pdfBlock(input.pdf), { type: "text", text: `${header}\n\nПрикачен е PDF-ът с обявата на процедурата.` }]
     : header;
-  const f = await askStructured({ schema: CallSchema, system: CALL_SYSTEM, content, effort: "low", maxTokens: 6000 });
+  const f = await askStructured({ label: "cron.grant_call", schema: CallSchema, system: CALL_SYSTEM, content, effort: "low", maxTokens: 6000 });
   return fieldsToRow(f);
 }
 
 export async function extractPlan(input: { programme: string; year: number; pdf: Buffer }) {
   const { calls } = await askStructured({
+    label: "cron.grant_plan",
     schema: PlanSchema,
     system: PLAN_SYSTEM,
     content: [

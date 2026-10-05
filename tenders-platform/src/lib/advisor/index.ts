@@ -193,6 +193,7 @@ export async function buildSurvey(description: string, regionHint?: string) {
   ].join("\n");
 
   const s = await askStructured({
+    label: "advisor.survey",
     schema: SurveySchema,
     system: SURVEY_SYSTEM,
     content: `${companyBlock(description, [])}\n\n${context}`,
@@ -308,6 +309,7 @@ export async function businessGrants(): Promise<GrantCall[]> {
 /** Описание + отговори → разбиране за фирмата и филтри за търсене. */
 async function profileCall(description: string, answers: AdvisorAnswer[], regionHint?: string) {
   const p = await askStructured({
+    label: "advisor.profile",
     schema: ProfileSchema,
     system: PROFILE_SYSTEM,
     content: `${companyBlock(description, answers)}${regionHint ? `\n\nИзбрана област: ${REGIONS[regionHint] ?? regionHint}.` : ""}`,
@@ -402,6 +404,7 @@ export async function runAdvisor(input: {
   const [tenderRank, grantRank] = await Promise.all([
     candidates.length
       ? askStructured({
+          label: "advisor.rank_tenders",
           schema: TenderRankSchema,
           system: TENDER_RANK_SYSTEM,
           content: `${profileText}\n\nОтворени поръчки (${candidates.length}):\n${candidates.map(tenderLine).join("\n")}`,
@@ -411,6 +414,7 @@ export async function runAdvisor(input: {
       : Promise.resolve(null),
     grantList.length
       ? askStructured({
+          label: "advisor.rank_grants",
           schema: GrantRankSchema,
           system: GRANT_RANK_SYSTEM,
           content: `${profileText}\n\nПроцедури (${grantList.length}):\n${grantList.map(grantLine).join("\n")}`,

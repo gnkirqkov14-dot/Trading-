@@ -119,4 +119,19 @@ export interface Store {
   /** Запазени разбори: `tender:…` (TenderGuide), `grant:…` (GrantGuide), `grantfit:…` (GrantFit), `run:`/`err:` (диагностика). */
   getGuide<T = TenderGuide>(key: string): Promise<{ source_hash: string; guide: T; updated_at: string } | null>;
   saveGuide(key: string, sourceHash: string, guide: unknown): Promise<void>;
+
+  /** Разходът на една заявка към AI (0007_ai_usage.sql). */
+  logAiUsage(row: AiUsageRow): Promise<void>;
 }
+
+export type AiUsageRow = {
+  label: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  cost_usd: number;
+  ms: number;
+  ok: boolean;
+};

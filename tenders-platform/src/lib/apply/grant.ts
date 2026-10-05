@@ -113,8 +113,8 @@ export async function buildGrantGuide(grant: GrantCall, src: GrantDocs): Promise
     .join("\n\n");
 
   const [a, bPart] = await Promise.all([
-    askStructured({ schema: PartA, system: SYSTEM_A, content, effort: "medium", maxTokens: 32000 }),
-    askStructured({ schema: PartB, system: SYSTEM_B, content, effort: "medium", maxTokens: 32000 }),
+    askStructured({ label: "apply.grant_a", schema: PartA, system: SYSTEM_A, content, effort: "medium", maxTokens: 32000 }),
+    askStructured({ label: "apply.grant_b", schema: PartB, system: SYSTEM_B, content, effort: "medium", maxTokens: 32000 }),
   ]);
   const out = { ...a, ...bPart };
 
@@ -239,7 +239,7 @@ export async function buildGrantFit(
   ]
     .filter(Boolean)
     .join("\n\n");
-  const out = await askStructured({ schema: FitSchema, system: FIT_SYSTEM, content, effort: "medium", maxTokens: 12000 });
+  const out = await askStructured({ label: "apply.grant_fit", schema: FitSchema, system: FIT_SYSTEM, content, effort: "medium", maxTokens: 12000 });
   return {
     createdAt: new Date().toISOString(),
     guideCreatedAt: guide.createdAt,
