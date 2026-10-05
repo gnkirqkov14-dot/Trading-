@@ -68,7 +68,7 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
            architects_min_score: int = 55, log=print,
            kab_by_domain: dict | None = None, web_filter=lambda p: True,
            only=lambda p: True) -> dict[str, dict]:
-    http_tr = Http(delay=2.0)  # Търговският регистър връща 429 при по-често
+    http_tr = Http(delay=6.0)  # Търговският регистър пропуска около 10 заявки в минута
     roles: dict[str, set] = {}
     for p in permits:
         if not only(p):
@@ -80,7 +80,12 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
 
     log(f"Контакти на {len(roles)} фирми (Търговски регистър + КСБ) ...")
     contacts: dict[str, dict] = {}
-    for i, name in enumerate(sorted(roles), 1):
+    # Първо фирмите от най-добрите обекти – при дълъг/прекъснат процес те са готови първи
+    best = {}
+    for p in permits:
+        for n in p.get("investor_companies", []) + companies_in(p.get("supervision", "")):
+            best[n] = max(best.get(n, 0), p.get("score", 0))
+    for i, name in enumerate(sorted(roles, key=lambda n: (-best.get(n, 0), n)), 1):
         contacts[name] = company_contact(name, http_tr, http, cache)
         contacts[name]["roles"] = sorted(roles[name])
         if i % 25 == 0:
@@ -115,6 +120,8 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
             try:
                 found = cache("site", web.domain_of(site), lambda: web.site_contacts(http, site))
             except Exception:
+                continue
+            if not found:
                 continue
             _merge(c, found["phones"], found["emails"], found["website"], "сайт на фирмата")
 
@@ -158,7 +165,8 @@ def add_architects(permits: list[dict], results: dict, contacts: dict, http: Htt
             try:
                 found = cache("site", hit["domain"], lambda: web.site_contacts(http, hit["url"]))
             except Exception:
-                found = {"website": "https://" + hit["domain"], "phones": [], "emails": []}
+                found = None
+            found = found or {"website": "https://" + hit["domain"], "phones": [], "emails": []}
             kab = hit.get("kab")
             a = _new_contact(kab["name"] if kab else hit["domain"])
             a["evidence"] = {"title": hit["title"], "url": hit["url"]}

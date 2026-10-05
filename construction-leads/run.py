@@ -9,6 +9,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import date, timedelta
@@ -28,11 +29,16 @@ ROOT = Path(__file__).parent
 CACHE = ROOT / "cache"
 
 
+OFFLINE = False  # --offline: само от кеша, без бавни заявки по фирми/страници
+
+
 def cached(name: str, key: str, fetch, overwrite: bool = False):
     """Кеш на диск, за да не теглим един и същ детайл/профил повторно."""
     folder = CACHE / name
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / (hashlib.sha1(key.encode()).hexdigest()[:16] + ".json")
+    if OFFLINE and not path.exists() and not overwrite:
+        return None
     if path.exists() and not overwrite:
         return json.loads(path.read_text(encoding="utf-8"))
     value = fetch()
@@ -141,8 +147,14 @@ def main() -> None:
     ap.add_argument("--out", default=str(ROOT / "output"))
     ap.add_argument("--web-min-score", type=int, default=55,
                     help="Google/сайтове само за обекти с поне тази оценка в момента за фасада")
+    ap.add_argument("--offline", action="store_true",
+                    help="междинен отчет само от кеша (контактите, свалени дотук)")
     ap.add_argument("--report-only", action="store_true", help="само нов report.html от записаните данни")
     args = ap.parse_args()
+    if args.offline:
+        global OFFLINE
+        OFFLINE = True
+        os.environ["APIFY_RESERVE_USD"] = "1000"  # без нови Google търсения
 
     since = date.today() - timedelta(days=args.days)
     out = Path(args.out)
@@ -167,7 +179,7 @@ def main() -> None:
         if not args.no_details and p.get("hash"):
             try:
                 p.update(cached("permit", p["hash"],
-                                lambda: nag_sofia.fetch_permit_detail(http, p["hash"])))
+                                lambda: nag_sofia.fetch_permit_detail(http, p["hash"])) or {})
             except Exception as exc:  # един счупен детайл не спира всичко
                 log(f"  детайл {p['number']}: {exc}")
             if i % 25 == 0:

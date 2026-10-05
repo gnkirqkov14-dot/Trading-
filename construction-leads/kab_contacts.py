@@ -49,7 +49,7 @@ def main() -> None:
     path = ROOT / "output" / "architects.json"
     bureaus = json.loads(path.read_text(encoding="utf-8"))
 
-    http_tr = Http(delay=2.0)
+    http_tr = Http(delay=6.0)
     todo = [b for b in bureaus if not has_contact(b) and LEGAL.search(b["name"])]
     log(f"Търговски регистър за {len(todo)} бюра ...")
     for i, b in enumerate(todo, 1):
@@ -84,6 +84,8 @@ def main() -> None:
                     try:
                         found = cached("site", web.domain_of(url), lambda: web.site_contacts(http, url))
                     except Exception:
+                        continue
+                    if not found:
                         continue
                     add(b, found["phones"], found["emails"], found["website"], "сайт на бюрото")
                     break

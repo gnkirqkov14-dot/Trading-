@@ -15,6 +15,8 @@ class Http:
         self.session = requests.Session()
         self.session.headers["User-Agent"] = USER_AGENT
         self.delay = delay
+        self.base_delay = delay
+        self._ok = 0
         self.retries = retries
         self.timeout = timeout
         self._last = 0.0
@@ -32,10 +34,16 @@ class Http:
                     # Твърде много заявки: забавяме темпото трайно (не само еднократно),
                     # за да не удряме лимита отново веднага след паузата.
                     self.delay = min(self.delay * 1.5, 15.0)
+                    self._ok = 0
                     time.sleep(int(resp.headers.get("Retry-After") or 0) or 20 * (attempt + 1))
                     continue
                 if resp.status_code < 500:
                     resp.raise_for_status()
+                    # След 20 поредни успеха постепенно връщаме нормалното темпо
+                    self._ok += 1
+                    if self._ok >= 20 and self.delay > self.base_delay:
+                        self.delay = max(self.base_delay, self.delay * 0.85)
+                        self._ok = 0
                     return resp
             except requests.ConnectionError:
                 if attempt == self.retries - 1:

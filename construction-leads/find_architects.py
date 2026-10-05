@@ -87,6 +87,8 @@ def resolve(name: str, kab: KabIndex, http: Http, results_by_name: dict) -> dict
                     found = cached("site", dom, lambda: web.site_contacts(http, url))
                 except Exception:
                     continue
+                if not found:
+                    continue
                 _merge(c, found["phones"], found["emails"], found["website"], "сайт на архитекта")
                 c["links"]["Сайт"] = found["website"]
                 break
