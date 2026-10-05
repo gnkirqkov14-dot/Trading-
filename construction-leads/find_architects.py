@@ -111,6 +111,7 @@ def main(min_score: int = 50) -> None:
     found_names: dict[str, list[tuple[str, dict]]] = {}
     for i, p in enumerate(targets, 1):
         names = []
+        p["stage_hints"] = []  # преизчисляваме, не трупаме стари
         for r in candidate_pages(p, results, queries[p["number"]]):
             text = cached("pagetext", r["url"], lambda: safe_page_text(page_http, r["url"]))
             if not text:
@@ -118,7 +119,6 @@ def main(min_score: int = 50) -> None:
             for n in mentions(text):
                 names.append((n, {"url": r["url"], "title": r.get("title", "")}))
             for h in stage_hints(text):
-                p.setdefault("stage_hints", [])
                 if h not in [x["text"] for x in p["stage_hints"]]:
                     p["stage_hints"].append({"text": h, "url": r["url"]})
             dom = web.domain_of(r["url"])
