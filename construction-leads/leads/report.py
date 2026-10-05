@@ -29,7 +29,8 @@ TEMPLATE = r"""<meta charset="utf-8">
   --mid: #d9b85a; --mid-soft: #352d16; --lo: #a3acb0; --lo-soft: #283033; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--body); margin: 0; }
-.wrap { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 20px; }
+.wrap { max-width: 1280px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.wrap > * { min-width: 0; }
 header { display: grid; gap: 6px; }
 .eyebrow { font: 600 12px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
 h1 { font: 700 clamp(26px, 4vw, 36px)/1.1 var(--display); margin: 0; text-wrap: balance; }
@@ -114,7 +115,7 @@ a { color: var(--accent); }
     <div class="tablebox"><table>
       <thead><tr><th>Оценка</th><th>Обект</th><th>Кат. / РЗП</th><th>Район / адрес</th><th>Контакти: инвеститор, надзор, архитект</th><th>Влязло в сила</th></tr></thead>
       <tbody id="rows"></tbody>
-    </table></div>
+    </table><div class="more" id="pmore" hidden></div></div>
   </section>
 
   <section id="pane-builders" hidden>
@@ -275,7 +276,10 @@ function render() {
     && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.architects || []).length : who === "visual" ? !!p.visual : (p.investor_phone || p.investor_email)))
     && (!q || [p.object, p.investor, p.address, p.supervision, p.region, p.architect].join(" ").toLowerCase().includes(q)));
   $("#count").textContent = `${rows.length} от ${P.length}`;
-  $("#rows").innerHTML = rows.length ? rows.map(p => `<tr>
+  const shownP = rows.slice(0, 300);
+  $("#pmore").hidden = rows.length <= shownP.length;
+  $("#pmore").textContent = `Показани са първите ${shownP.length} (подредени по оценка). Стеснете филтрите или търсенето, за да видите останалите.`;
+  $("#rows").innerHTML = rows.length ? shownP.map(p => `<tr>
     <td><span class="score ${scoreCls(p.score)}">${p.score}</span>${p.stage ? `<span class="stage ${p.facade_window ? "on" : ""}">${esc(p.stage)}${p.act16 ? ` · ${esc(fmtDate(p.act16.date))}` : ""}</span>` : ""}${(p.stage_hints || []).map(h => `<a class="stage on" href="${esc(h.url)}" target="_blank" rel="noopener">„${esc(h.text)}“</a>`).join("")}</td>
     <td class="obj">${p.visual ? `<a class="visual" href="${esc(p.visual.page)}" target="_blank" rel="noopener"><img src="${p.visual.thumb}" alt="Визуализация: ${esc(p.visual.title)}" loading="lazy"><span>Източник: ${esc(p.visual.page.replace(/^https?:\/\/(www\.)?/, "").split("/")[0])}</span></a>` : ""}<p>${esc(p.object)}</p>
       <div class="links" style="margin-top:4px"><span class="chip">${esc(p.kind)}</span>${p.building_type ? `<span class="chip plain">${esc(p.building_type)}</span>` : ""}

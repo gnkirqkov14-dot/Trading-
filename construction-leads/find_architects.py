@@ -14,7 +14,7 @@ from pathlib import Path
 from leads import web
 from leads.architects import (KabIndex, address_query, mentions, name_query, page_text,
                               stage_hints, street_of)
-from leads.enrich import (_merge, _new_contact, architect_contact, directory_links, google_cached,
+from leads.enrich import (_merge, _new_contact, architect_contact, directory_links, google_cached, pid,
                           visual_queries)
 from leads.http import Http
 from leads.visuals import NO_IMAGE_DOMAINS, _loose, relevant
@@ -105,7 +105,7 @@ def main(min_score: int = 50) -> None:
     http = Http()
     page_http = Http(retries=1, timeout=15)  # чужди сайтове: без дълги повторни опити
 
-    queries = {p["number"]: [address_query(p)] + (visual_queries(p) if p.get("investor_companies") else [])
+    queries = {pid(p): [address_query(p)] + (visual_queries(p) if p.get("investor_companies") else [])
                for p in targets}
     results = google_cached(http, list(dict.fromkeys(q for qs in queries.values() for q in qs)), cached, log)
 
@@ -114,7 +114,7 @@ def main(min_score: int = 50) -> None:
     for i, p in enumerate(targets, 1):
         names = []
         p["stage_hints"] = []  # преизчисляваме, не трупаме стари
-        for r in candidate_pages(p, results, queries[p["number"]]):
+        for r in candidate_pages(p, results, queries[pid(p)]):
             text = cached("pagetext", r["url"], lambda: safe_page_text(page_http, r["url"]))
             if not text:
                 continue
@@ -126,7 +126,7 @@ def main(min_score: int = 50) -> None:
             dom = web.domain_of(r["url"])
             if re.search(r"arch|arh", dom.replace("search", "")) and relevant(r, (p.get("investor_companies") or [""])[0] or p.get("locality", "")):
                 names.append((dom, {"url": r["url"], "title": r.get("title", "")}))
-        found_names[p["number"]] = names
+        found_names[pid(p)] = names
         if i % 20 == 0:
             log(f"  {i}/{len(targets)}")
 
@@ -137,7 +137,7 @@ def main(min_score: int = 50) -> None:
     with_arch = 0
     for p in targets:
         archs, seen = [], set()
-        for name, evidence in found_names[p["number"]]:
+        for name, evidence in found_names[pid(p)]:
             c = resolve(name, kab, http, by_name)
             if c["name"] in seen:
                 continue

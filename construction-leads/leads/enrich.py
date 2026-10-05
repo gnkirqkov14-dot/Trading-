@@ -100,15 +100,15 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
         # 2) вероятен архитект на големите нови сгради
         arch_permits = [p for p in permits if p.get("kind") == "Ново строителство" and web_filter(p)
                         and p.get("score", 0) >= architects_min_score and p.get("investor_companies")]
-        arch_q = {p["number"]: architect_query(p) for p in arch_permits}
+        arch_q = {pid(p): architect_query(p) for p in arch_permits}
         # Ред по важност: при ограничен бюджет първо отиват най-добрите обекти
-        arch_numbers = {p["number"] for p in arch_permits}
+        arch_ids = {pid(p) for p in arch_permits}
         ordered = []
         for p in sorted((p for p in permits if web_filter(p)), key=lambda p: -p.get("score", 0)):
             ordered += [queries[n] for n in p.get("investor_companies", []) if n in queries]
             ordered += [queries[n] for n in companies_in(p.get("supervision", "")) if n in queries]
-            if p["number"] in arch_numbers:
-                ordered += [project_query(p), arch_q[p["number"]]]
+            if pid(p) in arch_ids:
+                ordered += [project_query(p), arch_q[pid(p)]]
         results = google_cached(http, ordered + list(queries.values()), cache, log)
 
         log(f"Сайтове на {len(missing)} фирми ...")
@@ -201,6 +201,11 @@ def kab_domains(architects: list[dict]) -> dict[str, dict]:
         if b.get("website"):
             out[web.domain_of(b["website"] if "//" in b["website"] else "https://" + b["website"])] = b
     return out
+
+
+def pid(p: dict) -> str:
+    """Уникален ключ на разрешение: номерата се повтарят между районите."""
+    return p.get("hash") or f'{p.get("number")}|{p.get("region")}'
 
 
 def core_name(p: dict) -> str:
