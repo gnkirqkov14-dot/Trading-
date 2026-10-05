@@ -8,8 +8,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIMIT = int(sys.argv[1]) if len(sys.argv) > 1 else 6
 partners = [l.rstrip("\n").split("\t") for l in open(f"{HERE}/partners.txt", encoding="utf-8") if l.strip()]
 country = dict(partners)
+only = os.environ.get("ONLY")
+if only: partners = [x for x in partners if x[0] in only.split(",")]
 seen = set(json.load(open(f"{HERE}/seen.json")))
-since = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%d")
+since = (datetime.now(timezone.utc) - timedelta(days=int(os.environ.get("SINCE_DAYS","10")))).strftime("%Y-%m-%d")
 
 body = {"directUrls": [f"https://www.instagram.com/{u}/" for u, _ in partners],
         "resultsType": "posts", "resultsLimit": LIMIT, "onlyPostsNewerThan": since}
