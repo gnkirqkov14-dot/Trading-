@@ -11,7 +11,7 @@ USER_AGENT = (
 
 
 class Http:
-    def __init__(self, delay: float = 0.4, retries: int = 3, timeout: int = 60):
+    def __init__(self, delay: float = 0.4, retries: int = 4, timeout: int = 60):
         self.session = requests.Session()
         self.session.headers["User-Agent"] = USER_AGENT
         self.delay = delay
@@ -28,6 +28,9 @@ class Http:
             self._last = time.time()
             try:
                 resp = self.session.request(method, url, **kw)
+                if resp.status_code == 429:  # твърде много заявки – изчакваме по-дълго
+                    time.sleep(int(resp.headers.get("Retry-After") or 0) or 20 * (attempt + 1))
+                    continue
                 if resp.status_code < 500:
                     resp.raise_for_status()
                     return resp

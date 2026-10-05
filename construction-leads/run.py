@@ -1,7 +1,7 @@
 """Събира нови строителни обекти за София и прави CSV / JSON / HTML отчет.
 
     python run.py --days 30
-    python run.py --days 7 --no-ksb        # без търсене на контакти в КСБ
+    python run.py --days 7 --no-web        # само регистрите, без Google
 """
 from __future__ import annotations
 
@@ -13,25 +13,49 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-from leads import ksb, nag_sofia
+from leads import nag_sofia
+from leads.enrich import enrich
 from leads.classify import classify, companies_in, score
 from leads.http import Http
+from leads.web import _clean_phone
 from leads.report import write_html
 
 ROOT = Path(__file__).parent
 CACHE = ROOT / "cache"
 
 
-def cached(name: str, key: str, fetch):
+def cached(name: str, key: str, fetch, overwrite: bool = False):
     """Кеш на диск, за да не теглим един и същ детайл/профил повторно."""
     folder = CACHE / name
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / (hashlib.sha1(key.encode()).hexdigest()[:16] + ".json")
-    if path.exists():
+    if path.exists() and not overwrite:
         return json.loads(path.read_text(encoding="utf-8"))
     value = fetch()
     path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
     return value
+
+
+def builders_for_report(out: Path) -> list[dict]:
+    """Справочникът от builders.py (ако е пускан), сведен до нужното за отчета."""
+    path = out / "builders.json"
+    if not path.exists():
+        return []
+    rows = []
+    for b in json.loads(path.read_text(encoding="utf-8")):
+        blocks = [b.get("office") or {}, b.get("seat") or {}]
+        phones = list(dict.fromkeys(filter(None, (_clean_phone(x.get("phone", "")) or x.get("phone", "").strip()
+                                                   for x in blocks))))
+        emails = list(dict.fromkeys(x.get("email", "").strip().lower() for x in blocks if "@" in x.get("email", "")))
+        rows.append({
+            "name": b.get("name", ""), "eik": b.get("eik", ""), "ksb_url": b.get("ksb_url", ""),
+            "list_groups": b.get("list_groups", []), "works": b.get("works", []),
+            "representatives": b.get("representatives", []),
+            "phones": phones, "emails": emails,
+            "website": next((x.get("website", "").strip() for x in blocks if x.get("website", "").strip()), ""),
+        })
+    rows.sort(key=lambda r: (not r["phones"], r["name"].lower()))
+    return rows
 
 
 def log(msg: str) -> None:
@@ -43,13 +67,21 @@ def main() -> None:
     ap.add_argument("--days", type=int, default=90, help="колко дни назад (по дата на влизане в сила)")
     ap.add_argument("--limit", type=int, default=None, help="макс. брой разрешения (за тест)")
     ap.add_argument("--no-details", action="store_true", help="без детайлите (РЗП, категория, надзор)")
-    ap.add_argument("--no-ksb", action="store_true", help="без търсене на фирмите в КСБ")
+    ap.add_argument("--no-contacts", action="store_true", help="без търсене на контакти")
+    ap.add_argument("--no-web", action="store_true", help="без Google/сайтове (само регистрите)")
     ap.add_argument("--out", default=str(ROOT / "output"))
+    ap.add_argument("--report-only", action="store_true", help="само нов report.html от записаните данни")
     args = ap.parse_args()
 
     since = date.today() - timedelta(days=args.days)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    if args.report_only:
+        load = lambda n: json.loads((out / n).read_text(encoding="utf-8"))
+        write_html(out / "report.html", load("permits.json"), load("visas.json"), load("oesut.json"),
+                   since, builders_for_report(out))
+        log(f"Готово: {out / 'report.html'}")
+        return
     http = Http()
 
     log(f"Разрешения за строеж от {since} ...")
@@ -71,28 +103,8 @@ def main() -> None:
         p["score"] = score(p)
 
     companies: dict[str, dict] = {}
-    if not args.no_ksb:
-        names = {c for p in permits for c in p["investor_companies"]}
-        log(f"Търсене на {len(names)} фирми-възложители в регистъра на КСБ ...")
-        for name in sorted(names):
-            key = ksb.normalize_name(name)
-            try:
-                prof = cached("ksb", key or "empty", lambda: ksb.find_company(http, name))
-            except Exception as exc:
-                log(f"  КСБ {name}: {exc}")
-                prof = None
-            if prof:
-                companies[name] = prof
-        log(f"  {len(companies)} намерени в КСБ")
-        for p in permits:
-            prof = next((companies[c] for c in p["investor_companies"] if c in companies), None)
-            if prof:
-                c = prof["office"] if prof["office"].get("phone") else prof["seat"]
-                p["investor_eik"] = prof["eik"]
-                p["investor_phone"] = c.get("phone", "")
-                p["investor_email"] = c.get("email", "")
-                p["investor_website"] = c.get("website", "")
-                p["investor_ksb_url"] = prof["ksb_url"]
+    if not args.no_contacts:
+        companies = enrich(permits, http, cached, use_web=not args.no_web, log=log)
 
     permits.sort(key=lambda p: p.get("in_force") or "", reverse=True)
     permits.sort(key=lambda p: p["score"], reverse=True)
@@ -113,7 +125,8 @@ def main() -> None:
 
     cols = ["score", "kind", "building_type", "category", "rzp", "rzp_with_basement",
             "number", "in_force", "region", "address", "object", "investor", "investor_eik",
-            "investor_phone", "investor_email", "investor_website", "supervision",
+            "investor_managers", "investor_phone", "investor_email", "investor_website",
+            "supervision", "architect",
             "url", "pdf_url", "map_url"]
     with open(out / "permits.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
@@ -126,7 +139,7 @@ def main() -> None:
         for v in visas:
             w.writerow({**v, "files": " ".join(v["files"])})
 
-    write_html(out / "report.html", permits, visas, protocols, since)
+    write_html(out / "report.html", permits, visas, protocols, since, builders_for_report(out))
     log(f"Готово: {out}")
 
 

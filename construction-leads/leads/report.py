@@ -68,6 +68,14 @@ a { color: var(--accent); }
 .note h2 { font: 600 18px var(--display); margin: 0 0 6px; }
 .note ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .empty { padding: 24px; color: var(--muted); text-align: center; }
+.people { display: grid; gap: 8px; min-width: 260px; }
+.person { display: grid; gap: 1px; font-size: 12px; padding-left: 8px; border-left: 2px solid var(--line); }
+.person.inv { border-color: var(--accent); }
+.person .role { font: 600 11px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.person .nm { font-size: 13px; color: var(--fg); }
+.person .sel { user-select: all; font-family: var(--mono); }
+.person .src { color: var(--muted); }
+.more { padding: 10px; color: var(--muted); font-size: 13px; }
 </style>
 
 <div class="wrap">
@@ -80,6 +88,7 @@ a { color: var(--accent); }
 
   <nav class="tabs" role="tablist">
     <button role="tab" id="tab-permits" aria-selected="true" data-tab="permits">Разрешения за строеж</button>
+    <button role="tab" id="tab-builders" aria-selected="false" data-tab="builders">Строители и подизпълнители</button>
     <button role="tab" id="tab-visas" aria-selected="false" data-tab="visas">Визи за проектиране</button>
     <button role="tab" id="tab-oesut" aria-selected="false" data-tab="oesut">Протоколи ОЕСУТ</button>
     <button role="tab" id="tab-about" aria-selected="false" data-tab="about">Как се събира</button>
@@ -91,13 +100,28 @@ a { color: var(--accent); }
       <label>Вид<select id="kind"><option value="">Всички</option></select></label>
       <label>Район<select id="region"><option value="">Всички</option></select></label>
       <label>Мин. оценка<select id="minscore"><option value="0">0</option><option value="40" selected>40</option><option value="60">60</option><option value="75">75</option></select></label>
-      <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С контакт</option></select></label>
+      <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С телефон/имейл на инвеститора</option><option value="arch">С вероятен архитект</option></select></label>
       <span class="count" id="count"></span>
     </div>
     <div class="tablebox"><table>
-      <thead><tr><th>Оценка</th><th>Обект</th><th>Кат. / РЗП</th><th>Район / адрес</th><th>Възложител</th><th>Надзор</th><th>Влязло в сила</th></tr></thead>
+      <thead><tr><th>Оценка</th><th>Обект</th><th>Кат. / РЗП</th><th>Район / адрес</th><th>Контакти: инвеститор, надзор, архитект</th><th>Влязло в сила</th></tr></thead>
       <tbody id="rows"></tbody>
     </table></div>
+  </section>
+
+  <section id="pane-builders" hidden>
+    <p class="sub">Всички фирми от София, вписани в Централния професионален регистър на строителя (КСБ) за сгради (групи 1.1–1.4) или за отделни видове работи (група 5, подизпълнители). Контактите са от публичните им профили.</p>
+    <div class="filters">
+      <label>Търсене<input type="search" id="bq" placeholder="фирма, управител, ЕИК…"></label>
+      <label>Група<select id="bgroup"><option value="">Всички</option></select></label>
+      <label>Вид работа<select id="bwork"><option value="">Всички</option></select></label>
+      <label>Контакт<select id="bcontact"><option value="">Всички</option><option value="phone">С телефон</option><option value="email">С имейл</option></select></label>
+      <span class="count" id="bcount"></span>
+    </div>
+    <div class="tablebox"><table>
+      <thead><tr><th>Фирма</th><th>Групи в КСБ</th><th>Видове работи</th><th>Контакти</th><th>Управители</th></tr></thead>
+      <tbody id="brows"></tbody>
+    </table><div class="more" id="bmore" hidden></div></div>
   </section>
 
   <section id="pane-visas" hidden>
@@ -122,7 +146,9 @@ a { color: var(--accent); }
       <li><b>Разрешения за строеж</b> – публичният регистър на НАГ София (nag.sofia.bg). За всяко разрешение: възложител, обект, категория, РЗП, адрес, строителен надзор и сканираното разрешение.</li>
       <li><b>Визи за проектиране</b> – регистър на НАГ. Най-ранен сигнал за бъдещ обект.</li>
       <li><b>Протоколи ОЕСУТ</b> – експертният съвет на общината, където се разглеждат големите проекти.</li>
-      <li><b>Контакти на фирми</b> – Централен професионален регистър на строителя (КСБ): телефон, имейл, сайт, управители.</li>
+      <li><b>Контакти на инвеститори и надзор</b> – Търговски регистър (телефон, имейл, управители, адрес), регистърът на КСБ и сайтът на фирмата, намерен чрез Google.</li>
+      <li><b>Вероятен архитект</b> – архитектурно студио, което се появява в Google заедно с името на инвеститора. Проверете връзката преди да се обадите.</li>
+      <li><b>Строители и подизпълнители</b> – Централен професионален регистър на строителя (КСБ).</li>
     </ul>
     <h2 style="margin-top:14px">Оценка 0–100</h2>
     <ul>
@@ -149,7 +175,9 @@ $("#stats").innerHTML = [
   [P.length, "разрешения за строеж"],
   [newBuild.length, "от тях ново строителство"],
   [Math.round(bigRzp).toLocaleString("bg-BG"), "м² РЗП ново строителство"],
-  [withContact.length, "с контакт на възложителя"],
+  [withContact.length, "с телефон/имейл на инвеститора"],
+  [P.filter(p => (p.architects || []).length).length, "с вероятен архитект"],
+  [DATA.builders.length.toLocaleString("bg-BG"), "строители и подизпълнители"],
   [DATA.visas.length, "визи за проектиране"],
   [DATA.oesut.length, "протокола ОЕСУТ"],
 ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join("");
@@ -160,20 +188,35 @@ fill($("#kind"), P.map(p => p.kind));
 fill($("#region"), P.map(p => p.region));
 
 function scoreCls(s) { return s >= 60 ? "s-hi" : s >= 40 ? "s-mid" : "s-lo"; }
+const href = (u) => /^https?:\/\//.test(u) ? u : "https://" + u;
+const fmtPhone = (p) => { const m = /^\+359(\d{2,3})(\d{3})(\d{3,4})$/.exec(p || ""); return m ? `+359 ${m[1]} ${m[2]} ${m[3]}` : p; };
+function person(c, cls) {
+  const lines = [`<span class="role">${esc(c.role)}</span>`, `<span class="nm">${esc(c.name)}${c.eik ? ` <span class="src">ЕИК ${esc(c.eik)}</span>` : ""}</span>`];
+  (c.phones || []).slice(0, 3).forEach(ph => lines.push(`<span class="sel">${esc(fmtPhone(ph))}</span>`));
+  (c.emails || []).slice(0, 3).forEach(em => lines.push(`<span class="sel">${esc(em)}</span>`));
+  if (c.website) lines.push(`<a href="${esc(href(c.website))}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>`);
+  if ((c.managers || []).length) lines.push(`<span>Упр.: ${esc(c.managers.slice(0, 2).join(", "))}</span>`);
+  if (c.evidence) lines.push(`<a class="src" href="${esc(c.evidence.url)}" target="_blank" rel="noopener">откъде: ${esc(c.evidence.title.slice(0, 60))}</a>`);
+  const src = Object.entries(c.links || {}).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(k)}</a>`);
+  if (src.length) lines.push(`<span class="src">${src.join(" · ")}</span>`);
+  if (!(c.phones || []).length && !(c.emails || []).length) lines.push(`<span class="src">няма публикуван контакт</span>`);
+  return `<div class="person ${cls}">${lines.join("")}</div>`;
+}
 function contact(p) {
-  const bits = [];
-  if (p.investor_phone) bits.push(`<span class="sel">${esc(p.investor_phone)}</span>`);
-  if (p.investor_email) bits.push(`<span class="sel">${esc(p.investor_email)}</span>`);
-  if (p.investor_website) bits.push(`<a href="https://${esc(p.investor_website.replace(/^https?:\/\//,""))}" target="_blank" rel="noopener">${esc(p.investor_website)}</a>`);
-  if (p.investor_ksb_url) bits.push(`<a href="${esc(p.investor_ksb_url)}" target="_blank" rel="noopener">профил в КСБ</a>`);
-  return bits.length ? `<div class="contact">${bits.join("")}</div>` : "";
+  const people = (p.contacts || []).map(c => person(c, c.role.startsWith("Инвеститор") ? "inv" : ""));
+  const named = new Set((p.contacts || []).filter(c => c.role.startsWith("Инвеститор")).map(c => c.name));
+  const persons = (p.investor || "").split(",").map(x => x.trim()).filter(x => x && !named.has(x) && !/ООД|ЕАД|\bАД\b|ЕТ\b/.test(x));
+  if (persons.length) people.unshift(`<div class="person inv"><span class="role">Инвеститор</span><span class="nm">${esc(persons.slice(0, 4).join(", "))}${persons.length > 4 ? ` и още ${persons.length - 4}` : ""}</span></div>`);
+  if (!(p.contacts || []).some(c => c.role === "Строителен надзор") && p.supervision && p.supervision !== "-")
+    people.push(`<div class="person"><span class="role">Строителен надзор</span><span class="nm">${esc(p.supervision)}</span></div>`);
+  return `<div class="people">${people.join("")}</div>`;
 }
 function render() {
   const q = $("#q").value.trim().toLowerCase(), kind = $("#kind").value, region = $("#region").value;
   const min = +$("#minscore").value, who = $("#who").value;
   const rows = P.filter(p => p.score >= min && (!kind || p.kind === kind) && (!region || p.region === region)
-    && (!who || (who === "co" ? p.investor_is_company : (p.investor_phone || p.investor_email)))
-    && (!q || [p.object, p.investor, p.address, p.supervision, p.region].join(" ").toLowerCase().includes(q)));
+    && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.architects || []).length : (p.investor_phone || p.investor_email)))
+    && (!q || [p.object, p.investor, p.address, p.supervision, p.region, p.architect].join(" ").toLowerCase().includes(q)));
   $("#count").textContent = `${rows.length} от ${P.length}`;
   $("#rows").innerHTML = rows.length ? rows.map(p => `<tr>
     <td><span class="score ${scoreCls(p.score)}">${p.score}</span></td>
@@ -182,13 +225,38 @@ function render() {
       <a href="${esc(p.url)}" target="_blank" rel="noopener">№ ${esc(p.number)}</a>${p.pdf_url ? `<a href="${esc(p.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}<a href="${esc(p.map_url)}" target="_blank" rel="noopener">карта</a></div></td>
     <td class="num">${p.category ? "кат. " + p.category : "–"}<br>${fmtNum(p.rzp_with_basement || p.rzp)}</td>
     <td>${esc(p.region)}<div class="small">${esc(p.address || p.locality)}</div></td>
-    <td>${esc(p.investor)}${contact(p)}</td>
-    <td class="small">${esc(p.supervision || "–")}</td>
+    <td>${contact(p)}</td>
     <td class="num">${fmtDate(p.in_force)}</td></tr>`).join("")
-    : `<tr><td colspan="7" class="empty">Няма обекти с тези филтри. Намалете минималната оценка или изчистете търсенето.</td></tr>`;
+    : `<tr><td colspan="6" class="empty">Няма обекти с тези филтри. Намалете минималната оценка или изчистете търсенето.</td></tr>`;
 }
 ["#q","#kind","#region","#minscore","#who"].forEach(s => $(s).addEventListener("input", render));
 render();
+
+const B = DATA.builders;
+const groupsAll = [...new Set(B.flatMap(b => b.list_groups || []))].sort();
+groupsAll.forEach(g => $("#bgroup").insertAdjacentHTML("beforeend", `<option>${esc(g)}</option>`));
+const workCount = {};
+B.forEach(b => (b.works || []).forEach(w => workCount[w] = (workCount[w] || 0) + 1));
+Object.keys(workCount).sort().forEach(w => $("#bwork").insertAdjacentHTML("beforeend", `<option value="${esc(w)}">${esc(w)} (${workCount[w]})</option>`));
+function renderBuilders() {
+  const q = $("#bq").value.trim().toLowerCase(), g = $("#bgroup").value, w = $("#bwork").value, c = $("#bcontact").value;
+  const rows = B.filter(b => (!g || (b.list_groups || []).includes(g)) && (!w || (b.works || []).includes(w))
+    && (!c || (c === "phone" ? b.phones.length : b.emails.length))
+    && (!q || [b.name, b.eik, (b.representatives || []).join(" ")].join(" ").toLowerCase().includes(q)));
+  $("#bcount").textContent = `${rows.length.toLocaleString("bg-BG")} от ${B.length.toLocaleString("bg-BG")}`;
+  const shown = rows.slice(0, 300);
+  $("#brows").innerHTML = shown.map(b => `<tr>
+    <td><b>${esc(b.name)}</b><div class="small">ЕИК ${esc(b.eik)} · <a href="${esc(b.ksb_url)}" target="_blank" rel="noopener">профил в КСБ</a></div></td>
+    <td class="small">${(b.list_groups || []).map(esc).join("<br>")}</td>
+    <td class="small">${(b.works || []).slice(0, 4).map(esc).join("<br>")}${(b.works || []).length > 4 ? `<br>и още ${b.works.length - 4}` : ""}</td>
+    <td><div class="contact">${b.phones.map(p => `<span class="sel">${esc(fmtPhone(p))}</span>`).join("")}${b.emails.map(e => `<span class="sel">${esc(e)}</span>`).join("")}${b.website ? `<a href="${esc(href(b.website))}" target="_blank" rel="noopener">${esc(b.website)}</a>` : ""}</div></td>
+    <td class="small">${(b.representatives || []).slice(0, 3).map(esc).join("<br>")}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="empty">Няма фирми с тези филтри.</td></tr>`;
+  $("#bmore").hidden = rows.length <= shown.length;
+  $("#bmore").textContent = `Показани са първите ${shown.length}. Стеснете търсенето, за да видите останалите.`;
+}
+["#bq","#bgroup","#bwork","#bcontact"].forEach(s => $(s).addEventListener("input", renderBuilders));
+renderBuilders();
 
 $("#visas").innerHTML = DATA.visas.map(v => `<tr><td class="num">${fmtDate(v.issued)}</td><td class="num">${esc(v.number)}</td>
   <td>${esc(v.region)}</td><td class="small">${esc(v.scope)}</td><td class="small">${esc(v.basis)}</td>
@@ -200,19 +268,21 @@ $("#oesut").innerHTML = DATA.oesut.map(o => `<tr><td class="num">${fmtDate(o.dat
 
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["permits","visas","oesut","about"].forEach(t => $("#pane-" + t).hidden = t !== b.dataset.tab);
+  ["permits","builders","visas","oesut","about"].forEach(t => $("#pane-" + t).hidden = t !== b.dataset.tab);
 }));
 </script>
 """
 
 
-def write_html(path: Path, permits: list, visas: list, protocols: list, since: date) -> None:
+def write_html(path: Path, permits: list, visas: list, protocols: list, since: date,
+               builders: list | None = None) -> None:
     data = {
         "since": since.isoformat(),
         "generated": datetime.now().isoformat(timespec="minutes"),
         "permits": permits,
         "visas": visas,
         "oesut": protocols,
+        "builders": builders or [],
     }
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     path.write_text(TEMPLATE.replace("__DATA__", blob), encoding="utf-8")

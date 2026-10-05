@@ -61,8 +61,8 @@ def profile(http: Http, ksb_id: str) -> dict:
     def contact(block: str) -> dict:
         return {
             "city": _after(block, "град\\(село\\):"),
-            "street": (_after(block, "улица,/ж.к.,бл.,вх.,ет.,ап./:") + " " +
-                       _after(block, "номер:")).strip(" ,"),
+            "street": re.sub(r"\s*тел\.код:.*", "", _after(block, "улица,/ж.к.,бл.,вх.,ет.,ап./:") + " " +
+                             _after(block, "номер:")).strip(" ,"),
             "phone": (_after(block, "тел.код:") + " " + _after(block, "Телефон:")).strip(),
             "email": _after(block, "E-mail:"),
             "website": _after(block, "Уеб сайт:"),
@@ -74,15 +74,23 @@ def profile(http: Http, ksb_id: str) -> dict:
         reps.append(f"{m.group(2).strip()} {m.group(4).strip()} – {m.group(5).strip()}")
 
     groups = re.findall(r"\b(\d\.\d) строежи от ([^;|]+?категория)", text)
+    # Пета група: отделни видове работи по КИД (подизпълнители), напр. "43.21 Електрически инсталации"
+    works = []
+    if "V ПЕТА ГРУПА" in text:
+        block = text.split("V ПЕТА ГРУПА", 1)[1].split("Срок на валидност", 1)[0]
+        works = [f"{c} {n.strip()}" for c, n in re.findall(r"\b(\d{2}\.\d{2}) ([^|]+)", block)]
+    name = (_after(text, "наименование:") + " " + _after(text, "правно-организационна форма:")).strip()
     about = _after(text, "7. Текстова информация за строителя, ограничена до 10 реда или 600 знака")
     return {
         "ksb_id": ksb_id,
         "ksb_url": f"{BASE}/pub_view.php?id_members={ksb_id}",
         "eik": _after(text, "ЕИК по БУЛСТАТ:"),
+        "name": name,
         "representatives": reps,
         "seat": contact(seat),
         "office": contact(mail),
         "groups": [f"{g} {c}" for g, c in groups],
+        "works": works,
         "about": about if not about.startswith("8.") else "",
     }
 
@@ -96,3 +104,31 @@ def find_company(http: Http, company_name: str) -> dict | None:
         if normalize_name(hit["name"]) == target:
             return profile(http, hit["ksb_id"])
     return None
+
+
+SOFIA_REGION = "22"  # „София град и София област“ в списъка на КСБ
+GROUPS = {
+    "11": "1.1 Сгради 1–5 категория",
+    "12": "1.2 Сгради 2–5 категория",
+    "13": "1.3 Сгради 3–5 категория",
+    "14": "1.4 Сгради 4–5 категория",
+    "50": "5 Отделни видове СМР (подизпълнители)",
+}
+
+
+def list_firms(http: Http, group: str, region: str = SOFIA_REGION) -> list[dict]:
+    """Всички вписани строители в област + група (публичният списък на КСБ)."""
+    resp = http.post(f"{BASE}/listFirms.php", data={
+        "Podphp": region, "GroupTypephp": group, "Pod": region, "GroupType": group,
+        "filter": "Покажи строителите",
+    })
+    soup = BeautifulSoup(resp.text, "html.parser")
+    firms = []
+    for a in soup.find_all("a", href=re.compile(r"pub_view\.php\?id_members=\d+")):
+        tds = a.find_parent("tr").find_all("td")
+        firms.append({
+            "ksb_id": re.search(r"id_members=(\d+)", a["href"]).group(1),
+            "eik": a.get_text(strip=True),
+            "name": tds[2].get_text(" ", strip=True) if len(tds) > 2 else "",
+        })
+    return firms
