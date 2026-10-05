@@ -59,6 +59,9 @@ tr:last-child td { border-bottom: 0; }
 .chip.plain { background: var(--lo-soft); color: var(--muted); }
 .obj { max-width: 46ch; }
 .obj p { margin: 0; }
+.visual { display: block; margin-bottom: 6px; max-width: 220px; }
+.visual img { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--lo-soft); }
+.visual span { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .small { color: var(--muted); font-size: 12px; }
 .contact { display: grid; gap: 1px; font-size: 12px; }
 .contact .sel { user-select: all; font-family: var(--mono); }
@@ -101,7 +104,7 @@ a { color: var(--accent); }
       <label>Вид<select id="kind"><option value="">Всички</option></select></label>
       <label>Район<select id="region"><option value="">Всички</option></select></label>
       <label>Мин. оценка<select id="minscore"><option value="0">0</option><option value="40" selected>40</option><option value="60">60</option><option value="75">75</option></select></label>
-      <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С телефон/имейл на инвеститора</option><option value="arch">С вероятен архитект</option></select></label>
+      <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С телефон/имейл на инвеститора</option><option value="arch">С вероятен архитект</option><option value="visual">С визуализация</option></select></label>
       <span class="count" id="count"></span>
     </div>
     <div class="tablebox"><table>
@@ -164,6 +167,7 @@ a { color: var(--accent); }
       <li><b>Контакти на инвеститори и надзор</b> – Търговски регистър (телефон, имейл, управители, адрес), регистърът на КСБ и сайтът на фирмата, намерен чрез Google.</li>
       <li><b>Вероятен архитект</b> – архитектурно студио, което се появява в Google заедно с името на инвеститора. Проверете връзката преди да се обадите.</li>
       <li><b>Строители и подизпълнители</b> – Централен професионален регистър на строителя (КСБ).</li>
+      <li><b>Визуализации</b> – картинката от страницата на проекта, архитекта или обявата (намерена чрез Google). Авторските права са на архитекта или инвеститора; линкът води към източника.</li>
       <li><b>Архитектурни бюра</b> – регистър „Проектантски бюра“ на Камарата на архитектите (kab.bg).</li>
     </ul>
     <h2 style="margin-top:14px">Оценка 0–100</h2>
@@ -193,6 +197,7 @@ $("#stats").innerHTML = [
   [Math.round(bigRzp).toLocaleString("bg-BG"), "м² РЗП ново строителство"],
   [withContact.length, "с телефон/имейл на инвеститора"],
   [P.filter(p => (p.architects || []).length).length, "с вероятен архитект"],
+  [P.filter(p => p.visual).length, "с визуализация"],
   [DATA.builders.length.toLocaleString("bg-BG"), "строители и подизпълнители"],
   [DATA.architects.length.toLocaleString("bg-BG"), "архитектурни бюра (КАБ)"],
   [DATA.visas.length, "визи за проектиране"],
@@ -232,12 +237,12 @@ function render() {
   const q = $("#q").value.trim().toLowerCase(), kind = $("#kind").value, region = $("#region").value;
   const min = +$("#minscore").value, who = $("#who").value;
   const rows = P.filter(p => p.score >= min && (!kind || p.kind === kind) && (!region || p.region === region)
-    && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.architects || []).length : (p.investor_phone || p.investor_email)))
+    && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.architects || []).length : who === "visual" ? !!p.visual : (p.investor_phone || p.investor_email)))
     && (!q || [p.object, p.investor, p.address, p.supervision, p.region, p.architect].join(" ").toLowerCase().includes(q)));
   $("#count").textContent = `${rows.length} от ${P.length}`;
   $("#rows").innerHTML = rows.length ? rows.map(p => `<tr>
     <td><span class="score ${scoreCls(p.score)}">${p.score}</span></td>
-    <td class="obj"><p>${esc(p.object)}</p>
+    <td class="obj">${p.visual ? `<a class="visual" href="${esc(p.visual.page)}" target="_blank" rel="noopener"><img src="${p.visual.thumb}" alt="Визуализация: ${esc(p.visual.title)}" loading="lazy"><span>Източник: ${esc(p.visual.page.replace(/^https?:\/\/(www\.)?/, "").split("/")[0])}</span></a>` : ""}<p>${esc(p.object)}</p>
       <div class="links" style="margin-top:4px"><span class="chip">${esc(p.kind)}</span>${p.building_type ? `<span class="chip plain">${esc(p.building_type)}</span>` : ""}
       <a href="${esc(p.url)}" target="_blank" rel="noopener">№ ${esc(p.number)}</a>${p.pdf_url ? `<a href="${esc(p.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}<a href="${esc(p.map_url)}" target="_blank" rel="noopener">карта</a></div></td>
     <td class="num">${p.category ? "кат. " + p.category : "–"}<br>${fmtNum(p.rzp_with_basement || p.rzp)}</td>

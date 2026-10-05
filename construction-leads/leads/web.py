@@ -32,8 +32,6 @@ DIRECTORY_DOMAINS = {
     "zaplata.bg", "infobusiness.bcci.bg", "bcc.bg", "bcci.bg", "egov.bg", "lex.bg", "ciela.net",
 }
 
-ARCH_HINT = re.compile(r"arch|архитект|architect|studio|студио|design", re.I)
-
 TRANSLIT = str.maketrans({
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ж": "zh", "з": "z", "и": "i",
     "й": "y", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o", "п": "p", "р": "r", "с": "s",
@@ -164,15 +162,22 @@ def pick_company_site(results: list[dict], company: str) -> str | None:
     return None
 
 
-def pick_architects(results: list[dict], exclude_domain: str = "") -> list[dict]:
-    """Резултати, които приличат на архитектурно студио (по домейн/заглавие)."""
+def pick_architects(results: list[dict], company: str, kab_by_domain: dict | None = None,
+                    exclude_domain: str = "") -> list[dict]:
+    """Архитект на проекта: сайт на бюро от регистъра на КАБ, или архитектурен
+    сайт (.bg/.com/.eu с „arch“ в домейна), в който се споменава инвеститорът."""
+    from .visuals import relevant  # избягваме цикличен import
+    kab_by_domain = kab_by_domain or {}
     found, seen = [], set()
     for r in results:
         url = r.get("url") or ""
         dom = domain_of(url)
         if not url or is_directory(url) or dom == exclude_domain or dom in seen:
             continue
-        if ARCH_HINT.search(dom) or ARCH_HINT.search(r.get("title", "")):
+        kab = kab_by_domain.get(dom)
+        archy = (re.search(r"arch|arh", dom.replace("search", "")) and dom.rsplit(".", 1)[-1] in {"bg", "com", "eu"}
+                 and relevant(r, company))
+        if kab or archy:
             seen.add(dom)
-            found.append({"url": url, "title": r.get("title", ""), "domain": dom})
+            found.append({"url": url, "title": r.get("title", ""), "domain": dom, "kab": kab})
     return found[:2]

@@ -15,7 +15,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from leads import nag_sofia
-from leads.enrich import enrich
+from leads.enrich import enrich, kab_domains
 from leads.classify import classify, companies_in, score
 from leads.http import Http
 from leads.web import _clean_phone
@@ -128,7 +128,8 @@ def main() -> None:
 
     companies: dict[str, dict] = {}
     if not args.no_contacts:
-        companies = enrich(permits, http, cached, use_web=not args.no_web, log=log)
+        companies = enrich(permits, http, cached, use_web=not args.no_web, log=log,
+                           kab_by_domain=kab_domains(architects_for_report(out)))
 
     permits.sort(key=lambda p: p.get("in_force") or "", reverse=True)
     permits.sort(key=lambda p: p["score"], reverse=True)

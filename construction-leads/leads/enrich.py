@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from . import ksb, tr, web
+from . import ksb, tr, visuals, web
 from .classify import companies_in
 from .http import Http
 
@@ -65,7 +65,8 @@ def company_contact(name: str, http_tr: Http, http: Http, cache: Cache) -> dict:
 
 
 def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
-           architects_min_score: int = 55, log=print) -> dict[str, dict]:
+           architects_min_score: int = 55, log=print,
+           kab_by_domain: dict | None = None) -> dict[str, dict]:
     http_tr = Http(delay=2.0)  # Търговският регистър връща 429 при по-често
     roles: dict[str, set] = {}
     for p in permits:
@@ -85,13 +86,13 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
     if use_web:
         # 1) сайт на фирмите без телефон или имейл
         missing = [n for n, c in contacts.items() if not (c["phones"] and c["emails"])]
-        queries = {n: f'"{ksb.normalize_name(n)}" {tr._legal_form(n)}'.strip() for n in missing}
+        queries = {n: company_query(n) for n in missing}
         # 2) вероятен архитект на големите нови сгради
         arch_permits = [p for p in permits if p.get("kind") == "Ново строителство"
                         and p.get("score", 0) >= architects_min_score and p.get("investor_companies")]
-        arch_q = {p["number"]: f'"{ksb.normalize_name(p["investor_companies"][0])}" архитект'
-                  for p in arch_permits}
-        results = google_cached(http, list(queries.values()) + list(arch_q.values()), cache, log)
+        arch_q = {p["number"]: architect_query(p) for p in arch_permits}
+        results = google_cached(http, list(queries.values()) + list(arch_q.values())
+                                + [project_query(p) for p in arch_permits], cache, log)
 
         log(f"Сайтове на {len(missing)} фирми ...")
         for name in missing:
@@ -106,20 +107,10 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
             _merge(c, found["phones"], found["emails"], found["website"], "сайт на фирмата")
 
         log(f"Архитекти за {len(arch_permits)} обекта ...")
-        for p in arch_permits:
-            inv = contacts.get(p["investor_companies"][0], {})
-            own = web.domain_of(inv.get("website", "")) if inv.get("website") else ""
-            archs = []
-            for hit in web.pick_architects(results.get(arch_q[p["number"]], []), exclude_domain=own):
-                try:
-                    found = cache("site", hit["domain"], lambda: web.site_contacts(http, hit["url"]))
-                except Exception:
-                    found = {"website": "https://" + hit["domain"], "phones": [], "emails": []}
-                a = _new_contact(hit["domain"])
-                a["evidence"] = {"title": hit["title"], "url": hit["url"]}
-                _merge(a, found["phones"], found["emails"], found["website"], "Google + сайт")
-                archs.append(a)
-            p["architects"] = archs
+        add_architects(arch_permits, results, contacts, http, cache, kab_by_domain or {})
+
+        log(f"Визуализации за {len(arch_permits)} обекта ...")
+        visuals.add_visuals(arch_permits, results, visual_queries, http, cache, log)
 
     for p in permits:
         p["contacts"] = []
@@ -129,7 +120,7 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
         for name in companies_in(p.get("supervision", "")):
             p["contacts"].append({**contacts[name], "role": "Строителен надзор"})
         for a in p.get("architects", []):
-            p["contacts"].append({**a, "role": "Архитект (вероятен)"})
+            p["contacts"].append(architect_contact(a))
         inv = [c for c in p["contacts"] if c["role"].startswith("Инвеститор")]
         p["investor_phone"] = ", ".join(sum((c["phones"][:2] for c in inv), []))
         p["investor_email"] = ", ".join(sum((c["emails"][:2] for c in inv), []))
@@ -140,6 +131,67 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
             f'{a["name"]} {" ".join(a["phones"][:1])} {" ".join(a["emails"][:1])}'.strip()
             for a in p.get("architects", []))
     return contacts
+
+
+def add_architects(permits: list[dict], results: dict, contacts: dict, http: Http, cache: Cache,
+                   kab_by_domain: dict) -> None:
+    """p['architects'] от Google резултатите за „<инвеститор> архитект“."""
+    for p in permits:
+        inv = contacts.get(p["investor_companies"][0], {})
+        own = web.domain_of(inv.get("website", "")) if inv.get("website") else ""
+        archs = []
+        for hit in web.pick_architects(results.get(architect_query(p), []), p["investor_companies"][0],
+                                       kab_by_domain, exclude_domain=own):
+            try:
+                found = cache("site", hit["domain"], lambda: web.site_contacts(http, hit["url"]))
+            except Exception:
+                found = {"website": "https://" + hit["domain"], "phones": [], "emails": []}
+            kab = hit.get("kab")
+            a = _new_contact(kab["name"] if kab else hit["domain"])
+            a["evidence"] = {"title": hit["title"], "url": hit["url"]}
+            if kab:
+                a["managers"] = kab.get("owners", [])[:3]
+                a["links"]["КАБ"] = kab["kab_url"]
+                _merge(a, kab.get("phones", []), kab.get("emails", []), kab.get("website", ""), "КАБ")
+            _merge(a, found["phones"], found["emails"], found["website"], "сайт на бюрото")
+            a["in_kab"] = bool(kab)
+            archs.append(a)
+        p["architects"] = archs
+
+
+def architect_contact(a: dict) -> dict:
+    role = "Архитект (бюро в КАБ)" if a.get("in_kab") else "Архитект (вероятен)"
+    return {**a, "role": role}
+
+
+def kab_domains(architects: list[dict]) -> dict[str, dict]:
+    """{домейн на сайта на бюрото: запис от КАБ}"""
+    out = {}
+    for b in architects:
+        if b.get("website"):
+            out[web.domain_of(b["website"] if "//" in b["website"] else "https://" + b["website"])] = b
+    return out
+
+
+def core_name(p: dict) -> str:
+    return ksb.normalize_name(p["investor_companies"][0])
+
+
+def architect_query(p: dict) -> str:
+    return f'"{core_name(p)}" архитект'
+
+
+def project_query(p: dict) -> str:
+    """Търсене на страницата на проекта (там са визуализациите)."""
+    return f'"{core_name(p)}" проект София'
+
+
+def company_query(name: str) -> str:
+    return f'"{ksb.normalize_name(name)}" {tr._legal_form(name)}'.strip()
+
+
+def visual_queries(p: dict) -> list[str]:
+    return [project_query(p), architect_query(p), company_query(p["investor_companies"][0])]
 
 
 def google_cached(http: Http, queries: list[str], cache: Cache, log=print) -> dict[str, list]:
