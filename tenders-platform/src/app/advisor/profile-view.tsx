@@ -92,7 +92,7 @@ function TenderCard({ tender: t, pick, isNew }: { tender: TenderLike; pick?: Ten
         </Link>{" "}
         ·{" "}
         <Link href={`/apply/tender/${t.id}`} className="text-brand-600 hover:underline">
-          Помощ за ЕЕДОП и офертата →
+          Изисквания и помощ за ЕЕДОП →
         </Link>
       </p>
     </article>

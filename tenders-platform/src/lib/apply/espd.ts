@@ -72,6 +72,54 @@ export function deadlineConflict(guide: TenderGuide): string | null {
   return `В текста на обявлението крайният срок за оферти е ${other.map(human).join(", ")}, а в системата ЦАИС ЕОП е ${human(official)} Срокът вероятно е променен с отделно решение. Проверете на страницата на поръчката в ЦАИС ЕОП кой срок важи — и за всеки случай подайте преди по-ранната дата.`;
 }
 
+const FIT_SHORT: Record<SelectionItem["fit"], string> = {
+  покривате: "изглежда, че го покривате",
+  проверете: "проверете",
+  "не покривате": "изглежда, че НЕ го покривате",
+  "няма данни": "",
+};
+
+/**
+ * „Изисквания накратко“ — какво иска поръчката от фирмата, в няколко
+ * реда, за да реши човек бързо дали може да участва. Само от разбора (без
+ * нова заявка към AI); подробностите и точният текст са по-надолу.
+ */
+export function requirementsBlocks(guide: TenderGuide, opts: { detailsBelow?: boolean } = {}): GuideBlock[] {
+  const detailsBelow = opts.detailsBelow ?? true;
+  const b: GuideBlock[] = [{ kind: "h2", text: "Изисквания накратко", id: "iziskvania" }];
+  const items: string[] = [];
+  for (const s of guide.selection) {
+    const fit = FIT_SHORT[s.fit];
+    const doubt =
+      s.badNumbers?.length || !s.quote.verified
+        ? " Внимание: не всичко тук е намерено дословно в обявлението — проверете."
+        : "";
+    items.push(`${s.title}: ${s.requirement}${fit ? ` — ${fit}.` : ""}${doubt}`);
+  }
+  if (!guide.selection.length) {
+    items.push("Критерии за подбор (оборот, опит, персонал, регистрации): в обявлението не са посочени. Проверете документацията.");
+  }
+  for (const g of guide.guarantees) items.push(`${g.kind}: ${g.amount}`);
+  const national = guide.exclusion.filter((e) => e.part === "III.Г").map((e) => e.ground);
+  if (national.length) items.push(`Особени основания за отстраняване: ${national.join("; ")}`);
+  b.push({ kind: "list", items });
+  if (guide.personal && guide.selection.length) {
+    const count = (f: SelectionItem["fit"]) => guide.selection.filter((s) => s.fit === f).length;
+    const yes = count("покривате");
+    const no = count("не покривате");
+    const check = count("проверете") + count("няма данни");
+    b.push({
+      kind: "p",
+      text: `От ${guide.selection.length} изисквания за подбор по вашите отговори: ${yes} изглежда покривате, ${check} трябва да проверите${no ? `, ${no} изглежда НЕ покривате` : ""}. Това е оценка — проверете я.`,
+    });
+  }
+  b.push({
+    kind: "p",
+    text: `Освен това при всяка поръчка се проверяват основанията за отстраняване по закона (чл. 54 ЗОП): например влезли в сила присъди на представляващите за определени престъпления и неплатени данъци и осигуровки, установени с влязъл в сила акт. ${detailsBelow ? "Подробностите и точният текст на всяко изискване са по-долу." : "Подробностите и точният текст на всяко изискване са в помощта за ЕЕДОП."}`,
+  });
+  return b;
+}
+
 export function buildEspdBlocks(guide: TenderGuide, company: Partial<CompanyData>, lot: string | null): GuideBlock[] {
   const b: GuideBlock[] = [];
   const warnNumbers = (badNumbers?: string[]) => {
@@ -128,6 +176,8 @@ export function buildEspdBlocks(guide: TenderGuide, company: Partial<CompanyData
     kind: "warn",
     text: "Това е помощ за попълване, не правен съвет. Всяко изискване е взето от официалното обявление в ЦАИС ЕОП и под него има точния откъс. Документацията (образци, техническа спецификация, проект на договор) е в ЦАИС ЕОП и иска вход — прочетете я преди да подадете.",
   });
+
+  b.push(...requirementsBlocks(guide));
 
   // — Преди да започнете —
   b.push({ kind: "h2", text: "Преди да започнете", id: "predi" });
