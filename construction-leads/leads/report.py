@@ -57,6 +57,8 @@ tr:last-child td { border-bottom: 0; }
 .s-hi { background: var(--hi-soft); color: var(--hi); } .s-mid { background: var(--mid-soft); color: var(--mid); } .s-lo { background: var(--lo-soft); color: var(--lo); }
 .chip { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 .chip.plain { background: var(--lo-soft); color: var(--muted); }
+.stage { display: block; margin-top: 6px; font-size: 11px; line-height: 1.3; color: var(--muted); max-width: 12ch; }
+.stage.on { color: var(--hi); font-weight: 600; }
 .obj { max-width: 46ch; }
 .obj p { margin: 0; }
 .visual { display: block; margin-bottom: 6px; max-width: 220px; }
@@ -95,6 +97,7 @@ a { color: var(--accent); }
     <button role="tab" id="tab-arch" aria-selected="false" data-tab="arch">Архитектурни бюра</button>
     <button role="tab" id="tab-visas" aria-selected="false" data-tab="visas">Визи за проектиране</button>
     <button role="tab" id="tab-oesut" aria-selected="false" data-tab="oesut">Протоколи ОЕСУТ</button>
+    <button role="tab" id="tab-howto" aria-selected="false" data-tab="howto">Как да работите</button>
     <button role="tab" id="tab-about" aria-selected="false" data-tab="about">Как се събира</button>
   </nav>
 
@@ -103,6 +106,7 @@ a { color: var(--accent); }
       <label>Търсене<input type="search" id="q" placeholder="адрес, фирма, обект…"></label>
       <label>Вид<select id="kind"><option value="">Всички</option></select></label>
       <label>Район<select id="region"><option value="">Всички</option></select></label>
+      <label>Етап<select id="stage"><option value="facade" selected>Подходящи за фасада – преди Акт 14</option><option value="">Всички етапи</option><option value="hole">Изкоп („на дупка“)</option><option value="rough">Груб строеж – преди Акт 14</option><option value="late">Около Акт 14</option><option value="finish">След Акт 14</option><option value="done">Въведени (Акт 16)</option></select></label>
       <label>Мин. оценка<select id="minscore"><option value="0">0</option><option value="40" selected>40</option><option value="60">60</option><option value="75">75</option></select></label>
       <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С телефон/имейл на инвеститора</option><option value="arch">С вероятен архитект</option><option value="visual">С визуализация</option></select></label>
       <span class="count" id="count"></span>
@@ -129,10 +133,11 @@ a { color: var(--accent); }
   </section>
 
   <section id="pane-arch" hidden>
-    <p class="sub">Проектантските бюра от регистъра на Камарата на архитектите (КАБ) в София, с архитектите в тях и контактите, които са публикували.</p>
+    <p class="sub">Архитектурните бюра в София от регистъра на Камарата на архитектите (КАБ) и от Google Maps, обединени по сайт, телефон и име. Контактите са от КАБ, Търговския регистър, Google Maps и сайтовете на бюрата.</p>
     <div class="filters">
       <label>Търсене<input type="search" id="aq" placeholder="бюро, архитект, адрес…"></label>
       <label>Колегия<select id="acol"><option value="">Всички</option></select></label>
+      <label>Източник<select id="asrc"><option value="">КАБ и Google Maps</option><option value="kab">Регистър на КАБ</option><option value="maps">Google Maps</option><option value="both">И в двата</option></select></label>
       <label>Контакт<select id="acontact"><option value="">Всички</option><option value="phone">С телефон</option><option value="email">С имейл</option></select></label>
       <span class="count" id="acount"></span>
     </div>
@@ -156,6 +161,33 @@ a { color: var(--accent); }
       <thead><tr><th>Дата</th><th>Номер</th><th>Вид</th><th>Файл</th></tr></thead>
       <tbody id="oesut"></tbody>
     </table></div>
+  </section>
+
+  <section id="pane-howto" hidden class="note">
+    <h2>Кои обекти да изберете</h2>
+    <ul>
+      <li>Раздел „Разрешения за строеж“ → <b>Етап: Подходящи за фасада – преди Акт 14</b> (по подразбиране е избрано).</li>
+      <li><b>Мин. оценка 60</b> оставя големите многофамилни и офис сгради. За повече обекти сложете 40.</li>
+      <li><b>Възложител: С телефон/имейл на инвеститора</b> – за обектите, на които може да се обадите веднага.</li>
+      <li>Етапът е изчислен по датата на разрешението. Зелен текст в кавички („Акт 14 – март 2027“) означава, че инвеститорът сам е публикувал етапа – това е най-сигурното.</li>
+    </ul>
+    <h2 style="margin-top:14px">Кога е най-добрият момент за фасадни панели</h2>
+    <ul>
+      <li><b>Изкоп („на дупка“)</b> – фасадата още може да се смени в проекта. Търсете архитекта и инвеститора.</li>
+      <li><b>Груб строеж, преди Акт 14</b> – инвеститорът и строителят избират доставчици за фасадата. Най-добрият момент за оферта и мостри.</li>
+      <li><b>Около Акт 14</b> – фасадата започва. Говорете със строителя и фасадната фирма за доставка.</li>
+    </ul>
+    <h2 style="margin-top:14px">На кого да се обадите</h2>
+    <ul>
+      <li><b>Инвеститорът</b> решава за материала и цената. Питайте и кой е архитектът и кой е строителят.</li>
+      <li><b>Строителният надзор</b> знае строителя и проектантите на обекта – полезно, когато инвеститорът няма контакт.</li>
+      <li><b>Архитектът</b> вписва материала в проекта. Раздел „Архитектурни бюра“ – за този и следващите им проекти.</li>
+      <li><b>Строители и фасадни фирми</b> – раздел „Строители и подизпълнители“ → вид работа <b>43.33 Полагане на облицовки</b> или <b>43.31 Полагане на мазилки</b>: това са фирмите, които монтират фасади.</li>
+    </ul>
+    <h2 style="margin-top:14px">Повтаряйте всеки месец</h2>
+    <ul>
+      <li>Всеки месец в София влизат в сила около 50–60 нови разрешения за ново строителство. Новите обекти и обявите им (с визуализации и етап) се появяват постепенно.</li>
+    </ul>
   </section>
 
   <section id="pane-about" hidden class="note">
@@ -187,19 +219,21 @@ const fmtDate = (s) => s ? s.split("-").reverse().join(".") : "–";
 const fmtNum = (n) => n ? Math.round(n).toLocaleString("bg-BG") + " м²" : "–";
 const P = DATA.permits;
 
-$("#sub").textContent = `Обекти от ${fmtDate(DATA.since)} до ${fmtDate(DATA.generated.slice(0,10))}. Събрани автоматично от публичните регистри на Столична община и КСБ.`;
+$("#sub").textContent = `Разрешения за строеж, влезли в сила от ${fmtDate(DATA.since)} до ${fmtDate(DATA.generated.slice(0,10))}. Етапът е изчислен по датата на разрешението и размера на сградата; сградите с Акт 16 са отбелязани.`;
 const newBuild = P.filter(p => p.kind === "Ново строителство");
 const withContact = P.filter(p => p.investor_phone || p.investor_email);
 const bigRzp = P.reduce((a, p) => a + (p.kind === "Ново строителство" ? (p.rzp_with_basement || p.rzp || 0) : 0), 0);
 $("#stats").innerHTML = [
   [P.length, "разрешения за строеж"],
+  [P.filter(p => p.facade_window).length, "подходящи за фасада (преди Акт 14)"],
   [newBuild.length, "от тях ново строителство"],
   [Math.round(bigRzp).toLocaleString("bg-BG"), "м² РЗП ново строителство"],
   [withContact.length, "с телефон/имейл на инвеститора"],
   [P.filter(p => (p.architects || []).length).length, "с вероятен архитект"],
   [P.filter(p => p.visual).length, "с визуализация"],
   [DATA.builders.length.toLocaleString("bg-BG"), "строители и подизпълнители"],
-  [DATA.architects.length.toLocaleString("bg-BG"), "архитектурни бюра (КАБ)"],
+  [DATA.architects.length.toLocaleString("bg-BG"), "архитектурни бюра"],
+  [DATA.architects.filter(a => a.phones.length).length.toLocaleString("bg-BG"), "архитектурни бюра с телефон"],
   [DATA.visas.length, "визи за проектиране"],
   [DATA.oesut.length, "протокола ОЕСУТ"],
 ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join("");
@@ -235,13 +269,14 @@ function contact(p) {
 }
 function render() {
   const q = $("#q").value.trim().toLowerCase(), kind = $("#kind").value, region = $("#region").value;
-  const min = +$("#minscore").value, who = $("#who").value;
+  const min = +$("#minscore").value, who = $("#who").value, st = $("#stage").value;
   const rows = P.filter(p => p.score >= min && (!kind || p.kind === kind) && (!region || p.region === region)
+    && (!st || (st === "facade" ? p.facade_window : p.stage_code === st))
     && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.architects || []).length : who === "visual" ? !!p.visual : (p.investor_phone || p.investor_email)))
     && (!q || [p.object, p.investor, p.address, p.supervision, p.region, p.architect].join(" ").toLowerCase().includes(q)));
   $("#count").textContent = `${rows.length} от ${P.length}`;
   $("#rows").innerHTML = rows.length ? rows.map(p => `<tr>
-    <td><span class="score ${scoreCls(p.score)}">${p.score}</span></td>
+    <td><span class="score ${scoreCls(p.score)}">${p.score}</span>${p.stage ? `<span class="stage ${p.facade_window ? "on" : ""}">${esc(p.stage)}${p.act16 ? ` · ${esc(fmtDate(p.act16.date))}` : ""}</span>` : ""}${(p.stage_hints || []).map(h => `<a class="stage on" href="${esc(h.url)}" target="_blank" rel="noopener">„${esc(h.text)}“</a>`).join("")}</td>
     <td class="obj">${p.visual ? `<a class="visual" href="${esc(p.visual.page)}" target="_blank" rel="noopener"><img src="${p.visual.thumb}" alt="Визуализация: ${esc(p.visual.title)}" loading="lazy"><span>Източник: ${esc(p.visual.page.replace(/^https?:\/\/(www\.)?/, "").split("/")[0])}</span></a>` : ""}<p>${esc(p.object)}</p>
       <div class="links" style="margin-top:4px"><span class="chip">${esc(p.kind)}</span>${p.building_type ? `<span class="chip plain">${esc(p.building_type)}</span>` : ""}
       <a href="${esc(p.url)}" target="_blank" rel="noopener">№ ${esc(p.number)}</a>${p.pdf_url ? `<a href="${esc(p.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}<a href="${esc(p.map_url)}" target="_blank" rel="noopener">карта</a></div></td>
@@ -251,7 +286,7 @@ function render() {
     <td class="num">${fmtDate(p.in_force)}</td></tr>`).join("")
     : `<tr><td colspan="6" class="empty">Няма обекти с тези филтри. Намалете минималната оценка или изчистете търсенето.</td></tr>`;
 }
-["#q","#kind","#region","#minscore","#who"].forEach(s => $(s).addEventListener("input", render));
+["#q","#kind","#region","#minscore","#who","#stage"].forEach(s => $(s).addEventListener("input", render));
 render();
 
 const B = DATA.builders;
@@ -281,15 +316,16 @@ function renderBuilders() {
 renderBuilders();
 
 const A = DATA.architects;
-[...new Set(A.map(a => a.college))].sort().forEach(c => $("#acol").insertAdjacentHTML("beforeend", `<option>${esc(c)}</option>`));
+[...new Set(A.map(a => a.college).filter(Boolean))].sort().forEach(c => $("#acol").insertAdjacentHTML("beforeend", `<option>${esc(c)}</option>`));
 function renderArch() {
-  const q = $("#aq").value.trim().toLowerCase(), col = $("#acol").value, c = $("#acontact").value;
+  const q = $("#aq").value.trim().toLowerCase(), col = $("#acol").value, c = $("#acontact").value, src = $("#asrc").value;
   const rows = A.filter(a => (!col || a.college === col) && (!c || (c === "phone" ? a.phones.length : a.emails.length))
+    && (!src || (src === "kab" ? !!a.kab_url : src === "maps" ? !!a.maps_url : !!(a.kab_url && a.maps_url)))
     && (!q || [a.name, a.address, a.contact_person, ...(a.owners || []), ...(a.staff || [])].join(" ").toLowerCase().includes(q)));
   $("#acount").textContent = `${rows.length} от ${A.length}`;
   const shown = rows.slice(0, 300);
   $("#arows").innerHTML = shown.map(a => `<tr>
-    <td><b>${esc(a.name)}</b><div class="small">Рег. № ${esc(a.reg_no)} · ${esc(a.college)} · <a href="${esc(a.kab_url)}" target="_blank" rel="noopener">профил в КАБ</a></div></td>
+    <td><b>${esc(a.name)}</b><div class="small">${[a.reg_no ? `Рег. № ${esc(a.reg_no)}` : "", a.college ? esc(a.college) : "", a.kab_url ? `<a href="${esc(a.kab_url)}" target="_blank" rel="noopener">профил в КАБ</a>` : "", a.maps_url ? `<a href="${esc(a.maps_url)}" target="_blank" rel="noopener">Google Maps${a.rating ? ` ★ ${a.rating}` : ""}</a>` : "", a.category && !a.kab_url ? esc(a.category) : ""].filter(Boolean).join(" · ")}</div></td>
     <td class="small">${[...(a.owners || []), ...(a.staff || []).slice(0, 4)].map(esc).join("<br>")}</td>
     <td><div class="contact">${a.contact_person ? `<span>${esc(a.contact_person)}</span>` : ""}${a.phones.map(p => `<span class="sel">${esc(p)}</span>`).join("")}${a.emails.map(e => `<span class="sel">${esc(e)}</span>`).join("")}${a.website ? `<a href="${esc(href(a.website))}" target="_blank" rel="noopener">${esc(a.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : ""}${!a.phones.length && !a.emails.length ? `<span class="src">няма публикуван контакт</span>` : ""}</div></td>
     <td class="small">${esc(a.address)}</td></tr>`).join("")
@@ -297,7 +333,7 @@ function renderArch() {
   $("#amore").hidden = rows.length <= shown.length;
   $("#amore").textContent = `Показани са първите ${shown.length}. Стеснете търсенето, за да видите останалите.`;
 }
-["#aq","#acol","#acontact"].forEach(s => $(s).addEventListener("input", renderArch));
+["#aq","#acol","#acontact","#asrc"].forEach(s => $(s).addEventListener("input", renderArch));
 renderArch();
 
 $("#visas").innerHTML = DATA.visas.map(v => `<tr><td class="num">${fmtDate(v.issued)}</td><td class="num">${esc(v.number)}</td>
@@ -310,7 +346,7 @@ $("#oesut").innerHTML = DATA.oesut.map(o => `<tr><td class="num">${fmtDate(o.dat
 
 document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["permits","builders","arch","visas","oesut","about"].forEach(t => $("#pane-" + t).hidden = t !== b.dataset.tab);
+  ["permits","builders","arch","visas","oesut","howto","about"].forEach(t => $("#pane-" + t).hidden = t !== b.dataset.tab);
 }));
 </script>
 """

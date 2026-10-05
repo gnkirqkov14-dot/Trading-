@@ -78,6 +78,27 @@ def matches_company(url: str, company: str) -> bool:
 # Google през Apify
 # --------------------------------------------------------------------------
 
+COST_PER_QUERY = 0.0055  # USD на заявка (измерено: 0.0045–0.0056)
+
+
+def _norm_q(q: str) -> str:
+    return re.sub(r"\s+", " ", q or "").strip().lower()
+
+
+def queries_affordable(http: Http) -> int | None:
+    """Колко нови Google заявки позволява оставащият месечен бюджет в Apify.
+    Резерв APIFY_RESERVE_USD (по подразбиране 0.30 $) не се харчи. None = неизвестно."""
+    token = os.environ.get("APIFY_TOKEN")
+    params = {"token": token} if token else {}
+    reserve = float(os.environ.get("APIFY_RESERVE_USD", "0.30"))
+    try:
+        data = http.get(f"{APIFY}/users/me/limits", params=params).json()["data"]
+        left = data["limits"]["maxMonthlyUsageUsd"] - data["current"]["monthlyUsageUsd"]
+    except Exception:
+        return None
+    return max(0, int((left - reserve) / COST_PER_QUERY))
+
+
 def google(http: Http, queries: list[str], timeout: int = 900) -> dict[str, list[dict]]:
     """Пуска всички заявки в един Apify run и връща {заявка: [резултати]}."""
     if not queries:
@@ -94,10 +115,14 @@ def google(http: Http, queries: list[str], timeout: int = 900) -> dict[str, list
             raise TimeoutError("Apify търсенето не приключи навреме")
         time.sleep(10)
         run = http.get(f"{APIFY}/actor-runs/{run['id']}", params=params).json()["data"]
+    if run["status"] != "SUCCEEDED":
+        raise RuntimeError(f"Apify run {run['id']}: {run['status']}")
     items = http.get(f"{APIFY}/datasets/{run['defaultDatasetId']}/items", params=params).json()
+    by_norm = {_norm_q(q): q for q in queries}
     out: dict[str, list[dict]] = {}
     for item in items:
         term = (item.get("searchQuery") or {}).get("term", "")
+        term = by_norm.get(_norm_q(term), term)
         out.setdefault(term, []).extend(
             {"url": r.get("url"), "title": r.get("title", ""), "description": r.get("description", "")}
             for r in item.get("organicResults") or [])

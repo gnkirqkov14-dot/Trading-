@@ -66,10 +66,13 @@ def company_contact(name: str, http_tr: Http, http: Http, cache: Cache) -> dict:
 
 def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
            architects_min_score: int = 55, log=print,
-           kab_by_domain: dict | None = None) -> dict[str, dict]:
+           kab_by_domain: dict | None = None, web_filter=lambda p: True,
+           only=lambda p: True) -> dict[str, dict]:
     http_tr = Http(delay=2.0)  # Търговският регистър връща 429 при по-често
     roles: dict[str, set] = {}
     for p in permits:
+        if not only(p):
+            continue
         for name in p.get("investor_companies", []):
             roles.setdefault(name, set()).add("Инвеститор")
         for name in companies_in(p.get("supervision", "")):
@@ -85,14 +88,23 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
 
     if use_web:
         # 1) сайт на фирмите без телефон или имейл
-        missing = [n for n, c in contacts.items() if not (c["phones"] and c["emails"])]
+        web_names = {n for p in permits if web_filter(p) for n in p.get("investor_companies", [])
+                     + companies_in(p.get("supervision", ""))}
+        missing = [n for n, c in contacts.items() if not (c["phones"] and c["emails"]) and n in web_names]
         queries = {n: company_query(n) for n in missing}
         # 2) вероятен архитект на големите нови сгради
-        arch_permits = [p for p in permits if p.get("kind") == "Ново строителство"
+        arch_permits = [p for p in permits if p.get("kind") == "Ново строителство" and web_filter(p)
                         and p.get("score", 0) >= architects_min_score and p.get("investor_companies")]
         arch_q = {p["number"]: architect_query(p) for p in arch_permits}
-        results = google_cached(http, list(queries.values()) + list(arch_q.values())
-                                + [project_query(p) for p in arch_permits], cache, log)
+        # Ред по важност: при ограничен бюджет първо отиват най-добрите обекти
+        arch_numbers = {p["number"] for p in arch_permits}
+        ordered = []
+        for p in sorted((p for p in permits if web_filter(p)), key=lambda p: -p.get("score", 0)):
+            ordered += [queries[n] for n in p.get("investor_companies", []) if n in queries]
+            ordered += [queries[n] for n in companies_in(p.get("supervision", "")) if n in queries]
+            if p["number"] in arch_numbers:
+                ordered += [project_query(p), arch_q[p["number"]]]
+        results = google_cached(http, ordered + list(queries.values()), cache, log)
 
         log(f"Сайтове на {len(missing)} фирми ...")
         for name in missing:
@@ -115,10 +127,11 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
     for p in permits:
         p["contacts"] = []
         for name in p.get("investor_companies", []):
-            c = contacts[name]
+            c = contacts.get(name) or {**_new_contact(name), "roles": ["Инвеститор"]}
             p["contacts"].append({**c, "role": "Инвеститор" + (" и строител (КСБ)" if c["is_builder"] else "")})
         for name in companies_in(p.get("supervision", "")):
-            p["contacts"].append({**contacts[name], "role": "Строителен надзор"})
+            if name in contacts:
+                p["contacts"].append({**contacts[name], "role": "Строителен надзор"})
         for a in p.get("architects", []):
             p["contacts"].append(architect_contact(a))
         inv = [c for c in p["contacts"] if c["role"].startswith("Инвеститор")]
@@ -151,12 +164,21 @@ def add_architects(permits: list[dict], results: dict, contacts: dict, http: Htt
             a["evidence"] = {"title": hit["title"], "url": hit["url"]}
             if kab:
                 a["managers"] = kab.get("owners", [])[:3]
-                a["links"]["КАБ"] = kab["kab_url"]
-                _merge(a, kab.get("phones", []), kab.get("emails", []), kab.get("website", ""), "КАБ")
+                directory_links(a, kab)
+                _merge(a, kab.get("phones", []), kab.get("emails", []), kab.get("website", ""),
+                       "КАБ" if kab.get("kab_url") else "Google Maps")
             _merge(a, found["phones"], found["emails"], found["website"], "сайт на бюрото")
-            a["in_kab"] = bool(kab)
+            a["in_kab"] = bool(kab and kab.get("kab_url"))
             archs.append(a)
         p["architects"] = archs
+
+
+def directory_links(contact: dict, bureau: dict) -> None:
+    """Линкове към записа на бюрото в справочника (КАБ и/или Google Maps)."""
+    if bureau.get("kab_url"):
+        contact["links"]["КАБ"] = bureau["kab_url"]
+    if bureau.get("maps_url"):
+        contact["links"]["Google Maps"] = bureau["maps_url"]
 
 
 def architect_contact(a: dict) -> dict:
@@ -204,10 +226,23 @@ def google_cached(http: Http, queries: list[str], cache: Cache, log=print) -> di
         else:
             out[q] = hit
     if todo:
+        cap = web.queries_affordable(http)
+        if cap is not None and len(todo) > cap:
+            log(f"  бюджетът в Apify стига за {cap} от {len(todo)} нови заявки; "
+                f"останалите (с по-нисък приоритет) се пропускат")
+            todo = todo[:cap]
+    if todo:
         log(f"Google търсене (Apify): {len(todo)} заявки ...")
-        fresh = web.google(http, todo)
-        for q in todo:
-            out[q] = fresh.get(q, [])
-            cache("google", q, lambda: out[q], overwrite=True)
+        try:
+            fresh = web.google(http, todo)
+        except Exception as exc:  # без интернет/бюджет – продължаваме с кеша
+            log(f"  Google търсенето не успя: {exc}")
+            fresh = None
+        if fresh is not None:
+            for q in todo:
+                out[q] = fresh.get(q, [])
+                cache("google", q, lambda: out[q], overwrite=True)
+    for q in queries:
+        out.setdefault(q, [])
     return out
 

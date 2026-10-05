@@ -13,8 +13,9 @@ from pathlib import Path
 
 from leads import web
 from leads.architects import (KabIndex, address_query, mentions, name_query, page_text,
-                              street_of)
-from leads.enrich import _merge, _new_contact, architect_contact, google_cached, visual_queries
+                              stage_hints, street_of)
+from leads.enrich import (_merge, _new_contact, architect_contact, directory_links, google_cached,
+                          visual_queries)
 from leads.http import Http
 from leads.visuals import NO_IMAGE_DOMAINS, _loose, relevant
 from run import architects_for_report, cached, log
@@ -60,9 +61,10 @@ def resolve(name: str, kab: KabIndex, http: Http, results_by_name: dict) -> dict
     if b:
         c["name"] = b["name"] + (f" ({name})" if name.startswith("арх.") else "")
         c["managers"] = (b.get("owners") or [])[:3]
-        c["links"]["КАБ"] = b["kab_url"]
-        c["in_kab"] = True
-        _merge(c, b.get("phones", []), b.get("emails", []), b.get("website", ""), "КАБ")
+        directory_links(c, b)
+        c["in_kab"] = bool(b.get("kab_url"))
+        _merge(c, b.get("phones", []), b.get("emails", []), b.get("website", ""),
+               "КАБ" if b.get("kab_url") else "Google Maps")
     if not (c["phones"] or c["emails"]):
         toks = [t for t in re.split(r"\s+", web.translit(name.replace("арх.", ""))) if len(t) >= 4]
         for r in results_by_name.get(name_query(name), []):
@@ -87,12 +89,14 @@ def main(min_score: int = 50) -> None:
     out = ROOT / "output"
     permits = json.loads((out / "permits.json").read_text(encoding="utf-8"))
     kab = KabIndex(architects_for_report(out))
-    targets = [p for p in permits if p.get("kind") == "Ново строителство" and p.get("score", 0) >= min_score]
+    # Само обектите в момента за фасада, най-добрите първи (при ограничен бюджет за Google)
+    targets = sorted((p for p in permits if p.get("kind") == "Ново строителство" and p.get("score", 0) >= min_score
+                      and p.get("facade_window", True)), key=lambda p: -p.get("score", 0))
     http = Http()
 
     queries = {p["number"]: [address_query(p)] + (visual_queries(p) if p.get("investor_companies") else [])
                for p in targets}
-    results = google_cached(http, sorted({q for qs in queries.values() for q in qs}), cached, log)
+    results = google_cached(http, list(dict.fromkeys(q for qs in queries.values() for q in qs)), cached, log)
 
     log(f"Страници на проектите за {len(targets)} обекта ...")
     found_names: dict[str, list[tuple[str, dict]]] = {}
@@ -105,6 +109,10 @@ def main(min_score: int = 50) -> None:
                 continue
             for n in mentions(text):
                 names.append((n, {"url": r["url"], "title": r.get("title", "")}))
+            for h in stage_hints(text):
+                p.setdefault("stage_hints", [])
+                if h not in [x["text"] for x in p["stage_hints"]]:
+                    p["stage_hints"].append({"text": h, "url": r["url"]})
             dom = web.domain_of(r["url"])
             if re.search(r"arch|arh", dom.replace("search", "")) and relevant(r, (p.get("investor_companies") or [""])[0] or p.get("locality", "")):
                 names.append((dom, {"url": r["url"], "title": r.get("title", "")}))
@@ -135,6 +143,7 @@ def main(min_score: int = 50) -> None:
             f'{a["name"]} {" ".join(a["phones"][:1])} {" ".join(a["emails"][:1])}'.strip() for a in p["architects"])
         with_arch += bool(p["architects"])
     log(f"Обекти с архитект: {with_arch} от {len(targets)}")
+    log(f"Обекти с етап от обявите (Акт 14/16): {sum(bool(p.get('stage_hints')) for p in targets)}")
     (out / "permits.json").write_text(json.dumps(permits, ensure_ascii=False, indent=1), encoding="utf-8")
 
 

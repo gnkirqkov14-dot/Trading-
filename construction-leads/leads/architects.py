@@ -116,3 +116,23 @@ def address_query(p: dict) -> str:
 
 def name_query(name: str) -> str:
     return f'"{name.replace("арх. ", "")}" архитект София'
+
+
+# „Акт 14 – март 2027“, „Акт 16: Q2 2027“, „очакван Акт 14 през 2027 г.“
+ACT_HINT = re.compile(
+    r"(?i)(?:очакван\w*\s+|предвид\w*\s+|планиран\w*\s+|издаден\w*\s+|получен\w*\s+)?"
+    r"акт\s*(?:обр(?:азец|\.)\s*)?(?:№\s*)?(14|15|16)\b[^.;\n]{0,70}")
+YEAR = re.compile(r"20(2[4-9]|3[0-2])")
+
+
+def stage_hints(text: str) -> list[str]:
+    """Изречения за Акт 14/15/16 с година – етапът според самия инвеститор."""
+    out = []
+    for m in ACT_HINT.finditer(text or ""):
+        frag = re.sub(r"\s+", " ", m.group(0)).strip(" ,:-–")
+        before = (text[max(0, m.start() - 6):m.start()] or "").lower()
+        if re.search(r"(?:^|\s)(?:на|има|с)\s*$", before):  # „сградата е на Акт 14“
+            frag = before.strip().split()[-1] + " " + frag
+        if YEAR.search(frag) or re.search(r"(?i)издаден|получен|въведен|^(на|има|с) акт", frag):
+            out.append(frag[:90])
+    return list(dict.fromkeys(out))[:3]

@@ -28,7 +28,10 @@ class Http:
             self._last = time.time()
             try:
                 resp = self.session.request(method, url, **kw)
-                if resp.status_code == 429:  # твърде много заявки – изчакваме по-дълго
+                if resp.status_code == 429:
+                    # Твърде много заявки: забавяме темпото трайно (не само еднократно),
+                    # за да не удряме лимита отново веднага след паузата.
+                    self.delay = min(self.delay * 1.5, 15.0)
                     time.sleep(int(resp.headers.get("Retry-After") or 0) or 20 * (attempt + 1))
                     continue
                 if resp.status_code < 500:

@@ -235,3 +235,32 @@ def fetch_oesut_protocols(http: Http, since: date) -> list[dict]:
             "files": files,
         })
     return out
+
+
+# --------------------------------------------------------------------------
+# Удостоверения за въвеждане в експлоатация (Акт 16) – готовите сгради
+# --------------------------------------------------------------------------
+
+def fetch_occupancy(http: Http, since: date) -> list[dict]:
+    """Удостоверенията, издадени след `since` (най-новите първи по Id)."""
+    reg = KendoRegister(http, "/RegisterCertificateForExploitationBuildings",
+                        "/RegisterCertificateForExploitationBuildings/Read")
+    out, older = [], 0
+    for row in reg.rows(sort="Id-desc"):
+        m = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", row.get("Number") or "")
+        d = date(int(m.group(3)), int(m.group(2)), int(m.group(1))) if m else None
+        if d and d < since:
+            older += 1
+            if older > 50:  # няколко поредни стари записа – стигнали сме началото
+                break
+            continue
+        older = 0
+        fields = parse_scope(row.get("Scope") or "")
+        out.append({
+            "number": row.get("Number"), "date": d.isoformat() if d else None,
+            "object": row.get("Object"), "region": row.get("Region"),
+            "upi": fields.get("УПИ", ""), "kvartal": fields.get("Квартал по регулация", ""),
+            "locality": fields.get("Местност", "").strip('"'),
+            "kkkr": fields.get("Идентификатор КККР (имот)", ""), "address": fields.get("Адрес", ""),
+        })
+    return out

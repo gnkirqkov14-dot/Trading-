@@ -18,7 +18,10 @@ from leads import nag_sofia
 from leads.enrich import enrich, kab_domains
 from leads.classify import classify, companies_in, score
 from leads.http import Http
-from leads.web import _clean_phone
+from leads.stage import facade_window, mark_act16, stage
+from leads.ksb import normalize_name
+from leads.visuals import _loose
+from leads.web import _clean_phone, domain_of
 from leads.report import write_html
 
 ROOT = Path(__file__).parent
@@ -78,8 +81,50 @@ def architects_for_report(out: Path) -> list[dict]:
             "phones": a.get("phones", []),
             "emails": [e for e in a.get("emails", []) if not e.endswith("@kab.bg")],
         })
+    merge_maps(rows, out)
     rows.sort(key=lambda r: (not (r["phones"] or r["emails"]), r["name"].lower().strip('"„ ')))
     return rows
+
+
+MAPS_CATEGORIES = {"Архитект", "Архитектурна фирма", "Архитектурен дизайнер", "Интериорен дизайнер",
+                   "Ландшафтен архитект", "Архитектурно бюро"}
+
+
+def merge_maps(rows: list[dict], out: Path) -> None:
+    """Добавя архитектурните бюра от Google Maps (output/maps_architects*.json):
+    съвпадение с КАБ по сайт, телефон или име, иначе нов запис."""
+    places = {}
+    for f in sorted(out.glob("maps_architects*.json")):
+        for x in json.loads(f.read_text(encoding="utf-8")):
+            if x.get("placeId") and not x.get("permanentlyClosed"):
+                places[x["placeId"]] = x
+    by_domain, by_phone, by_name = {}, {}, {}
+    for r in rows:
+        if r.get("website"):
+            by_domain[domain_of(r["website"] if "//" in r["website"] else "https://" + r["website"])] = r
+        for ph in r["phones"]:
+            by_phone[_clean_phone(ph) or ph] = r
+        by_name[_loose(normalize_name(r["name"]))] = r
+    for x in places.values():
+        title, cat = x.get("title") or "", x.get("categoryName") or ""
+        if cat not in MAPS_CATEGORIES and not re.search(r"(?i)арх|arch", title):
+            continue
+        phone = _clean_phone(x.get("phone") or "") or (x.get("phone") or "")
+        dom = domain_of(x["website"]) if x.get("website") else ""
+        r = (by_domain.get(dom) if dom else None) or (by_phone.get(phone) if phone else None) \
+            or by_name.get(_loose(normalize_name(title)))
+        if r is None:
+            r = {"name": title, "college": "", "reg_no": "", "kab_url": "", "owners": [], "staff": [],
+                 "contact_person": "", "address": x.get("address") or "", "website": "",
+                 "phones": [], "emails": []}
+            rows.append(r)
+        if phone and phone not in r["phones"]:
+            r["phones"].append(phone)
+        if x.get("website") and not r.get("website"):
+            r["website"] = x["website"]
+        r["maps_url"] = x.get("url") or ""
+        r["rating"] = x.get("totalScore")
+        r["category"] = cat
 
 
 def log(msg: str) -> None:
@@ -88,12 +133,14 @@ def log(msg: str) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--days", type=int, default=90, help="колко дни назад (по дата на влизане в сила)")
+    ap.add_argument("--days", type=int, default=540, help="колко дни назад (по дата на влизане в сила)")
     ap.add_argument("--limit", type=int, default=None, help="макс. брой разрешения (за тест)")
     ap.add_argument("--no-details", action="store_true", help="без детайлите (РЗП, категория, надзор)")
     ap.add_argument("--no-contacts", action="store_true", help="без търсене на контакти")
     ap.add_argument("--no-web", action="store_true", help="без Google/сайтове (само регистрите)")
     ap.add_argument("--out", default=str(ROOT / "output"))
+    ap.add_argument("--web-min-score", type=int, default=55,
+                    help="Google/сайтове само за обекти с поне тази оценка в момента за фасада")
     ap.add_argument("--report-only", action="store_true", help="само нов report.html от записаните данни")
     args = ap.parse_args()
 
@@ -126,9 +173,18 @@ def main() -> None:
         p["investor_is_company"] = bool(p["investor_companies"]) or "ОБЩИНА" in p["investor"].upper()
         p["score"] = score(p)
 
+    log("Удостоверения за въвеждане в експлоатация (Акт 16) ...")
+    certificates = nag_sofia.fetch_occupancy(http, since)
+    log(f"  {len(certificates)} удостоверения, свързани с разрешения: {mark_act16(permits, certificates)}")
+    for p in permits:
+        p["stage"], p["stage_code"] = stage(p)
+        p["facade_window"] = facade_window(p)
+
     companies: dict[str, dict] = {}
     if not args.no_contacts:
         companies = enrich(permits, http, cached, use_web=not args.no_web, log=log,
+                           web_filter=lambda p: p["facade_window"] and p["score"] >= args.web_min_score,
+                           only=lambda p: p["facade_window"],
                            kab_by_domain=kab_domains(architects_for_report(out)))
 
     permits.sort(key=lambda p: p.get("in_force") or "", reverse=True)
@@ -148,7 +204,7 @@ def main() -> None:
     (out / "oesut.json").write_text(json.dumps(protocols, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "companies.json").write_text(json.dumps(companies, ensure_ascii=False, indent=1), encoding="utf-8")
 
-    cols = ["score", "kind", "building_type", "category", "rzp", "rzp_with_basement",
+    cols = ["score", "facade_window", "stage", "kind", "building_type", "category", "rzp", "rzp_with_basement",
             "number", "in_force", "region", "address", "object", "investor", "investor_eik",
             "investor_managers", "investor_phone", "investor_email", "investor_website",
             "supervision", "architect",
