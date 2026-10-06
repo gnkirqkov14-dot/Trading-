@@ -5,3 +5,4 @@ phomiturkey	Турция
 phomibeneluxfrance	Бенелюкс / Франция
 phomi.chechnya	Чечня
 phomi.ukraine	Украйна
+phomi_bel	Беларус
