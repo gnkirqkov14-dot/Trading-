@@ -30,7 +30,7 @@ def link_path(permit_hash: str) -> Path:
     return CACHE / "eiklink" / f"{hashlib.sha1(permit_hash.encode()).hexdigest()[:16]}.json"
 
 
-VERSION = 4  # при промяна на правилата старите решения се изчисляват наново (от кеша)
+VERSION = 5  # при промяна на правилата старите решения се изчисляват наново (от кеша)
 
 
 def load_link(permit_hash: str) -> dict | None:

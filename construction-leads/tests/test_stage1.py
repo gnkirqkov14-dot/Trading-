@@ -282,3 +282,64 @@ def test_selection_metrics_follow_filters(tmp_path):
         browser.close()
     assert not errors, errors
     assert "(всички обекти)" in total_tiles   # общите плочки са отделени от селекцията
+
+
+# ---------------------------------------------------------------- заповед към разрешението
+
+def test_order_investor_with_abbreviations():
+    text = ("ЗАПОВЕД ... Възложител в качеството му на собственик и заинтересовано лице по чл. 149, ал.2 "
+            "от ЗУТ е „ВА БУЛ СЪРВИЗ“ ООД, Булстат 200213515, представена е декларация. "
+            "Доклад, изготвен от „СМ КОНТРОЛ“ ЕООД, ЕИК 175053345")
+    d = match_investors(['"ВА БУЛ СЪРВИЗ" ЕООД'], text)['"ВА БУЛ СЪРВИЗ" ЕООД']
+    assert d["status"] == "намерен" and d["eik"] == "200213515"   # не ЕИК на надзора
+
+
+# ---------------------------------------------------------------- ръчно проверени факти
+
+def _record():
+    return {"hash": "H", "number": "1/01.01.2025", "region": "Младост", "in_force": "2025-04-12",
+            "rzp": 1000, "investor_companies": ["ФИРМА ООД"],
+            "contacts": [{"name": "ФИРМА ООД", "role": "Инвеститор", "eik": "200213515", "phones": [],
+                          "emails": [], "website": "", "sources": [], "links": {}, "managers": [], "address": ""},
+                         {"name": "друг.bg", "role": "Архитект (вероятен)", "phones": [], "emails": [], "website": "",
+                          "sources": [], "links": {}, "evidence": {"url": "https://drug-proekt", "mention": "друг.bg"}}],
+            "architects": [{"name": "друг.bg", "evidence": {"url": "https://drug-proekt", "mention": "друг.bg"}}]}
+
+
+def _conf(pole, stoinost, **kw):
+    row = {"obekt": "H", "pole": pole, "stoinost": stoinost, "status": "", "eik": "", "iztochnik": "сайт",
+           "url": "https://x", "publikuvano": "", "provereno": "2026-10-06", "belezhka": "основание"}
+    row.update(kw)
+    return row
+
+
+def test_manual_facts_keep_source_and_dates():
+    from leads.evidence import apply_manual, apply_stage_status, build_links
+    p = _record()
+    confs = {"H": [
+        _conf("изключен източник", "друг проект", url="https://drug-proekt"),
+        _conf("събитие", "излети основи", publikuvano="2025-07-27"),
+        _conf("контакт инвеститор", "+359889309580; sales@vabul.com; vabul.com", eik="200213515"),
+        _conf("строител", "СТРОИТЕЛ ЕООД", eik="202642315", publikuvano="2025-04-28"),
+        _conf("архитект", "АРХ ООД", status="кандидат"),
+    ]}
+    apply_manual(p, confs)
+    apply_stage_status(p, confs, "2026-10-06")
+    links = build_links(p, confs)
+    assert not p["architects"] and not any(c["name"] == "друг.bg" for c in p["contacts"])   # друг проект
+    assert p["stage_status"] == "приблизителен"            # историческо събитие не потвърждава етапа
+    assert p["milestones"][0]["historical"] and p["milestones"][0]["date"] == "2025-07-27"
+    inv = p["contacts"][0]
+    assert inv["phones"] == ["+359889309580"] and inv["emails"] == ["sales@vabul.com"]
+    b = next(l for l in links if l["role"] == "строител")
+    assert b["status"] == "потвърдена" and b["published"] == "2025-04-28" and b["date"] == "2026-10-06"
+    a = next(l for l in links if l["role"] == "архитект")
+    assert a["status"] == "кандидат"                       # за преглед, не потвърдена
+
+
+def test_manual_contact_not_added_when_investor_unclear():
+    from leads.evidence import apply_manual
+    p = _record()
+    p["contacts"].append({**p["contacts"][0], "name": "ВТОРА ООД", "eik": ""})
+    apply_manual(p, {"H": [_conf("контакт инвеститор", "+359889309580")]})   # без ЕИК, двама инвеститори
+    assert all(not c["phones"] for c in p["contacts"] if c["role"] == "Инвеститор")

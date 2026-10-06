@@ -75,7 +75,9 @@ def investor_section(text: str) -> str | None:
         rest = text[m.end():]
         end = re.search(r"(?i)строителен\s+надзор|консултант|\bстроител\s*:|проектант|протокол", rest)
         return rest[:end.start()] if end else rest[:800]
-    m = re.search(r"(?i)възложител\b[^.]{0,120}?\bе\s", text)
+    # „Възложител в качеството му на собственик … по чл. 149, ал.2 от ЗУТ е „…“ ООД, Булстат …“ –
+    # между тях може да има съкращения с точка (чл., ал.), затова се търси „е“ пред кавичка
+    m = re.search(r"(?is)възложител\b.{0,200}?\sе\s+(?=[„\"“«])", text)
     if m:
         return text[m.end():m.end() + 300]
     return None

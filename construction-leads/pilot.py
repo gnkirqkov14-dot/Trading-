@@ -79,7 +79,7 @@ def metrics(final_by_hash: dict, selection: list[dict]) -> list[dict]:
             "links_confirmed": sum(1 for l in p.get("links", []) if l["status"] == "потвърдена"),
             "links_candidate": sum(1 for l in p.get("links", []) if l["status"] != "потвърдена"),
             "stage_status": p.get("stage_status", ""),
-            "milestones": len(p.get("milestones", [])),
+            "milestones": sum(1 for m in p.get("milestones", []) if "протокол" in m["what"]),
             "document": p.get("attached_document", ""),
             "builder_confirmed": sum(1 for l in p.get("links", []) if l["role"] == "строител" and l["status"] == "потвърдена"),
         })
@@ -138,7 +138,7 @@ def write_report(before: list[dict], after: list[dict], log: RunLog) -> None:
         f"| Доказани връзки (архитект/строител) | {sum(r['links_confirmed'] for r in before)} | {sum(r['links_confirmed'] for r in after)} |",
         f"| Потвърден текущ етап (Акт 16 / ръчно) | {count(before, lambda r: r['stage_status'] == 'потвърден')} | {count(after, lambda r: r['stage_status'] == 'потвърден')} |",
         f"| Потвърдено начало на строежа (протокол обр. 2) | {count(before, lambda r: r.get('milestones'))} | {count(after, lambda r: r.get('milestones'))} |",
-        f"| Потвърден строител (протокол + ЕИК в ТР) | {count(before, lambda r: r.get('builder_confirmed'))} | {count(after, lambda r: r.get('builder_confirmed'))} |",
+        f"| Потвърден строител (протокол + ЕИК в ТР или ръчна проверка) | {count(before, lambda r: r.get('builder_confirmed'))} | {count(after, lambda r: r.get('builder_confirmed'))} |",
         "", "Вид на документа, прикачен към разрешението: " + ", ".join(
             f"{k}: {v}" for k, v in sorted(__import__('collections').Counter(r.get('document') or '–' for r in after).items())),
         "", "## По обекти", "",

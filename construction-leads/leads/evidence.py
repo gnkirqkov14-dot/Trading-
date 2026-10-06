@@ -41,7 +41,12 @@ def load_confirmations(path: Path = CONFIRMATIONS) -> dict[str, list[dict]]:
         for row in csv.DictReader(f):
             if not (row.get("obekt") or "").strip() or not (row.get("pole") or "").strip():
                 continue
-            out.setdefault(row["obekt"].strip(), []).append(row)
+            row = {k: (v or "").strip() for k, v in row.items() if k}
+            row.setdefault("provereno", row.get("data", ""))
+            row["provereno"] = row["provereno"] or row.get("data", "")
+            for k in ("url", "publikuvano", "status", "eik", "iztochnik", "belezhka", "stoinost"):
+                row.setdefault(k, "")
+            out.setdefault(row["obekt"], []).append(row)
     return out
 
 
@@ -59,8 +64,9 @@ def apply_stage_status(p: dict, confirmations: dict, data_date: str) -> None:
         if code:
             p["stage_code"] = code
         p["stage_status"] = "потвърден"
-        p["stage_evidence"] = {"source": c.get("iztochnik", "").strip() or "ръчно потвърждение",
-                               "detail": c.get("belezhka", "").strip(), "date": c.get("data", "").strip()}
+        p["stage_evidence"] = {"source": c.get("iztochnik", "") or "ръчно потвърждение",
+                               "detail": c.get("belezhka", ""), "date": c.get("publikuvano") or c.get("provereno", ""),
+                               "url": c.get("url", ""), "retrieved": c.get("provereno", "")}
     elif p.get("act16"):
         p["stage_status"] = "потвърден"
         p["stage_evidence"] = {
@@ -143,15 +149,21 @@ def _role_context_ok(text: str, mention: str) -> bool:
 
 def build_links(p: dict, confirmations: dict) -> list[dict]:
     links = []
+    manual_urls = set()
     for c in _confs(p, confirmations):
         role = c["pole"].strip().lower()
         if role in ("архитект", "строител"):
-            links.append({"role": role, "name": c["stoinost"].strip(), "status": "потвърдена",
-                          "basis": c.get("belezhka", "").strip() or "ръчно потвърждение",
-                          "source": c.get("iztochnik", "").strip(), "url": "",
-                          "date": c.get("data", "").strip()})
+            links.append({"role": role, "name": c["stoinost"], "eik": c.get("eik", ""),
+                          "status": "кандидат" if c.get("status") == "кандидат" else "потвърдена",
+                          "basis": c.get("belezhka", "") or "ръчно потвърждение",
+                          "source": c.get("iztochnik", ""), "url": c.get("url", ""),
+                          "published": c.get("publikuvano", ""), "date": c.get("provereno", "")})
+            for u in c.get("url", "").split():
+                manual_urls.add((role, u))
     confirmed_names = {(l["role"], normalize_name(l["name"])) for l in links}
     for a in p.get("architects", []):
+        if ("архитект", (a.get("evidence") or {}).get("url", "")) in manual_urls:
+            continue  # същата страница вече е проверена ръчно (ред в confirmations.csv)
         ev = a.get("evidence") or {}
         url = ev.get("url", "")
         text, at = _page_cache(url)
@@ -197,3 +209,85 @@ def build_links(p: dict, confirmations: dict) -> list[dict]:
                           "source": "КСБ – Централен професионален регистър на строителя",
                           "url": (c.get("links") or {}).get("КСБ", ""), "date": ""})
     return links
+
+
+# ---------------------------------------------------------------------------
+# Ръчно проверени данни за обект (data/confirmations.csv)
+# ---------------------------------------------------------------------------
+
+def _tr_cached(eik: str) -> dict | None:
+    """Запис от Търговския регистър само от кеша (без мрежа при изграждане на отчета)."""
+    path = CACHE / "tr_eik" / (hashlib.sha1(eik.encode()).hexdigest()[:16] + ".json")
+    if not path.exists():
+        return None
+    rec = json.loads(path.read_text(encoding="utf-8"))
+    return rec if rec and rec.get("tr_name") else None
+
+
+def _ref(c: dict) -> dict:
+    return {"source": c.get("iztochnik", ""), "url": c.get("url", ""), "published": c.get("publikuvano", ""),
+            "checked": c.get("provereno", ""), "note": c.get("belezhka", "")}
+
+
+def apply_manual(p: dict, confirmations: dict) -> None:
+    """Прилага ръчно проверените факти към съществуващия запис. Всеки факт пази източник, линк,
+    дата на публикуване и дата на проверка. Не презаписва потвърдени данни – само допълва:
+      проект               – търговското име на проекта (напр. Vabul ONE);
+      доказателство        – документ/страница, която свързва проекта с разрешението и имота;
+      събитие              – историческо събитие (напр. „излети основи“), НЕ текущ етап;
+      контакт инвеститор   – „телефон; имейл; сайт“ от официален източник на инвеститора;
+      изключен източник    – страница за друг проект (връзките от нея се махат);
+      архитект / строител  – участник (с ЕИК по избор), виж build_links."""
+    from .enrich import _merge, _new_contact
+    confs = _confs(p, confirmations)
+    if not confs:
+        return
+    excluded = {c["url"]: c for c in confs if c["pole"].lower() == "изключен източник" and c.get("url")}
+    if excluded:
+        p["rejected_sources"] = [{**_ref(c), "reason": c.get("belezhka", "")} for c in excluded.values()]
+        p["architects"] = [a for a in p.get("architects", []) if (a.get("evidence") or {}).get("url") not in excluded]
+        p["contacts"] = [c for c in p.get("contacts", []) if (c.get("evidence") or {}).get("url") not in excluded]
+    for c in confs:
+        pole = c["pole"].lower()
+        if pole == "проект" and not p.get("project_name"):
+            p["project_name"] = {"name": c["stoinost"], **_ref(c)}
+        elif pole == "доказателство":
+            p.setdefault("identification", []).append({"what": c["stoinost"], **_ref(c)})
+        elif pole == "събитие":
+            p.setdefault("milestones", []).append({
+                "what": c["stoinost"], "date": c.get("publikuvano", ""), "label": "Съобщено",
+                "historical": True, "source": c.get("iztochnik", ""), "url": c.get("url", ""),
+                "retrieved": c.get("provereno", "")})
+        elif pole == "контакт инвеститор":
+            inv = [x for x in p.get("contacts", []) if x.get("role", "").startswith("Инвеститор")
+                   and (not c.get("eik") or x.get("eik") == c["eik"])]
+            if len(inv) != 1:
+                continue  # не е ясно на кой инвеститор е – не се добавя
+            parts = [x.strip() for x in c["stoinost"].split(";") if x.strip()]
+            _merge(inv[0], [x for x in parts if re.search(r"\d{6}", x)], [x for x in parts if "@" in x],
+                   next((x for x in parts if "." in x and "@" not in x and not re.search(r"\d{6}", x)), ""),
+                   c.get("iztochnik", "") or "ръчна проверка")
+            inv[0].setdefault("contact_evidence", []).append(_ref(c))
+        elif pole in ("архитект", "строител") and c.get("status") != "кандидат":
+            role = "Архитект – потвърдена" if pole == "архитект" else "Строител"
+            eik = c.get("eik", "")
+            same = next((x for x in p.get("contacts", []) if eik and x.get("eik") == eik), None)
+            contact = same or {**_new_contact(c["stoinost"]), "eik": eik}
+            contact["role"] = role if not same else same["role"]
+            rec = _tr_cached(eik) if eik else None
+            if rec:
+                contact["managers"] = contact.get("managers") or [m for m in rec.get("managers", []) if "Заличено" not in m]
+                contact["address"] = contact.get("address") or rec.get("address", "")
+                contact.setdefault("links", {})["Търговски регистър"] = rec.get("tr_url", "")
+                _merge(contact, [rec.get("phone")], [rec.get("email")], rec.get("website", ""), "Търговски регистър")
+            contact["link_basis"] = c.get("belezhka", "")
+            contact["link_date"] = c.get("provereno", "")
+            contact.setdefault("link_evidence", []).append(_ref(c))
+            if not same:
+                p.setdefault("contacts", []).append(contact)
+            if pole == "архитект":
+                urls = set(c.get("url", "").split())
+                # кандидатът от същата страница (напр. домейнът ip-arch.com) се заменя от проверения запис
+                p["architects"] = [a for a in p.get("architects", []) if (a.get("evidence") or {}).get("url") not in urls]
+                p["contacts"] = [x for x in p["contacts"] if x is contact or not (
+                    x.get("role", "").startswith("Архитект") and (x.get("evidence") or {}).get("url") in urls)]

@@ -25,7 +25,7 @@ from leads.visuals import _loose
 from leads.web import _clean_phone, domain_of
 from leads.dedupe import dedupe_architects, dedupe_permits, group_investors, normalize_phone
 from leads.eik_link import apply_eik
-from leads.evidence import apply_stage_status, build_links, load_confirmations
+from leads.evidence import apply_manual, apply_stage_status, build_links, load_confirmations
 from leads.export import write_architects, write_leads
 from leads.runlog import RunLog
 from leads.visuals import filter_visuals
@@ -159,6 +159,7 @@ def finalize(permits: list[dict], data_date: str = "") -> list[dict]:
     filter_visuals(final)
     confirmations = load_confirmations()
     for p in final:
+        apply_manual(p, confirmations)  # ръчно проверени факти (с източник и дати)
         apply_stage_status(p, confirmations, data_date)
         p["facade_window"] = facade_window(p) if p["stage_status"] != "неизвестен" else False
         p["links"] = build_links(p, confirmations)
