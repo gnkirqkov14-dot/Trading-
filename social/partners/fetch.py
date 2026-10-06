@@ -15,10 +15,25 @@ since = (datetime.now(timezone.utc) - timedelta(days=int(os.environ.get("SINCE_D
 
 body = {"directUrls": [f"https://www.instagram.com/{u}/" for u, _ in partners],
         "resultsType": "posts", "resultsLimit": LIMIT, "onlyPostsNewerThan": since}
-req = urllib.request.Request(
-    "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?timeout=540",
-    data=json.dumps(body).encode(), headers={"Content-Type": "application/json"}, method="POST")
-items = json.load(urllib.request.urlopen(req, timeout=600))
+def api(url, data=None):
+    r = urllib.request.Request(url, data=json.dumps(data).encode() if data is not None else None,
+                               headers={"Content-Type": "application/json"}, method="POST" if data is not None else "GET")
+    for attempt in range(4):
+        try:
+            return json.load(urllib.request.urlopen(r, timeout=120))
+        except Exception as e:
+            if attempt == 3: raise
+            time.sleep(10)
+
+import time
+run = api("https://api.apify.com/v2/acts/apify~instagram-scraper/runs", body)["data"]
+for _ in range(90):
+    st = api(f"https://api.apify.com/v2/actor-runs/{run['id']}")["data"]
+    if st["status"] not in ("READY", "RUNNING"): break
+    time.sleep(10)
+if st["status"] != "SUCCEEDED":
+    raise SystemExit(f"Apify run {st['status']}")
+items = api(f"https://api.apify.com/v2/datasets/{st['defaultDatasetId']}/items?clean=true")
 
 out = f"{HERE}/new_docs"; os.makedirs(out, exist_ok=True); os.makedirs(f"{HERE}/gallery/thumbs", exist_ok=True)
 new = []
