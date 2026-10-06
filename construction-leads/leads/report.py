@@ -275,6 +275,8 @@ function person(c, cls) {
   if ((c.group || []).length > 1) lines.push(`<span class="src" title="${esc(c.group.join(", "))}">Група: ${c.group.length} фирми с общ телефон/имейл${c.group_objects > 1 ? ` · ${c.group_objects} обекта` : ""}</span>`);
   else if (c.group_objects > 1) lines.push(`<span class="src">${c.group_objects} обекта в списъка</span>`);
   if (c.evidence) lines.push(`<a class="src" href="${esc(c.evidence.url)}" target="_blank" rel="noopener">откъде: ${esc(c.evidence.title.slice(0, 60))}</a>`);
+  (c.link_evidence || []).slice(0, 3).forEach(e => lines.push(`<a class="src" href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.snippet || e.note || "")}">${e.source === "автоматично" ? "автоматично" : "ръчно"}: ${esc((e.url || "").replace(/^https?:\/\/(www\.)?/, "").slice(0, 50))}${e.published ? " · публ. " + esc(fmtDate(e.published)) : ""}${e.checked ? " · пров. " + esc(fmtDate(e.checked)) : ""}</a>`));
+  (c.contact_evidence || []).slice(0, 2).forEach(e => lines.push(`<a class="src" href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.note || "")}">контакт: ${esc(e.source)} – ${esc((e.url || "").replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}${e.checked ? " · пров. " + esc(fmtDate(e.checked)) : ""}</a>`));
   const src = Object.entries(c.links || {}).map(([k, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(k)}</a>`);
   if (src.length) lines.push(`<span class="src">${src.join(" · ")}</span>`);
   if (!(c.phones || []).length && !(c.emails || []).length) lines.push(`<span class="src">няма публикуван контакт</span>`);
@@ -287,6 +289,7 @@ function contact(p) {
   if (persons.length) people.unshift(`<div class="person inv"><span class="role">Инвеститор</span><span class="nm">${esc(persons.slice(0, 4).join(", "))}${persons.length > 4 ? ` и още ${persons.length - 4}` : ""}</span></div>`);
   if (!(p.contacts || []).some(c => c.role === "Строителен надзор") && p.supervision && p.supervision !== "-")
     people.push(`<div class="person"><span class="role">Строителен надзор</span><span class="nm">${esc(p.supervision)}</span></div>`);
+  (p.review || []).slice(0, 4).forEach(r => people.push(`<div class="person"><span class="badge warn">за преглед</span><span class="src">${esc(r.what)} – ${esc(r.reason)}${r.url ? ` <a href="${esc(r.url)}" target="_blank" rel="noopener">източник</a>` : ""}</span></div>`));
   return `<div class="people">${people.join("")}</div>`;
 }
 function stageBadge(p) {

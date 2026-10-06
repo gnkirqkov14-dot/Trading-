@@ -25,6 +25,7 @@ from leads.visuals import _loose
 from leads.web import _clean_phone, domain_of
 from leads.dedupe import dedupe_architects, dedupe_permits, group_investors, normalize_phone
 from leads.eik_link import apply_eik
+from leads.projects import apply_projects, link_entries
 from leads.evidence import apply_manual, apply_stage_status, build_links, load_confirmations
 from leads.export import write_architects, write_leads
 from leads.runlog import RunLog
@@ -160,9 +161,11 @@ def finalize(permits: list[dict], data_date: str = "") -> list[dict]:
     confirmations = load_confirmations()
     for p in final:
         apply_manual(p, confirmations)  # ръчно проверени факти (с източник и дати)
+        apply_projects(p)  # автоматично намерени проектни страници (само допълва)
         apply_stage_status(p, confirmations, data_date)
         p["facade_window"] = facade_window(p) if p["stage_status"] != "неизвестен" else False
         p["links"] = build_links(p, confirmations)
+        p["links"] += link_entries(p, p["links"])
         by_name = {(l["role"], l["name"]): l for l in p["links"]}
         for c in p.get("contacts", []):
             if c.get("role", "").startswith("Архитект"):

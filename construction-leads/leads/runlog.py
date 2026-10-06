@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -29,6 +30,7 @@ class RunLog:
         self.pending_path = self.folder / "pending_failures.json"
         self.history_path = self.folder / "failures.jsonl"
         self.failures_this_run = 0
+        self._lock = threading.Lock()  # паралелни заявки пишат в същите файлове
 
     def log(self, msg: str) -> None:
         line = f"{now()} {msg}"
@@ -48,6 +50,10 @@ class RunLog:
         tmp.replace(self.pending_path)
 
     def failure(self, kind: str, key: str, error, url: str = "") -> None:
+        with self._lock:
+            self._failure(kind, key, error, url)
+
+    def _failure(self, kind: str, key: str, error, url: str = "") -> None:
         rec = {"kind": kind, "key": key, "url": url, "error": str(error)[:300], "at": now(),
                "run": self.run_id}
         with open(self.history_path, "a", encoding="utf-8") as f:
@@ -61,9 +67,10 @@ class RunLog:
         self.log(f"  НЕУСПЕХ {kind} {key}: {str(error)[:120]}")
 
     def success(self, kind: str, key: str) -> None:
-        pending = self._pending()
-        if pending.pop(f"{kind}:{key}", None) is not None:
-            self._save_pending(pending)
+        with self._lock:
+            pending = self._pending()
+            if pending.pop(f"{kind}:{key}", None) is not None:
+                self._save_pending(pending)
 
     def checkpoint(self, step: str, **state) -> None:
         path = self.folder / f"state-{step}.json"

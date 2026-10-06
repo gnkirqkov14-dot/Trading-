@@ -246,6 +246,7 @@ def apply_manual(p: dict, confirmations: dict) -> None:
     if excluded:
         p["rejected_sources"] = [{**_ref(c), "reason": c.get("belezhka", "")} for c in excluded.values()]
         p["architects"] = [a for a in p.get("architects", []) if (a.get("evidence") or {}).get("url") not in excluded]
+        p["stage_hints"] = [h for h in p.get("stage_hints") or [] if h.get("url") not in excluded]
         p["contacts"] = [c for c in p.get("contacts", []) if (c.get("evidence") or {}).get("url") not in excluded]
     for c in confs:
         pole = c["pole"].lower()
