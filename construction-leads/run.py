@@ -12,7 +12,7 @@ import json
 import os
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from leads import nag_sofia
@@ -24,7 +24,10 @@ from leads.ksb import normalize_name
 from leads.visuals import _loose
 from leads.web import _clean_phone, domain_of
 from leads.dedupe import dedupe_architects, dedupe_permits, group_investors, normalize_phone
+from leads.eik_link import apply_eik
+from leads.evidence import apply_stage_status, build_links, load_confirmations
 from leads.export import write_architects, write_leads
+from leads.runlog import RunLog
 from leads.visuals import filter_visuals
 from leads.report import write_html
 
@@ -136,8 +139,11 @@ def merge_maps(rows: list[dict], out: Path) -> None:
         r["category"] = cat
 
 
-def finalize(permits: list[dict]) -> list[dict]:
-    """Отчетът и Excel: без повторения на обекти, фирми и телефони; групи инвеститори."""
+def finalize(permits: list[dict], data_date: str = "") -> list[dict]:
+    """Отчетът и Excel: без повторения на обекти, фирми и телефони; групи инвеститори;
+    ЕИК от PDF-ите; потвърден/приблизителен етап; връзки с източник и основание."""
+    for p in permits:
+        apply_eik(p)  # ЕИК, прочетен от PDF-а на разрешението (ако вече е обработен)
     final = dedupe_permits(permits)
     # Едно изписване на фирма навсякъде (по ЕИК): „Прайм Контрол“ = „ПРАЙМ КОНТРОЛ“
     eik_name = {}
@@ -151,6 +157,20 @@ def finalize(permits: list[dict]) -> list[dict]:
                 c["name"] = eik_name[c["eik"]]
     group_investors(final)
     filter_visuals(final)
+    confirmations = load_confirmations()
+    for p in final:
+        apply_stage_status(p, confirmations, data_date)
+        p["facade_window"] = facade_window(p) if p["stage_status"] != "неизвестен" else False
+        p["links"] = build_links(p, confirmations)
+        by_name = {(l["role"], l["name"]): l for l in p["links"]}
+        for c in p.get("contacts", []):
+            if c.get("role", "").startswith("Архитект"):
+                l = by_name.get(("архитект", c.get("name")))
+                if l:
+                    c["role"] = f'Архитект – {l["status"]}'
+                    c["link_basis"], c["link_date"] = l["basis"], l["date"]
+            elif "строител (КСБ)" in c.get("role", ""):
+                c["link_basis"] = "като строител: кандидат – вписан в КСБ, не е доказано, че строи този обект"
     for p in final:
         inv = [c for c in p.get("contacts", []) if c.get("role", "").startswith("Инвеститор")]
         p["investor_phone"] = ", ".join(dict.fromkeys(x for c in inv for x in c["phones"][:2]))
@@ -162,8 +182,19 @@ def finalize(permits: list[dict]) -> list[dict]:
     return final
 
 
+RUNLOG: RunLog | None = None
+
+
+def runlog() -> RunLog:
+    """Един дневник за пускане: logs/run-<време>.log + неуспешните заявки."""
+    global RUNLOG
+    if RUNLOG is None:
+        RUNLOG = RunLog("run")
+    return RUNLOG
+
+
 def log(msg: str) -> None:
-    print(msg, file=sys.stderr, flush=True)
+    runlog().log(msg)
 
 
 def main() -> None:
@@ -202,7 +233,7 @@ def main() -> None:
         if dates:  # началото на данните, а не на --days
             since = date.fromisoformat(min(dates))
         architects = architects_for_report(out)
-        final = finalize(permits)
+        final = finalize(permits, datetime.fromtimestamp((out / "permits.json").stat().st_mtime).date().isoformat())
         log(f"Без повторения: {len(permits)} -> {len(final)} обекта")
         write_html(out / "report.html", final, load("visas.json"), load("oesut.json"),
                    since, builders_for_report(out), architects)
@@ -221,10 +252,12 @@ def main() -> None:
             try:
                 p.update(cached("permit", p["hash"],
                                 lambda: nag_sofia.fetch_permit_detail(http, p["hash"])) or {})
+                runlog().success("permit_detail", p["hash"])
             except Exception as exc:  # един счупен детайл не спира всичко
-                log(f"  детайл {p['number']}: {exc}")
+                runlog().failure("permit_detail", p["hash"], exc, p.get("url", ""))
             if i % 25 == 0:
                 log(f"  детайли {i}/{len(permits)}")
+                runlog().checkpoint("details", done=i, total=len(permits))
         p["kind"], p["building_type"] = classify(p["object"])
         p["investor_companies"] = companies_in(p["investor"])
         p["investor_is_company"] = bool(p["investor_companies"]) or "ОБЩИНА" in p["investor"].upper()
@@ -241,7 +274,7 @@ def main() -> None:
     if not args.no_contacts:
         companies = enrich(permits, http, cached, use_web=not args.no_web, log=log,
                            web_filter=lambda p: p["facade_window"] and p["score"] >= args.web_min_score,
-                           only=lambda p: p["facade_window"],
+                           only=lambda p: p["facade_window"], runlog=runlog(),
                            kab_by_domain=kab_domains(architects_for_report(out)))
 
     permits.sort(key=lambda p: p.get("in_force") or "", reverse=True)
@@ -278,7 +311,7 @@ def main() -> None:
             w.writerow({**v, "files": " ".join(v["files"])})
 
     architects = architects_for_report(out)
-    final = finalize(permits)
+    final = finalize(permits, date.today().isoformat())
     write_html(out / "report.html", final, visas, protocols, since, builders_for_report(out), architects)
     log(f"Excel: {write_leads(out / 'phomi_obekti.csv', final)} обекта за фасада, "
         f"{write_architects(out / 'arhitekti.csv', architects)} архитектурни бюра")

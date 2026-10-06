@@ -111,7 +111,7 @@ def dedupe_permits(permits: list[dict]) -> list[dict]:
             if p.get("hash") in seen:
                 continue  # същото разрешение, върнато втори път
             seen.add(p.get("hash"))
-            others.append({"number": p.get("number"), "object": p.get("object"), "url": p.get("url"),
+            others.append({"number": p.get("number"), "hash": p.get("hash"), "object": p.get("object"), "url": p.get("url"),
                            "in_force": p.get("in_force")})
             main["contacts"] = (main.get("contacts") or []) + (p.get("contacts") or [])
             main["stage_hints"] = (main.get("stage_hints") or []) + [

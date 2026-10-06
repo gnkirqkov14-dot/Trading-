@@ -35,13 +35,17 @@ def _new_contact(name: str) -> dict:
             "address": "", "sources": [], "links": {}, "is_builder": False, "works": []}
 
 
-def company_contact(name: str, http_tr: Http, http: Http, cache: Cache) -> dict:
+def company_contact(name: str, http_tr: Http, http: Http, cache: Cache, runlog=None) -> dict:
     c = _new_contact(name)
     key = ksb.normalize_name(name) + "|" + tr._legal_form(name)
     try:
         rec = cache("tr", key, lambda: tr.find_company(http_tr, name))
-    except Exception:
+        if runlog:
+            runlog.success("tr", key)
+    except Exception as exc:
         rec = None
+        if runlog:
+            runlog.failure("tr", key, exc)
     if rec:
         c["eik"] = rec["eik"]
         c["address"] = rec["address"]
@@ -50,8 +54,10 @@ def company_contact(name: str, http_tr: Http, http: Http, cache: Cache) -> dict:
         _merge(c, [rec["phone"]], [rec["email"]], rec["website"], "Търговски регистър")
     try:
         prof = cache("ksb", ksb.normalize_name(name), lambda: ksb.find_company(http, name))
-    except Exception:
+    except Exception as exc:
         prof = None
+        if runlog:
+            runlog.failure("ksb", ksb.normalize_name(name), exc)
     if prof:
         c["is_builder"] = True
         c["eik"] = c["eik"] or prof["eik"]
@@ -67,7 +73,7 @@ def company_contact(name: str, http_tr: Http, http: Http, cache: Cache) -> dict:
 def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
            architects_min_score: int = 55, log=print,
            kab_by_domain: dict | None = None, web_filter=lambda p: True,
-           only=lambda p: True) -> dict[str, dict]:
+           only=lambda p: True, runlog=None) -> dict[str, dict]:
     http_tr = Http(delay=6.0)  # Търговският регистър пропуска около 10 заявки в минута
     roles: dict[str, set] = {}
     for p in permits:
@@ -86,10 +92,12 @@ def enrich(permits: list[dict], http: Http, cache: Cache, use_web: bool = True,
         for n in p.get("investor_companies", []) + companies_in(p.get("supervision", "")):
             best[n] = max(best.get(n, 0), p.get("score", 0))
     for i, name in enumerate(sorted(roles, key=lambda n: (-best.get(n, 0), n)), 1):
-        contacts[name] = company_contact(name, http_tr, http, cache)
+        contacts[name] = company_contact(name, http_tr, http, cache, runlog)
         contacts[name]["roles"] = sorted(roles[name])
         if i % 25 == 0:
             log(f"  {i}/{len(roles)}")
+            if runlog:
+                runlog.checkpoint("contacts", done=i, total=len(roles))
 
     if use_web:
         # 1) сайт на фирмите без телефон или имейл

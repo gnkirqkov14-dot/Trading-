@@ -60,6 +60,12 @@ tr:last-child td { border-bottom: 0; }
 .chip.plain { background: var(--lo-soft); color: var(--muted); }
 .stage { display: block; margin-top: 6px; font-size: 11px; line-height: 1.3; color: var(--muted); max-width: 12ch; }
 .stage.on { color: var(--hi); font-weight: 600; }
+.selstats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); padding: 8px 2px; }
+.selstats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 9px; margin-top: 6px; }
+.badge.ok { background: var(--hi-soft); color: var(--hi); }
+.badge.est { background: var(--lo-soft); color: var(--muted); }
+.badge.warn { background: var(--mid-soft); color: var(--mid); }
 .obj { max-width: 46ch; }
 .obj p { margin: 0; }
 .visual { display: block; margin-bottom: 6px; max-width: 220px; }
@@ -107,11 +113,12 @@ a { color: var(--accent); }
       <label>Търсене<input type="search" id="q" placeholder="адрес, фирма, обект…"></label>
       <label>Вид<select id="kind"><option value="">Всички</option></select></label>
       <label>Район<select id="region"><option value="">Всички</option></select></label>
-      <label>Етап<select id="stage"><option value="facade" selected>Подходящи за фасада – преди Акт 14</option><option value="">Всички етапи</option><option value="hole">Изкоп („на дупка“)</option><option value="rough">Груб строеж – преди Акт 14</option><option value="late">Около Акт 14</option><option value="finish">След Акт 14</option><option value="done">Въведени (Акт 16)</option></select></label>
+      <label>Етап<select id="stage"><option value="facade" selected>Подходящи за фасада – преди Акт 14</option><option value="">Всички етапи</option><option value="hole">Изкоп („на дупка“)</option><option value="rough">Груб строеж – преди Акт 14</option><option value="late">Около Акт 14</option><option value="finish">След Акт 14</option><option value="done">Въведени (Акт 16)</option><option value="confirmed">Само с потвърден етап</option></select></label>
       <label>Мин. оценка<select id="minscore"><option value="0">0</option><option value="40" selected>40</option><option value="60">60</option><option value="75">75</option></select></label>
-      <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С телефон/имейл на инвеститора</option><option value="arch">С вероятен архитект</option><option value="visual">С визуализация</option></select></label>
+      <label>Възложител<select id="who"><option value="">Всички</option><option value="co">Само фирми</option><option value="contact">С телефон/имейл на инвеститора</option><option value="arch">С архитект (потвърден или кандидат)</option><option value="archok">С потвърден архитект</option><option value="eikrev">ЕИК за проверка</option><option value="visual">С визуализация</option></select></label>
       <span class="count" id="count"></span>
     </div>
+    <div class="selstats" id="selstats" aria-live="polite"></div>
     <div class="tablebox"><table>
       <thead><tr><th>Оценка</th><th>Обект</th><th>Кат. / РЗП</th><th>Район / адрес</th><th>Контакти: инвеститор, надзор, архитект</th><th>Влязло в сила</th></tr></thead>
       <tbody id="rows"></tbody>
@@ -220,17 +227,18 @@ const fmtDate = (s) => s ? s.split("-").reverse().join(".") : "–";
 const fmtNum = (n) => n ? Math.round(n).toLocaleString("bg-BG") + " м²" : "–";
 const P = DATA.permits;
 
-$("#sub").textContent = `Разрешения за строеж, влезли в сила от ${fmtDate(DATA.since)} до ${fmtDate(DATA.generated.slice(0,10))}. Етапът е изчислен по датата на разрешението и размера на сградата; сградите с Акт 16 са отбелязани.`;
+$("#sub").textContent = `Разрешения за строеж, влезли в сила от ${fmtDate(DATA.since)} до ${fmtDate(DATA.generated.slice(0,10))}. Етапът е „потвърден“ само при официален документ (Акт 16) или ръчно потвърждение; иначе е „приблизителен“ – изчислен по датата на разрешението и РЗП.`;
 const newBuild = P.filter(p => p.kind === "Ново строителство");
 const withContact = P.filter(p => p.investor_phone || p.investor_email);
 const bigRzp = P.reduce((a, p) => a + (p.kind === "Ново строителство" ? (p.rzp_with_basement || p.rzp || 0) : 0), 0);
 $("#stats").innerHTML = [
-  [P.length, "разрешения за строеж"],
+  [P.length, "обекта общо"],
   [P.filter(p => p.facade_window).length, "подходящи за фасада (преди Акт 14)"],
   [newBuild.length, "от тях ново строителство"],
   [Math.round(bigRzp).toLocaleString("bg-BG"), "м² РЗП ново строителство"],
-  [withContact.length, "с телефон/имейл на инвеститора"],
-  [P.filter(p => (p.architects || []).length).length, "с вероятен архитект"],
+  [withContact.length, "с телефон/имейл на инвеститора (всички обекти)"],
+  [P.filter(p => (p.links || []).some(l => l.role === "архитект" && l.status === "потвърдена")).length + " / " + P.filter(p => (p.links || []).some(l => l.role === "архитект")).length, "с архитект: потвърден / всички (всички обекти)"],
+  [P.filter(p => p.stage_status === "потвърден").length, "с потвърден етап (всички обекти)"],
   [P.filter(p => p.visual).length, "с визуализация"],
   [DATA.builders.length.toLocaleString("bg-BG"), "строители и подизпълнители"],
   [DATA.architects.length.toLocaleString("bg-BG"), "архитектурни бюра"],
@@ -260,6 +268,10 @@ function person(c, cls) {
   (c.emails || []).slice(0, 3).forEach(em => lines.push(`<span class="sel">${esc(em)}</span>`));
   if (c.website) lines.push(`<a href="${esc(href(c.website))}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>`);
   if ((c.managers || []).length) lines.push(`<span>Упр.: ${esc(c.managers.slice(0, 2).join(", "))}</span>`);
+  if (c.eik_status === "потвърден") lines.push(`<span class="src" title="${esc((c.eik_evidence || {}).snippet || "")}">ЕИК потвърден от PDF на разрешението${c.eik_reason ? " · " + esc(c.eik_reason) : ""}</span>`);
+  else if (c.eik_status === "за проверка") lines.push(`<span class="badge warn" title="${esc((c.eik_evidence || {}).snippet || "")}">ЕИК за проверка: ${esc(c.eik_reason || "")}</span>`);
+  else if (c.eik_status === "не е разчетен") lines.push(`<span class="src">ЕИК не е разчетен от PDF: ${esc(c.eik_reason || "")}</span>`);
+  if (c.link_basis) lines.push(`<span class="src">Основание: ${esc(c.link_basis)}${c.link_date ? " · " + esc(fmtDate(c.link_date.slice(0, 10))) : ""}</span>`);
   if ((c.group || []).length > 1) lines.push(`<span class="src" title="${esc(c.group.join(", "))}">Група: ${c.group.length} фирми с общ телефон/имейл${c.group_objects > 1 ? ` · ${c.group_objects} обекта` : ""}</span>`);
   else if (c.group_objects > 1) lines.push(`<span class="src">${c.group_objects} обекта в списъка</span>`);
   if (c.evidence) lines.push(`<a class="src" href="${esc(c.evidence.url)}" target="_blank" rel="noopener">откъде: ${esc(c.evidence.title.slice(0, 60))}</a>`);
@@ -277,19 +289,39 @@ function contact(p) {
     people.push(`<div class="person"><span class="role">Строителен надзор</span><span class="nm">${esc(p.supervision)}</span></div>`);
   return `<div class="people">${people.join("")}</div>`;
 }
+function stageBadge(p) {
+  const ev = p.stage_evidence || {};
+  const tip = [ev.source, ev.detail, ev.date ? "дата: " + fmtDate(ev.date) : "", ev.retrieved ? "извлечено: " + fmtDate(ev.retrieved) : ""].filter(Boolean).join(" · ");
+  if (p.stage_status === "потвърден") return `<span class="badge ok" title="${esc(tip)}">потвърден</span><span class="stage">${esc(ev.detail || "")}${ev.date ? " · " + esc(fmtDate(ev.date)) : ""}</span>`;
+  const ms = (p.milestones || []).map(m => `<a class="stage on" href="${esc(m.url)}" target="_blank" rel="noopener" title="${esc(m.source)}">Потвърдено: ${esc(m.what)}${m.date ? " · " + esc(fmtDate(m.date)) : " · дата не е разчетена"}</a>`).join("");
+  if (p.stage_status === "приблизителен") return `<span class="badge est" title="${esc(tip)}">приблизителен</span>${ms}`;
+  return `<span class="badge warn" title="${esc(tip)}">неизвестен</span>`;
+}
 function render() {
   const q = $("#q").value.trim().toLowerCase(), kind = $("#kind").value, region = $("#region").value;
   const min = +$("#minscore").value, who = $("#who").value, st = $("#stage").value;
   const rows = P.filter(p => p.score >= min && (!kind || p.kind === kind) && (!region || p.region === region)
-    && (!st || (st === "facade" ? p.facade_window : p.stage_code === st))
-    && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.architects || []).length : who === "visual" ? !!p.visual : (p.investor_phone || p.investor_email)))
+    && (!st || (st === "facade" ? p.facade_window : st === "confirmed" ? p.stage_status === "потвърден" : p.stage_code === st))
+    && (!who || (who === "co" ? p.investor_is_company : who === "arch" ? (p.links || []).some(l => l.role === "архитект") : who === "archok" ? (p.links || []).some(l => l.role === "архитект" && l.status === "потвърдена") : who === "eikrev" ? (p.contacts || []).some(c => c.eik_status === "за проверка") : who === "visual" ? !!p.visual : (p.investor_phone || p.investor_email)))
     && (!q || [p.object, p.investor, p.address, p.supervision, p.region, p.architect].join(" ").toLowerCase().includes(q)));
   $("#count").textContent = `${rows.length} от ${P.length}`;
+  const n = (f) => rows.filter(f).length;
+  $("#selstats").innerHTML = [
+    ["В селекцията", rows.length + " обекта"],
+    ["с контакт на инвеститора", n(p => p.investor_phone || p.investor_email)],
+    ["с контакт на надзора", n(p => (p.contacts || []).some(c => c.role === "Строителен надзор" && ((c.phones || []).length || (c.emails || []).length)))],
+    ["ЕИК потвърден от PDF", n(p => (p.contacts || []).some(c => c.eik_status === "потвърден"))],
+    ["ЕИК за проверка", n(p => (p.contacts || []).some(c => c.eik_status === "за проверка"))],
+    ["архитект потвърден / кандидат", n(p => (p.links || []).some(l => l.role === "архитект" && l.status === "потвърдена")) + " / " + n(p => (p.links || []).some(l => l.role === "архитект" && l.status !== "потвърдена"))],
+    ["етап потвърден / приблизителен", n(p => p.stage_status === "потвърден") + " / " + n(p => p.stage_status === "приблизителен")],
+    ["потвърдено започнал (протокол обр. 2)", n(p => (p.milestones || []).length)],
+    ["строител потвърден / кандидат", n(p => (p.links || []).some(l => l.role === "строител" && l.status === "потвърдена")) + " / " + n(p => (p.links || []).some(l => l.role === "строител" && l.status !== "потвърдена"))],
+  ].map(([l, v]) => `<span>${l}: <b>${v}</b></span>`).join("");
   const shownP = rows.slice(0, 300);
   $("#pmore").hidden = rows.length <= shownP.length;
   $("#pmore").textContent = `Показани са първите ${shownP.length} (подредени по оценка). Стеснете филтрите или търсенето, за да видите останалите.`;
   $("#rows").innerHTML = rows.length ? shownP.map(p => `<tr>
-    <td><span class="score ${scoreCls(p.score)}">${p.score}</span>${p.stage ? `<span class="stage ${p.facade_window ? "on" : ""}">${esc(p.stage)}${p.act16 ? ` · ${esc(fmtDate(p.act16.date))}` : ""}</span>` : ""}${(p.stage_hints || []).map(h => `<a class="stage on" href="${esc(h.url)}" target="_blank" rel="noopener">„${esc(h.text)}“</a>`).join("")}</td>
+    <td><span class="score ${scoreCls(p.score)}">${p.score}</span>${p.stage ? `<span class="stage ${p.facade_window ? "on" : ""}">${esc(p.stage)}</span>` : ""}${stageBadge(p)}${(p.stage_hints || []).map(h => `<a class="stage on" href="${esc(h.url)}" target="_blank" rel="noopener">„${esc(h.text)}“</a>`).join("")}</td>
     <td class="obj">${p.visual ? `<a class="visual" href="${esc(p.visual.page)}" target="_blank" rel="noopener"><img src="${p.visual.thumb}" alt="Визуализация: ${esc(p.visual.title)}" loading="lazy"><span>Източник: ${esc(p.visual.page.replace(/^https?:\/\/(www\.)?/, "").split("/")[0])}</span></a>` : ""}<p>${esc(p.object)}</p>
       <div class="links" style="margin-top:4px"><span class="chip">${esc(p.kind)}</span>${p.building_type ? `<span class="chip plain">${esc(p.building_type)}</span>` : ""}
       <a href="${esc(p.url)}" target="_blank" rel="noopener">№ ${esc(p.number)}</a>${p.pdf_url ? `<a href="${esc(p.pdf_url)}" target="_blank" rel="noopener">PDF</a>` : ""}<a href="${esc(p.map_url)}" target="_blank" rel="noopener">карта</a></div>${(p.other_permits || []).length ? `<div class="small" style="margin-top:4px">Още ${p.other_permits.length} ${p.other_permits.length === 1 ? "разрешение" : "разрешения"} за същия имот: ${p.other_permits.slice(0, 4).map(o => `<a href="${esc(o.url)}" target="_blank" rel="noopener" title="${esc(o.object)}">№ ${esc(o.number)}</a>`).join(", ")}</div>` : ""}</td>
