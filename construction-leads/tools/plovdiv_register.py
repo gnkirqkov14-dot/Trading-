@@ -7,7 +7,7 @@
 Нужен е само Python 3 (https://www.python.org/downloads/) – без допълнителни пакети.
 Скриптът:
   1. отваря регистъра на разрешенията за строеж и регистъра на въведените в експлоатация строежи;
-  2. намира таблицата и минава през всички страници (по линковете за страници);
+  2. взима таблицата от адреса, от който страницата я зарежда, по години и страници;
   3. записва:
        plovdiv_razreshenia.csv      – разрешенията за строеж (отваря се с Excel)
        plovdiv_vavedeni.csv         – въведените в експлоатация (за да отпаднат завършените)
@@ -42,21 +42,52 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) plovdiv-register/1.0"
 
 
 # ---------------------------------------------------------------------------
-# Изтегляне
+# Изтегляне (с бисквитка на сесията – сайтът я изисква)
 # ---------------------------------------------------------------------------
 
-def fetch(url: str) -> tuple[str, str]:
-    """(html, окончателен адрес). Опитва https, после http (сайтът е на порт 998)."""
+import http.cookiejar
+
+_JAR = http.cookiejar.CookieJar()
+_OPENERS: dict[str, urllib.request.OpenerDirector] = {}
+
+
+def _opener(scheme: str) -> urllib.request.OpenerDirector:
+    if scheme not in _OPENERS:
+        handlers = [urllib.request.HTTPCookieProcessor(_JAR)]
+        if scheme == "https":
+            handlers.append(urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+        _OPENERS[scheme] = urllib.request.build_opener(*handlers)
+    return _OPENERS[scheme]
+
+
+SCHEME = {"value": ""}  # https или http – каквото проработи първо
+
+
+def fetch(url: str, data: dict | None = None, referer: str = "") -> tuple[str, str]:
+    """(html, окончателен адрес). Опитва https, после http (сайтът е на порт 998). data -> POST."""
     last = None
-    candidates = [url] if url.startswith("http") else [f"https://{url}", f"http://{url}"]
+    if url.startswith("http"):
+        candidates = [url]
+    elif SCHEME["value"]:
+        candidates = [f'{SCHEME["value"]}://{url}']
+    else:
+        candidates = [f"https://{url}", f"http://{url}"]
+    body = urllib.parse.urlencode(data).encode() if data is not None else None
     for u in candidates:
         for attempt in range(3):
             try:
-                req = urllib.request.Request(u, headers={"User-Agent": UA})
-                with urllib.request.urlopen(req, timeout=60, context=ssl.create_default_context()) as resp:
+                headers = {"User-Agent": UA}
+                if body is not None:
+                    headers.update({"X-Requested-With": "XMLHttpRequest",
+                                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"})
+                if referer:
+                    headers["Referer"] = referer
+                req = urllib.request.Request(u, data=body, headers=headers)
+                with _opener(urllib.parse.urlparse(u).scheme).open(req, timeout=90) as resp:
                     raw = resp.read()
                     charset = resp.headers.get_content_charset()
                     final = resp.geturl()
+                SCHEME["value"] = SCHEME["value"] or urllib.parse.urlparse(u).scheme
                 return decode(raw, charset), final
             except ssl.SSLError as exc:
                 last = exc
@@ -178,57 +209,66 @@ def page_links(page: Page, base: str, params: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Обхождане на един регистър
+# Обхождане на един регистър: таблицата идва от user/classes/<файл>.php (POST),
+# филтър по година (field=year&value=ГГГГ) и страници (page=N)
 # ---------------------------------------------------------------------------
 
+YEARS = [str(y) for y in range(time.localtime().tm_year, 2021, -1)]  # последните години (вкл. текущата)
+EMPTY = {f"field{i}": "" for i in range(1, 7)} | {f"date{i}": "" for i in range(1, 5)}
+
+
+def pages_in(text: str) -> int:
+    nums = [int(n) for n in re.findall(r"selectPage\(\s*'?(\d+)'?\s*\)", text)]
+    return max(nums) if nums else 1
+
+
 def crawl(name: str, params: dict) -> int:
-    start = f"{BASE}?{urllib.parse.urlencode(params)}"
-    queue, seen, n_pages = [start], set(), 0
+    page_url = f"{BASE}?{urllib.parse.urlencode(params)}"
+    first, final_page = fetch(page_url)          # отваря сесията (бисквитка)
+    regfile = re.search(rf"case '{params['submode']}':\s*registerfile = '([^']+)'", first)
+    userid = re.search(r"userid=\"\s*\+\s*'(\d+)'", first)
+    regfile = regfile.group(1) if regfile else {"5": "__regs_list_sr.php", "7": "__regs_list_uve.php"}[params["submode"]]
+    userid = userid.group(1) if userid else "8"
+    data_url = urllib.parse.urljoin(final_page, f"user/classes/{regfile}?submode={params['submode']}&userid={userid}")
+    print(f"  данни от: {data_url}")
     header: list[str] = []
     rows_seen: set[tuple] = set()
-    out_path = HERE / f"{name}.csv"
-    f = open(out_path, "w", newline="", encoding="utf-8-sig")
-    w = csv.writer(f, delimiter=";")
     SAVED.mkdir(exist_ok=True)
-    try:
-        while queue and n_pages < MAX_PAGES:
-            url = queue.pop(0)
-            key = re.sub(r"^https?://", "", url)
-            if key in seen:
-                continue
-            seen.add(key)
-            try:
-                text, final = fetch(url)
-            except Exception as exc:
-                print(f"  ! {exc}")
-                continue
-            n_pages += 1
-            if n_pages <= 3:
-                (SAVED / f"{name}_{n_pages}.html").write_text(text, encoding="utf-8")
-            page = Page()
-            page.feed(text)
-            h, data = main_table(page)
-            if h and not header:
-                header = h
-                w.writerow(header + ["Линк към записа", "Страница в регистъра"])
-            new = 0
-            for r in data:
-                cells = r["cells"] + [""] * (len(header) - len(r["cells"]))
-                sig = tuple(cells)
-                if sig in rows_seen:
-                    continue
-                rows_seen.add(sig)
-                link = urllib.parse.urljoin(final, html.unescape(r["links"][0])) if r["links"] else ""
-                w.writerow(cells[:max(len(header), len(cells))] + [link, final])
-                new += 1
-            f.flush()
-            for nxt in page_links(page, final, params):
-                if re.sub(r"^https?://", "", nxt) not in seen:
-                    queue.append(nxt)
-            print(f"  {name}: страница {n_pages}, нови редове {new}, общо {len(rows_seen)}")
-            time.sleep(PAUSE)
-    finally:
-        f.close()
+    with open(HERE / f"{name}.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f, delimiter=";")
+        for year in YEARS:
+            page, n_pages = 1, 1
+            while page <= n_pages and page <= MAX_PAGES:
+                form = {"field": "year", "value": year, **EMPTY, "page": str(page)}
+                try:
+                    text, _ = fetch(data_url, form, referer=final_page)
+                except Exception as exc:
+                    print(f"  ! {year}, стр. {page}: {exc}")
+                    break
+                if page == 1:
+                    n_pages = pages_in(text)
+                    if year == YEARS[0]:
+                        (SAVED / f"{name}_dannite_{year}_1.html").write_text(text, encoding="utf-8")
+                parsed = Page()
+                parsed.feed(text)
+                h, data = main_table(parsed)
+                if h and not header:
+                    header = h
+                    w.writerow(["Година (филтър)"] + header + ["Линк към записа"])
+                new = 0
+                for r in data:
+                    cells = r["cells"] + [""] * (len(header) - len(r["cells"]))
+                    sig = tuple(cells)
+                    if sig in rows_seen:
+                        continue
+                    rows_seen.add(sig)
+                    link = urllib.parse.urljoin(data_url, html.unescape(r["links"][0])) if r["links"] else ""
+                    w.writerow([year] + cells + [link])
+                    new += 1
+                f.flush()
+                print(f"  {name} {year}: страница {page}/{n_pages}, нови редове {new}, общо {len(rows_seen)}")
+                page += 1
+                time.sleep(PAUSE)
     if not rows_seen:
         print(f"  ! В {name} не е разчетена таблица. Изпратете ни папката {SAVED.name}.")
     return len(rows_seen)
