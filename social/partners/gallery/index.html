@@ -64,6 +64,9 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .file .media img,.file .media video{width:100%;height:auto;max-height:520px;object-fit:contain;display:block}
 .fnote{font-size:12px;color:var(--muted)}
 .empty{grid-column:1/-1;padding:48px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.runbar{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px}
+.runbar .btn{flex:0 0 auto;padding:10px 16px}
+.runbar .st{font-size:13px;color:var(--fg);min-width:0}
 .note{font-size:12px;color:var(--muted);padding-top:18px}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s,box-shadow .15s}}
 </style>
@@ -92,7 +95,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 <script>
 const TABS=[["new","Нови"],["selected","Избрани"],["done","Обработени"],["skipped","Пропуснати"],["all","Всички"]];
 const TYPE={video:"Видео",carousel:"Галерия",image:"Снимка"};
-let rows=[], dl=null, tab="new", partner="all", kind="all", dbRef=null, busy=new Set();
+let rows=[], dl=null, mcp=null, metaRef=null, proc=null, procBusy=false, procErr="", tab="new", partner="all", kind="all", dbRef=null, busy=new Set();
 try{ tab=localStorage.getItem("tab")||"new"; partner=localStorage.getItem("partner")||"all"; kind=localStorage.getItem("kind")||"all"; }catch(e){}
 
 const $=s=>document.querySelector(s);
@@ -149,10 +152,26 @@ function fileCard(r,f){
   </article>`;
 }
 
+function procText(){
+  if(procErr) return procErr;
+  if(!proc||!proc.status) return "";
+  const t=proc.requestedAt?new Date(proc.requestedAt).toLocaleTimeString("bg-BG",{hour:"2-digit",minute:"2-digit"}):"";
+  if(proc.status==="requested") return `Заявено в ${t}. Обработва се, след няколко минути файловете ще са в „Обработени“.`;
+  if(proc.status==="done") return `Последна обработка: ${proc.doneAt?new Date(proc.doneAt).toLocaleString("bg-BG",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}${proc.count!=null?` · ${proc.count} файла`:""}.`;
+  return "";
+}
+function runBar(n){
+  const pending=proc&&proc.status==="requested"&&proc.requestedAt&&(Date.now()-Date.parse(proc.requestedAt)<30*60e3);
+  const dis=!n||procBusy||pending||!mcp;
+  const label=procBusy?"Изпращам…":pending?"Обработва се…":`Обработи сега (${n})`;
+  const st=!mcp?"Бутонът работи, когато страницата е отворена в claude.ai. Иначе пиши в чата „обработи избраните“.":procText();
+  return `<div class="runbar"><button class="btn pick" data-run ${dis?"disabled":""}>${label}</button><span class="st" role="status">${esc(st)}</span></div>`;
+}
+
 function render(){
   renderBars();
   const list=rows.filter(r=>(tab==="all"||r.status===tab)&&(partner==="all"||r.partner===partner)&&kindOk(r));
-  const info=tab==="selected"?`<div class="info"><b>Тук не е нужно да правиш нищо.</b> Избраните постове се обработват автоматично всяка сутрин в 07:53: снимките се свалят в пълно качество и се почистват от надписи, видеата се свалят както са. След това минават в „Обработени“. Ако размислиш, натисни „Избрано ✓“ и постът се връща в „Нови“.</div>`:"";
+  const info=tab==="selected"?runBar(list.length)+`<div class="info">Натисни „Обработи сега“ и избраните постове се свалят в пълно качество и се почистват от лога и надписи. След няколко минути са в „Обработени“, откъдето ги сваляш. Ако не натиснеш нищо, се обработват автоматично утре в 07:53. Ако размислиш за пост, натисни „Избрано ✓“ и той се връща в „Нови“.</div>`:"";
   if(tab==="done"){
     const files=list.flatMap(r=>(r.files||[]).map(f=>[r,f]));
     const head=`<div class="info"><b>Това е папката с готовия материал.</b> Тук са изчистените снимки и видеа от избраните постове, в пълно качество. Натисни „Изтегли“ под файла, за да го запазиш.</div>`;
@@ -172,6 +191,15 @@ document.addEventListener("click",async e=>{
   const k=e.target.closest("[data-kind]"); if(k){ kind=k.dataset.kind; try{localStorage.setItem("kind",kind)}catch(_){}; render(); return; }
   const p=e.target.closest("[data-p]"); if(p){ partner=p.dataset.p; try{localStorage.setItem("partner",partner)}catch(_){}; render(); return; }
   const m=e.target.closest("[data-more]"); if(m){ const c=document.getElementById("cap-"+m.dataset.more); c.classList.toggle("open"); m.textContent=c.classList.contains("open")?"По-малко":"Още"; return; }
+  const run=e.target.closest("[data-run]"); if(run){ if(!mcp||procBusy) return; procBusy=true; procErr=""; render();
+    const n=rows.filter(r=>r.status==="selected").length;
+    try{
+      await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:"trig_011H7DZv2z9tnTJDqNEoUNk7",
+        text:`Заявка от бутона „Обработи сега“ в галерията (${n} избрани). Пропусни стъпки 1 и 2 (без fetch). Направи само стъпки 3 и 4: обработи избраните сега. Накрая обнови документа meta/process в базата на артефакта: status "done", doneAt и count (брой обработени файлове).`});
+      const req={status:"requested",requestedAt:new Date().toISOString(),count:n};
+      proc=req; if(metaRef) metaRef.set(req).catch(()=>{});
+    }catch(err){ procErr=err&&err.code==="consent_required"||err&&err.code==="not_granted"?"Трябва да разрешиш връзката с Claude Code Remote, за да работи бутонът.":"Заявката не мина. Пиши в чата „обработи избраните“."; }
+    finally{ procBusy=false; render(); } return; }
   const a=e.target.closest("[data-act]"); if(!a||!dbRef) return;
   const id=a.closest(".card").dataset.id, r=rows.find(x=>x.id===id); if(!r||busy.has(id)) return;
   let next = a.dataset.act==="pick" ? (r.status==="selected"?"new":"selected") : (r.status==="skipped"?"new":"skipped");
@@ -187,6 +215,9 @@ render();
   if(!db){ $("#grid").innerHTML='<div class="empty">Влез в claude.ai, за да виждаш и избираш постове.</div>'; return; }
   dbRef=db.collection("posts");
   claude.use("downloads").then(x=>{ dl=x; render(); });
+  claude.use("mcp").then(x=>{ mcp=x; render(); });
+  metaRef=db.collection("meta").doc("process");
+  metaRef.onSnapshot(d=>{ proc=d.exists?d.data():null; render(); },()=>{});
   dbRef.orderBy("date","desc").onSnapshot(s=>{ rows=s.docs.map(d=>({id:d.id,...d.data()})); render(); },
     ()=>{ $("#note").textContent="Връзката с данните прекъсна. Презареди страницата."; });
 })();
