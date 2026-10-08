@@ -22,7 +22,8 @@ commit-ва).
    `work/user_sources.json`, `work/history.json`, `work/prefs.json`,
    `work/prev_topics.json`.
 4. `python3 collect.py --out work --user-sources work/user_sources.json`
-5. Анализ: пусни subagent (general-purpose) с инструкциите от
+5. Анализ: първо `meta/status` → message „Анализирам новините“ (иначе таблото
+   до края показва „Събирам източниците“). После пусни subagent (general-purpose) с инструкциите от
    `ANALYSIS.md`, вход `work/compact.json` (+ `work/prev_topics.json`,
    `work/prefs.json`), изход `work/analysis.json`, и проверка с
    `python3 build_digest.py --check work/analysis.json --work work`.
@@ -63,6 +64,12 @@ commit-ва).
     каквото може (напр. стари данни остават видими).
 
 ## Ако нещо се счупи
+
+- Анализиращият subagent виси (над ~20 мин без нов `work/analysis_new.json`;
+  внимавай — файл с вчерашна дата е от вчера, виж `stat`) → `TaskStop` и го
+  пусни пак със забрана да тегли страници, най-много 3 WebSearch и изискване да
+  запише `analysis_new.json` в първите ~12 минути. Нормалното време е ~12 мин.
+  Докато чака, таблото показва вчерашния брой — `meta/latest` се пише последен.
 
 - YouTube връща 429 → събирачът продължава с останалите източници; в
   `raw.json` `health` пише кое е паднало.
