@@ -16,6 +16,7 @@
 | 07.10 | Reel + стори | TikTok, FB, IG | „Погледнете отблизо, после вижте цялото“ (32 s, със субтитри) | Drive видео/`PHOMI_Final_32s_BG_1080x1920 (1).mp4` (1kcf7SskT_I5ndXUmFEAuOmcu7-UoiIfQ) |
 | 07.10 | стори + пост (2 снимки) | FB, IG | PHOMI Rough Surface · Portoro – тъмна къща с мрамор + прозорец | Drive `phomi_russia_Dds8JSQgGAW_1.jpg` (1AP4e6-n6RdQt4d2Dp3oSf_0d04WeCXYG), `_2.jpg` (1K3B7HHTyffFFxtJo9rwBSGXtLkUEUzAD); партньорски пост Dds8JSQgGAW |
 | 08.10 10:00 | Reel (насрочен) | FB, IG | PHOMI серия Travertine | същият клип като 06.10 |
+| 08.10 14:00 | пост (5 снимки, насрочен) | FB, IG | „Светла фасада и тъмни акценти“ – готов обект | Drive „nanka gogo“: `phomi_russia_DeB6nZigGPv_1…5_AI_retouched.png`; партньорски пост DeB6nZigGPv (снимки 6 и 7 не са ползвани) |
 
 ## Още неизползвани в Drive (към 08.10)
 - `PHOMI_Detail_16s_BG_1080x1920.mp4` (видео, 16 s) – в „изтеглени PHOMI“ и в подпапка „видео“
