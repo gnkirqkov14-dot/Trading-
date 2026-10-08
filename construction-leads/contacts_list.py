@@ -389,7 +389,7 @@ def sheet(wb: Workbook, title_: str, rows: list[dict], note: str) -> None:
 
 
 def summary(wb: Workbook, sheets: list[str]) -> None:
-    ws = wb.create_sheet("Обобщение", 0)
+    ws = wb.create_sheet("Обобщение")  # последен лист – файлът се отваря направо на телефоните
     ws["A1"] = "Фирми с контакт – София и Пловдив"
     ws["A1"].font = Font(name=FONT, bold=True, size=14)
     ws["A2"] = f"Данни към {TODAY.strftime('%d.%m.%Y')}. Попълвайте само жълтите колони: Статус, Дата на обаждане, Бележки."
@@ -459,6 +459,7 @@ def main() -> None:
     sheet(wb, "София – надзор", sofia_supervision, "Фирми за строителен надзор на тези сгради – знаят строителя и "
                                                    "графика; полезни, когато инвеститорът няма публичен контакт.")
     summary(wb, ["София", "Пловдив", "София – надзор"])
+    wb.active = 0  # отваря се на лист „София“
     OUT.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT)
     print(f"София: {len(sofia_firms)} фирми, надзор: {len(sofia_supervision)}, Пловдив: {len(plovdiv_firms)} -> {OUT}")
