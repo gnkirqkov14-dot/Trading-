@@ -363,7 +363,10 @@ def write_xlsx() -> None:
         return
     wb = Workbook()
     wb.remove(wb.active)
-    for name, title in (("obekti", "Обекти"), ("arhitekti", "Архитекти"), ("stroiteli", "Строители")):
+    sheets = [("obekti", "Обществени поръчки"), ("arhitekti", "Архитекти"), ("stroiteli", "Строители")]
+    if (OUT / "chastni_obekti.csv").exists():
+        sheets.insert(0, ("chastni_obekti", "Частни обекти (НАГ)"))
+    for name, title in sheets:
         ws = wb.create_sheet(title)
         with open(OUT / f"{name}.csv", encoding="utf-8-sig") as f:
             for row in csv.reader(f, delimiter=";"):
