@@ -447,6 +447,32 @@ def summary(wb: Workbook, sheets: list[str]) -> None:
         ws.column_dimensions[col].width = w
 
 
+def export_json(sheets: list[tuple[str, str, str, list[dict]]]) -> None:
+    """Същите редове за страницата за обаждания (output/kontakti.json). Стабилен id за всеки ред
+    (ЕИК или отпечатък от името) – по него страницата пази статуса и бележките."""
+    import hashlib
+    from leads.ksb import normalize_name
+    out = {"generated": TODAY.strftime("%d.%m.%Y"), "sheets": []}
+    for code, title_, note, rows in sheets:
+        items = []
+        for g in rows:
+            eiks = sorted(e for e in g["eiks"] if e)
+            key = eiks[0] if eiks else "h" + hashlib.sha1(normalize_name(g["names"][0]).encode()).hexdigest()[:10]
+            label, priority, order = STAGE_TEXT[g["best"]["code"]]
+            items.append({
+                "id": f"{code}-{key}", "names": g["names"][:4], "roles": list(dict.fromkeys(g["roles"])),
+                "phones": g["phones"][:4], "emails": mark_accountant(g["emails"][:4]),
+                "website": g["website"], "person": g["person"], "priority": priority, "order": order,
+                "stage": stage_line(g["best"]),
+                "objects": [{"where": o["where"], "what": o["what"], "stage": STAGE_TEXT[o["code"]][0],
+                             "date": o.get("date", ""), "url": o.get("url", ""),
+                             "confirmed": o.get("confirmed", "")} for o in g["objects"][:8]],
+                "more": max(0, len(g["objects"]) - 8),
+            })
+        out["sheets"].append({"code": code, "title": title_, "note": note, "rows": items})
+    (OUT.parent / "kontakti.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+
+
 def main() -> None:
     sofia_firms, sofia_supervision = sofia()
     plovdiv_firms = plovdiv()
@@ -462,6 +488,12 @@ def main() -> None:
     wb.active = 0  # отваря се на лист „София“
     OUT.parent.mkdir(parents=True, exist_ok=True)
     wb.save(OUT)
+    export_json([
+        ("sof", "София", "Инвеститори, строители и архитекти на сгради в подходящ момент за фасада.", sofia_firms),
+        ("plv", "Пловдив", "Инвеститори от регистъра на Община Пловдив и изпълнители на обществени сгради в областта.",
+         plovdiv_firms),
+        ("nad", "Надзор София", "Строителен надзор на същите сгради – знаят строителя и графика.", sofia_supervision),
+    ])
     print(f"София: {len(sofia_firms)} фирми, надзор: {len(sofia_supervision)}, Пловдив: {len(plovdiv_firms)} -> {OUT}")
 
 
