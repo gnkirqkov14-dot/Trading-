@@ -56,6 +56,9 @@ commit-ва).
    `work/audio_day.mp4` с Artifact (`url` на таблото, `asset: true`) и запиши
    `audio/day-<дата>` = съдържанието на `work/audio_day.json` + `"asset": "<id>"`.
    Изтрий `audio/day-*` по-стари от 7 дни и техните файлове (Artifact delete с id).
+   Ако `audio_daily.py` излезе с код 1 (Microsoft връща 403 — така стана на 2026-10-12;
+   `pip install -U edge-tts` не помага), НЕ качвай нищо: таблото чете с гласа на
+   браузъра. Опитай пак на следващия ден и спомени в бележката към потребителя.
 9. Имейл: Gmail `send_message` до собственика, тема
    `work/email_subject.txt`, тяло `work/email.html` (HTML) / `email.txt`.
    Само при сутрешния брой — при ръчно обновяване от таблото не се праща.

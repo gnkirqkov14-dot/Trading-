@@ -90,6 +90,9 @@ def main() -> None:
         return await asyncio.gather(*(one(sem, n, t) for n, (_, t) in enumerate(todo)))
 
     ok = asyncio.run(run())
+    if not any(ok):  # Microsoft върна 403 за всичко (на 2026-10-12) — не пускай празен файл, таблото ползва гласа на браузъра
+        print(json.dumps({"date": date, "clips": 0, "failed": len(ok), "errors": err[:2]}, ensure_ascii=False))
+        sys.exit(1)
     pcm = bytearray()
     clips = {}
     gap = b"\0\0" * int(RATE * GAP)
