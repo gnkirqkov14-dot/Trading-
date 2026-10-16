@@ -30,7 +30,12 @@ export default async function AdminUsersPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: profiles }, { data: listingOwners }, { data: statsRows }] =
+  const [
+    { data: profiles },
+    { data: listingOwners },
+    { data: statsRows },
+    { data: stateRows },
+  ] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -42,6 +47,9 @@ export default async function AdminUsersPage() {
       // Сметката по часовник е в базата: денят е софийски, а сървърът е
       // другаде — пък и четенето на времето в компонент е нечисто.
       supabase.rpc("admin_signup_stats"),
+      // Потвърден ли е имейлът и влизал ли е изобщо — живее в auth.users,
+      // до което приложението няма пряк достъп.
+      supabase.rpc("admin_user_states"),
     ]);
 
   const rows = (profiles ?? []) as ProfileRow[];
@@ -54,6 +62,10 @@ export default async function AdminUsersPage() {
     listingCounts.set(id, (listingCounts.get(id) ?? 0) + 1);
   }
 
+  const states = new Map(
+    (stateRows ?? []).map((row) => [row.user_id, row]),
+  );
+
   const counts = statsRows?.[0];
   const stats = [
     { label: "Общо", value: counts?.total ?? rows.length },
@@ -63,18 +75,30 @@ export default async function AdminUsersPage() {
       label: "С обява",
       value: rows.filter((row) => listingCounts.get(row.id)).length,
     },
+    {
+      label: "Не са влизали",
+      value: rows.filter((row) => !states.get(row.id)?.last_sign_in_at).length,
+    },
   ];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Админ панел — потребители</h1>
-        <Link
-          href="/admin"
-          className="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900"
-        >
-          Към обявите
-        </Link>
+        <div className="flex gap-4 text-sm">
+          <Link
+            href="/admin"
+            className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
+          >
+            Обяви
+          </Link>
+          <Link
+            href="/admin/contacts"
+            className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
+          >
+            Контакти
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -102,13 +126,14 @@ export default async function AdminUsersPage() {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Име</th>
                 <th className="px-4 py-3 font-medium">Имейл</th>
                 <th className="px-4 py-3 font-medium">Телефон</th>
                 <th className="px-4 py-3 font-medium">Регистриран</th>
+                <th className="px-4 py-3 font-medium">Докъде стигна</th>
                 <th className="px-4 py-3 text-right font-medium">Обяви</th>
               </tr>
             </thead>
@@ -142,6 +167,30 @@ export default async function AdminUsersPage() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                     {formatDateTime(row.created_at)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const state = states.get(row.id);
+                      if (!state?.email_confirmed_at) {
+                        return (
+                          <span className="text-amber-700">
+                            не е потвърдил имейла
+                          </span>
+                        );
+                      }
+                      if (!state.last_sign_in_at) {
+                        return (
+                          <span className="text-amber-700">
+                            потвърди, но не е влизал
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="text-slate-600">
+                          влизал на {formatDateTime(state.last_sign_in_at)}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {listingCounts.get(row.id) ?? 0}

@@ -140,12 +140,20 @@ export default async function AdminPage() {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Админ панел — обяви</h1>
-        <Link
-          href="/admin/users"
-          className="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900"
-        >
-          Към потребителите
-        </Link>
+        <div className="flex gap-4 text-sm">
+          <Link
+            href="/admin/users"
+            className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
+          >
+            Потребители
+          </Link>
+          <Link
+            href="/admin/contacts"
+            className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
+          >
+            Контакти
+          </Link>
+        </div>
       </div>
       <p className="mb-6 text-sm text-slate-500">
         Обяви със споделен телефон между {SUSPECTED_AGENCY_THRESHOLD}+ обяви

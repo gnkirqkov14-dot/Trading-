@@ -18,6 +18,56 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
 export interface Database {
   public: {
     Tables: {
+      contacts: Table<
+        {
+          id: string;
+          phone: string;
+          name: string | null;
+          source: string | null;
+          consent_at: string | null;
+          consent_note: string | null;
+          unsubscribed_at: string | null;
+          created_at: string;
+        },
+        // Вписването минава само през import_contacts() — номерът трябва
+        // да е нормализиран, а съгласието записано.
+        never,
+        { unsubscribed_at?: string | null }
+      >;
+      contact_groups: Table<
+        { id: string; name: string; created_at: string },
+        { name: string }
+      >;
+      contact_group_members: Table<
+        { group_id: string; contact_id: string },
+        { group_id: string; contact_id: string }
+      >;
+      campaigns: Table<
+        {
+          id: string;
+          name: string;
+          body: string;
+          group_id: string | null;
+          status: "draft" | "sending" | "sent" | "failed";
+          recipient_count: number;
+          estimated_cost_eur: number;
+          created_at: string;
+          sent_at: string | null;
+        },
+        { name: string; body: string; group_id?: string | null }
+      >;
+      campaign_messages: Table<
+        {
+          id: string;
+          campaign_id: string;
+          contact_id: string;
+          status: "queued" | "sent" | "delivered" | "read" | "failed";
+          provider_message_id: string | null;
+          error: string | null;
+          updated_at: string;
+        },
+        { campaign_id: string; contact_id: string }
+      >;
       profiles: Table<
         {
           id: string;
@@ -81,6 +131,27 @@ export interface Database {
           lng?: number | null;
         }
       >;
+      developers: Table<
+        {
+          id: string;
+          name: string;
+          phone: string;
+          email: string | null;
+          website: string | null;
+          logo_url: string | null;
+          permission_at: string | null;
+          permission_note: string | null;
+          created_at: string;
+        },
+        {
+          name: string;
+          phone: string;
+          email?: string | null;
+          website?: string | null;
+          permission_at?: string | null;
+          permission_note?: string | null;
+        }
+      >;
       listings: Table<
         {
           id: string;
@@ -109,6 +180,13 @@ export interface Database {
           reminder_count: number;
           last_confirmed_at: string;
           view_count: number;
+          developer_id: string | null;
+          project_name: string | null;
+          construction_stage:
+            | "planned" | "building" | "act14" | "act15" | "act16" | null;
+          source_url: string | null;
+          source_checked_at: string | null;
+          source_gone_at: string | null;
           created_at: string;
           updated_at: string;
         },
@@ -139,6 +217,12 @@ export interface Database {
           reminder_count?: number;
           last_confirmed_at?: string;
           view_count?: number;
+          developer_id?: string | null;
+          project_name?: string | null;
+          construction_stage?:
+            | "planned" | "building" | "act14" | "act15" | "act16" | null;
+          source_url?: string | null;
+          source_checked_at?: string | null;
           created_at?: string;
           updated_at?: string;
         }
@@ -270,6 +354,30 @@ export interface Database {
       admin_ban_agency: {
         Args: { p_listing_id: string };
         Returns: void;
+      };
+      import_contacts: {
+        Args: {
+          rows_in: { phone: string; name: string | null }[];
+          group_name: string | null;
+          source_in: string | null;
+          consent_note_in: string;
+        };
+        /** Какво е станало: нови, вече съществуващи, негодни номера. */
+        Returns: { imported: number; already_there: number; rejected: number }[];
+      };
+      campaign_recipients: {
+        Args: { group_id_in: string };
+        /** Без отписаните и без тези без записано съгласие. */
+        Returns: { id: string; phone: string; name: string | null }[];
+      };
+      admin_user_states: {
+        Args: Record<string, never>;
+        /** От auth.users — докъде е стигнал всеки при регистрацията. */
+        Returns: {
+          user_id: string;
+          email_confirmed_at: string | null;
+          last_sign_in_at: string | null;
+        }[];
       };
       admin_signup_stats: {
         Args: Record<string, never>;
