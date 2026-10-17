@@ -86,6 +86,7 @@ export type AdminListing = {
   reportCount: number;
   ownerListingCount: number;
   ownerListingLimit: number;
+  ownerIsAdmin: boolean;
   editLog: AdminEditLogEntry[];
 };
 
@@ -248,24 +249,32 @@ function AdminListingRow({
             {" · "}
             {listing.viewCount} {listing.viewCount === 1 ? "гледане" : "гледания"}
             {" · "}
-            <span
-              className={
-                listing.ownerListingCount >= ownerListingLimit
-                  ? "font-medium text-amber-600"
-                  : undefined
-              }
-            >
-              {listing.ownerListingCount}/{ownerListingLimit} обяви на
-              собственика
-            </span>{" "}
-            <button
-              type="button"
-              onClick={handleChangeLimit}
-              disabled={isPending}
-              className="underline hover:text-slate-700"
-            >
-              (промени лимита)
-            </button>
+            {/* Фирмените обяви влизат под админския профил и са десетки —
+                "36/11" там не значи нищо и изглежда като счупено. */}
+            {listing.ownerIsAdmin ? (
+              <span>{listing.ownerListingCount} обяви на собственика (админ, без лимит)</span>
+            ) : (
+              <>
+                <span
+                  className={
+                    listing.ownerListingCount >= ownerListingLimit
+                      ? "font-medium text-amber-600"
+                      : undefined
+                  }
+                >
+                  {listing.ownerListingCount}/{ownerListingLimit} обяви на
+                  собственика
+                </span>{" "}
+                <button
+                  type="button"
+                  onClick={handleChangeLimit}
+                  disabled={isPending}
+                  className="underline hover:text-slate-700"
+                >
+                  (промени лимита)
+                </button>
+              </>
+            )}
           </p>
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>

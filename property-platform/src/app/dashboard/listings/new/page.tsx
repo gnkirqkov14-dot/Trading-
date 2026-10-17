@@ -25,7 +25,8 @@ export default async function NewListingPage() {
 
   const listingLimit = profile?.listing_limit ?? DEFAULT_LISTING_LIMIT;
   const listingCount = count ?? 0;
-  const atLimit = listingCount >= listingLimit;
+  // Админът няма таван — виж getProfileContactInfo в actions/listings.ts.
+  const atLimit = !profile?.is_admin && listingCount >= listingLimit;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">

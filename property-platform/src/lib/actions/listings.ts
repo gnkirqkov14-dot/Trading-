@@ -23,7 +23,7 @@ async function getProfileContactInfo(
 ) {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone, listing_limit")
+    .select("phone, listing_limit, is_admin")
     .eq("id", userId)
     .single();
 
@@ -36,6 +36,11 @@ async function getProfileContactInfo(
   return {
     phone,
     listingLimit: profile?.listing_limit ?? DEFAULT_LISTING_LIMIT,
+    // Таванът пази от човек, който залива сайта с обяви. Админът е
+    // този, който вдига тавана на другите — няма смисъл да го спира
+    // собственото му ограничение, а и фирмените обяви влизат под
+    // неговия профил и са десетки.
+    isAdmin: Boolean(profile?.is_admin),
   };
 }
 
@@ -82,7 +87,7 @@ export async function createListing(input: CreateListingInput) {
   }
 
   const supabase = await createClient();
-  const { phone, listingLimit } = await getProfileContactInfo(
+  const { phone, listingLimit, isAdmin } = await getProfileContactInfo(
     supabase,
     user.id,
   );
@@ -102,7 +107,7 @@ export async function createListing(input: CreateListingInput) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  if ((listingCount ?? 0) >= listingLimit) {
+  if (!isAdmin && (listingCount ?? 0) >= listingLimit) {
     throw new Error(
       `Достигна лимита от ${listingLimit} обяви за един акаунт. Ако имаш ` +
         `нужда от повече (напр. строителна фирма с няколко имота), пиши ни ` +

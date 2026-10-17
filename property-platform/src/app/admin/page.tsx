@@ -26,7 +26,11 @@ type RawListingRow = {
   view_count: number;
   created_at: string;
   updated_at: string;
-  profiles: { name: string | null; listing_limit: number | null } | null;
+  profiles: {
+    name: string | null;
+    listing_limit: number | null;
+    is_admin: boolean | null;
+  } | null;
 };
 
 type EditLogRow = {
@@ -44,7 +48,7 @@ export default async function AdminPage() {
   const { data: listings } = await supabase
     .from("listings")
     .select(
-      "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name, listing_limit)",
+      "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name, listing_limit, is_admin)",
     )
     .order("created_at", { ascending: false });
 
@@ -113,6 +117,7 @@ export default async function AdminPage() {
     reportCount: reportCounts.get(row.id) ?? 0,
     ownerListingCount: ownerListingCounts.get(row.user_id) ?? 1,
     ownerListingLimit: row.profiles?.listing_limit ?? DEFAULT_LISTING_LIMIT,
+    ownerIsAdmin: Boolean(row.profiles?.is_admin),
     editLog: (editLogByListing.get(row.id) ?? []).map((log) => ({
       id: log.id,
       changedAt: log.changed_at,
