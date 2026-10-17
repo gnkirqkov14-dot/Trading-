@@ -163,7 +163,13 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
         : Number(floorMatch[1])
       : null,
     floorsTotal: floorMatch?.[2] ? Number(floorMatch[2]) : null,
-    neighborhood: grab(/град Пловдив,?\s*([А-Яа-я\s-]{3,30}?)\s*(?:-|,|::|<)/),
+    // Кварталът се чете първо от заглавието: „… в град Пловдив, Каменица 2 -
+    // 66 кв.м …“. Същият израз, пуснат върху тялото на страницата, лови
+    // съседен текст — за обява в Каменица 2 оттам излезе „Христо Смирненски“,
+    // съвсем друг квартал. Тялото остава само за заглавия без град.
+    neighborhood:
+      clean(title?.match(/град Пловдив,\s*([^-]{2,40}?)\s*-/)?.[1] ?? null) ??
+      grab(/град Пловдив,?\s*([А-Яа-я\s-]{3,30}?)\s*(?:-|,|::|<)/),
     description,
     company,
     phones,
