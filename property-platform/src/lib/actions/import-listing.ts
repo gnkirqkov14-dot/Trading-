@@ -223,6 +223,15 @@ export async function importImotAutomatically(
 
   const data = await fetchImotListing(url);
 
+  // Предпазителят: каквото и да е дошло в списъка, агенция не влиза.
+  // Цялата платформа обещава „без посредници“ — една агенционна обява
+  // струва повече доверие, отколкото десет обяви носят.
+  if (data.sellerKind === "agency" || data.sellerKind === "private") {
+    return { skipped: `не е строител (${data.sellerKind === "agency" ? "агенция" : "частно лице"})` as const };
+  }
+  if (data.sellerKind === "unknown") {
+    return { skipped: "не се разбра кой подава обявата" as const };
+  }
   if (!data.priceEur || !data.areaSqm) {
     return { skipped: "няма цена или квадратура" as const };
   }
