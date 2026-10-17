@@ -46,6 +46,14 @@ export type ImotListing = {
   photos: string[];
   /** Суровият ред за строителството — оттам се чете етапът. */
   constructionNote: string | null;
+  /**
+   * Кой подава обявата според самата страница.
+   *
+   * Това е предпазителят срещу агенции: филтърът в imot.bg живее в сесията
+   * на потребителя и не пътува с адреса, затова не бива да му се вярва.
+   * Маркерът е в самата обява и не лъже.
+   */
+  sellerKind: "builder" | "investor" | "agency" | "private" | "unknown";
 };
 
 /** „2-СТАЕН“ → 2, „МНОГОСТАЕН“ → 4 (повече от 3, точният брой не се казва). */
@@ -128,6 +136,16 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
 
   // Редът е от вида „Етаж: Партер от 4, Тухла, Ще бъде въведен в експлоатация
   // 2027 г.“ — етажът е до първата запетая, останалото е за етапа.
+  const sellerKind: ImotListing["sellerKind"] = /Строителна фирма:/i.test(text)
+    ? "builder"
+    : /Инвеститор:/i.test(text)
+      ? "investor"
+      : /Агенция:/i.test(text)
+        ? "agency"
+        : /Частно лице:/i.test(text)
+          ? "private"
+          : "unknown";
+
   const floorLine = grab(/Етаж:?\s*([^<\n]{0,90})/i);
   const floorPart = floorLine?.split(",")[0] ?? null;
   const floorMatch = floorPart?.match(/(\d+|Партер)\s*(?:от\s*(\d+))?/i);
@@ -151,6 +169,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     phones,
     photos,
     constructionNote: grab(/Строителство:?\s*([^<\n]{0,80})/i) ?? restOfLine,
+    sellerKind,
   };
 }
 
