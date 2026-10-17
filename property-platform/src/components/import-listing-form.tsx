@@ -146,7 +146,7 @@ export function ImportListingForm({
     try {
       const result = await refreshDescriptions();
       setDone(
-        `Описанията са препрочетени: ${result.obnoveni} обновени` +
+        `Препрочетени от източника: ${result.obnoveni} обновени` +
           (result.propadnali.length
             ? `, ${result.propadnali.length} пропаднали.`
             : "."),
@@ -270,9 +270,9 @@ export function ImportListingForm({
             onClick={handleRefreshDescriptions}
             disabled={busy}
             className="rounded-lg border border-white/40 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:border-white disabled:opacity-60"
-            title="Взима описанията наново от imot.bg за всички вече качени обяви"
+            title="Взима описанията и адресите наново от imot.bg за всички вече качени обяви"
           >
-            Опресни описанията
+            Опресни от източника
           </button>
 
           {found && (

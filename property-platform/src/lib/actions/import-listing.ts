@@ -32,6 +32,25 @@ function obiavaId(url: string | null) {
   return url?.match(/obiava-([0-9a-z]+)-/i)?.[1] ?? url ?? "";
 }
 
+/**
+ * Адресът, както да го прочете човек: улица и номер, когато ги има,
+ * иначе кварталът, иначе само населеното място.
+ *
+ * Улицата идва от реда „Местоположение“ в обявата и я има горе-долу при
+ * една на девет обяви — продавачът не е длъжен да я попълни.
+ */
+function sastaviAdres(data: {
+  street: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  isVillage: boolean;
+}) {
+  const mqsto = data.neighborhood
+    ? `кв. ${data.neighborhood}`
+    : `${data.isVillage ? "с." : "гр."} ${data.city ?? ""}`.trim();
+  return data.street ? `${data.street}, ${mqsto}` : mqsto;
+}
+
 export type ImportPreview = ImotListing & {
   stage: ReturnType<typeof guessStage>;
   /** Името на комплекса, ако imot.bg го е сложил в адреса на обявата. */
@@ -408,9 +427,7 @@ export async function importImotAutomatically(
     title:
       data.title?.split("::")[0]?.trim() || `Имот в ${data.city}`,
     description: data.description,
-    address: data.neighborhood
-      ? `кв. ${data.neighborhood}`
-      : `${data.isVillage ? "с." : "гр."} ${data.city}`,
+    address: sastaviAdres(data),
     cityId,
     neighborhoodId,
     price: data.priceEur,
@@ -457,7 +474,13 @@ export async function refreshDescriptions() {
       }
       const { error } = await supabase
         .from("listings")
-        .update({ description: data.description })
+        .update({
+          description: data.description,
+          // Улицата дълго време изобщо не се четеше: редът
+          // „Местоположение“ я носи, а дотогава се гледаше само
+          // заглавието. Опреснява се заедно с описанието.
+          address: sastaviAdres(data),
+        })
         .eq("id", red.id);
       if (error) {
         propadnali.push(`${obiavaId(red.source_url)} — ${error.message}`);
