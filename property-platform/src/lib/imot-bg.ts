@@ -21,9 +21,47 @@ function decodeCyrillic(buffer: ArrayBuffer) {
   return new TextDecoder("windows-1251").decode(buffer);
 }
 
+/** &#127969; → 🏡, &amp; → &. Без това описанията излизат с голи кодове. */
+function decodeEntities(value: string) {
+  const imena: Record<string, string> = {
+    amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+    laquo: "«", raquo: "»", ndash: "–", mdash: "—", hellip: "…",
+  };
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&([a-z]+);/gi, (цяло, име) => imena[име.toLowerCase()] ?? цяло);
+}
+
 function clean(value: string | undefined | null) {
-  return value?.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ")
+  if (!value) return null;
+  return decodeEntities(value.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ").trim() || null;
+}
+
+/**
+ * Описанието, запазено както продавачът го е написал.
+ *
+ * Отделно от `clean`, защото там всичко бяло се слива в интервали. В
+ * описанието редовете носят смисъл: „Локация: …“, „Площ: …“, „Етаж: …“
+ * са отделни редове и слети в един абзац стават каша. Страницата на
+ * обявата ги показва с `whitespace-pre-wrap`.
+ */
+function cleanDescription(value: string | undefined | null) {
+  if (!value) return null;
+  const text = decodeEntities(
+    value
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li)>/gi, "\n")
+      .replace(/<[^>]*>/g, " "),
+  );
+  return (
+    text
+      .replace(/[ \t\u00a0]+/g, " ")
+      .replace(/ *\n */g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim() || null
+  );
 }
 
 function digits(value: string | null) {
@@ -121,7 +159,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
 
   const grab = (re: RegExp) => clean(text.match(re)?.[1]);
 
-  const description = clean(
+  const description = cleanDescription(
     text.match(/Описание(?:\s*на имота)?:?([\s\S]{0,4000}?)(?:За контакти|Особености|ЗА КОНТАКТ)/i)?.[1],
   );
 

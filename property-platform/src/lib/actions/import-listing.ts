@@ -422,3 +422,57 @@ export async function importImotAutomatically(
 
   return { imported: result, company: data.company };
 }
+
+/**
+ * Препрочита описанията на вече качените фирмени обяви.
+ *
+ * Нужно е, защото четенето на описанието се поправя в движение: дълго
+ * време кодовете на емотиконите (`&#127969;`) влизаха както са, а новите
+ * редове се сливаха в един абзац. Записаното тогава не може да се оправи
+ * на място — редовете вече ги няма — затова текстът се взима наново от
+ * източника.
+ *
+ * Снимките не се пипат: те са си качени и тежат.
+ */
+export async function refreshDescriptions() {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: redove } = await supabase
+    .from("listings")
+    .select("id, source_url")
+    .not("developer_id", "is", null)
+    .not("source_url", "is", null);
+
+  let obnoveni = 0;
+  const propadnali: string[] = [];
+
+  for (const red of redove ?? []) {
+    if (!red.source_url) continue;
+    try {
+      const data = await fetchImotListing(red.source_url);
+      if (!data.description) {
+        propadnali.push(`${obiavaId(red.source_url)} — няма описание`);
+        continue;
+      }
+      const { error } = await supabase
+        .from("listings")
+        .update({ description: data.description })
+        .eq("id", red.id);
+      if (error) {
+        propadnali.push(`${obiavaId(red.source_url)} — ${error.message}`);
+        continue;
+      }
+      obnoveni += 1;
+    } catch (caught) {
+      propadnali.push(
+        `${obiavaId(red.source_url)} — ${
+          caught instanceof Error ? caught.message : "грешка"
+        }`,
+      );
+    }
+  }
+
+  revalidatePath("/listings");
+  return { obnoveni, propadnali };
+}

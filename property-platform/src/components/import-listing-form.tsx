@@ -7,6 +7,7 @@ import {
   importImotListing,
   findImotListings,
   importImotAutomatically,
+  refreshDescriptions,
   type ImportPreview,
   type FoundListing,
 } from "@/lib/actions/import-listing";
@@ -137,6 +138,27 @@ export function ImportListingForm({
     router.refresh();
   }
 
+  /** Взима описанията наново за всичко вече качено. Рядко, ръчно. */
+  async function handleRefreshDescriptions() {
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      const result = await refreshDescriptions();
+      setDone(
+        `Описанията са препрочетени: ${result.obnoveni} обновени` +
+          (result.propadnali.length
+            ? `, ${result.propadnali.length} пропаднали.`
+            : "."),
+      );
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Грешка.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handlePreview() {
     setBusy(true);
     setError(null);
@@ -239,6 +261,18 @@ export function ImportListingForm({
             className="rounded-lg bg-white px-5 py-2.5 font-medium text-slate-900 transition hover:bg-slate-200 disabled:opacity-60"
           >
             {busy && !progress ? "Чета…" : "Намери обявите"}
+          </button>
+
+          {/* Рядко и ръчно: взима описанията наново за всичко качено,
+              когато четенето им се е поправило. Снимките не се пипат. */}
+          <button
+            type="button"
+            onClick={handleRefreshDescriptions}
+            disabled={busy}
+            className="rounded-lg border border-white/40 px-4 py-2.5 text-sm font-medium text-white/80 transition hover:border-white disabled:opacity-60"
+            title="Взима описанията наново от imot.bg за всички вече качени обяви"
+          >
+            Опресни описанията
           </button>
 
           {found && (
