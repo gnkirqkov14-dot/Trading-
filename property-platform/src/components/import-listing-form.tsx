@@ -11,9 +11,15 @@ import {
   type FoundListing,
 } from "@/lib/actions/import-listing";
 
-/** Търсенето в imot.bg с филтъра за строителни фирми и инвеститори. */
-const DEFAULT_SEARCH =
-  "https://www.imot.bg/obiavi/prodazhbi/grad-plovdiv?fe_agkinds=2~4~";
+/**
+ * Списъкът НЕ се чете от сървъра по адрес на търсенето.
+ *
+ * Филтърът „Строителни фирми“ живее в сесията на потребителя в imot.bg, не
+ * в адреса: сървърът няма тази сесия и получава всички обяви, включително
+ * на агенции. Проверено по трудния начин — първото внасяне качи 38 агенции.
+ *
+ * Затова адресите се залепят от браузъра, където филтърът работи.
+ */
 
 type Neighborhood = { id: string; name: string };
 
@@ -60,7 +66,7 @@ export function ImportListingForm({
   const [stage, setStage] = useState<string>("");
 
   // --- партидно внасяне ---
-  const [searchUrl, setSearchUrl] = useState(DEFAULT_SEARCH);
+  const [urlList, setUrlList] = useState("");
   const [found, setFound] = useState<FoundListing[] | null>(null);
   const [batchNote, setBatchNote] = useState("");
   const [progress, setProgress] = useState<{
@@ -75,7 +81,15 @@ export function ImportListingForm({
     setError(null);
     setDone(null);
     try {
-      setFound(await findImotListings(searchUrl));
+      const urls = urlList
+        .split(/\s+/)
+        .map((u) => u.trim())
+        .filter((u) => /^https:\/\/(www\.)?imot\.bg\/obiava-/i.test(u));
+      if (urls.length === 0) {
+        setError("Не намерих нито един адрес на обява от imot.bg.");
+        return;
+      }
+      setFound(await findImotListings(urls));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Не се прочете.");
     } finally {
@@ -194,14 +208,20 @@ export function ImportListingForm({
       <section className="rounded-xl border border-slate-900 bg-slate-900 p-5 text-white">
         <h2 className="text-lg font-semibold">Внеси всички наведнъж</h2>
         <p className="mt-1 text-sm text-slate-300">
-          Адресът долу е търсенето в imot.bg с филтър само за строителни
-          фирми и инвеститори. Прочитам списъка и качвам обявите една по
-          една — със снимките.
+          Отвори търсенето в imot.bg с твоя филтър за строителни фирми,
+          копирай адресите на обявите и ги залепи тук — по един на ред.
+          Качвам ги една по една, със снимките.
+        </p>
+        <p className="mt-1 text-xs text-slate-400">
+          Списъкът се залепя, а не се чете от адрес на търсене: филтърът ти
+          живее в сесията на imot.bg и сървърът не го вижда.
         </p>
 
-        <input
-          value={searchUrl}
-          onChange={(e) => setSearchUrl(e.target.value)}
+        <textarea
+          rows={5}
+          value={urlList}
+          onChange={(e) => setUrlList(e.target.value)}
+          placeholder={"https://www.imot.bg/obiava-...\nhttps://www.imot.bg/obiava-..."}
           className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-xs text-white outline-none focus:border-white"
         />
 
