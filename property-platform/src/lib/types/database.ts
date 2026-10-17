@@ -7,6 +7,12 @@ export type SubscriptionPlan = "basic" | "pro" | "unlimited";
 export type ListingDealType = "rent" | "sale";
 export type PropertyType = "apartment" | "house" | "plot" | "office" | "shop";
 export type ListingStatus = "active" | "inactive" | "expired" | "archived";
+export type ConstructionStage =
+  | "planned"
+  | "building"
+  | "act14"
+  | "act15"
+  | "act16";
 
 type Table<Row, Insert, Update = Partial<Insert>> = {
   Row: Row;
@@ -182,8 +188,7 @@ export interface Database {
           view_count: number;
           developer_id: string | null;
           project_name: string | null;
-          construction_stage:
-            | "planned" | "building" | "act14" | "act15" | "act16" | null;
+          construction_stage: ConstructionStage | null;
           source_url: string | null;
           source_checked_at: string | null;
           source_gone_at: string | null;
@@ -219,8 +224,7 @@ export interface Database {
           view_count?: number;
           developer_id?: string | null;
           project_name?: string | null;
-          construction_stage?:
-            | "planned" | "building" | "act14" | "act15" | "act16" | null;
+          construction_stage?: ConstructionStage | null;
           source_url?: string | null;
           source_checked_at?: string | null;
           created_at?: string;
