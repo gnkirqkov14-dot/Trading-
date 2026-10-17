@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { fetchImotListing, guessStage, type ImotListing } from "@/lib/imot-bg";
+import type { PropertyType } from "@/lib/types/database";
 
 /**
  * Внасяне на фирмена обява от imot.bg.
@@ -62,6 +63,7 @@ export async function previewImotListing(url: string): Promise<ImportPreview> {
 
 export type ImportInput = {
   sourceUrl: string;
+  propertyType: PropertyType;
   developerName: string;
   developerPhone: string;
   permissionNote: string;
@@ -148,7 +150,7 @@ export async function importImotListing(input: ImportInput) {
     id: listingId,
     user_id: admin.id,
     type: "sale",
-    property_type: "apartment",
+    property_type: input.propertyType,
     city_id: input.cityId,
     neighborhood_id: input.neighborhoodId,
     price: input.price,
@@ -238,6 +240,9 @@ export async function importImotAutomatically(
   if (data.sellerKind === "unknown") {
     return { skipped: "не се разбра кой подава обявата" as const };
   }
+  if (!data.propertyType) {
+    return { skipped: "вид имот, който сайтът не описва" as const };
+  }
   if (!data.priceEur || !data.areaSqm) {
     return { skipped: "няма цена или квадратура" as const };
   }
@@ -263,6 +268,7 @@ export async function importImotAutomatically(
 
   const result = await importImotListing({
     sourceUrl: data.sourceUrl,
+    propertyType: data.propertyType,
     developerName: data.company,
     developerPhone: data.phones[0],
     permissionNote,
