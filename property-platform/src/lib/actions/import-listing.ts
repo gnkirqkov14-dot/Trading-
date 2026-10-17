@@ -3,12 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
-import {
-  fetchImotListing,
-  collectImotUrls,
-  guessStage,
-  type ImotListing,
-} from "@/lib/imot-bg";
+import { fetchImotListing, guessStage, type ImotListing } from "@/lib/imot-bg";
 
 /**
  * Внасяне на фирмена обява от imot.bg.
@@ -189,14 +184,19 @@ export type FoundListing = {
   alreadyImported: boolean;
 };
 
-/** Чете списъка с резултати и казва кои обяви още ги няма при нас. */
+/**
+ * Казва кои от подадените обяви още ги няма при нас.
+ *
+ * Приема готов списък адреси, а не адрес на търсене: филтърът „Строителни
+ * фирми“ живее в сесията на потребителя в imot.bg и сървърът не го вижда —
+ * поискана оттук, същата страница връща и обявите на агенциите.
+ */
 export async function findImotListings(
-  searchUrl: string,
+  urls: string[],
 ): Promise<FoundListing[]> {
   await requireAdmin();
   const supabase = await createClient();
 
-  const urls = await collectImotUrls(searchUrl.trim());
   const { data: existing } = await supabase
     .from("listings")
     .select("source_url")
