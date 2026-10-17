@@ -1,10 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  CONSTRUCTION_STAGE_LABELS,
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
+  constructionLabel,
   formatPrice,
 } from "@/lib/listing-labels";
 import type {
@@ -23,6 +23,7 @@ export type ListingCardData = {
   rooms: number | null;
   status: ListingStatus;
   construction_stage: ConstructionStage | null;
+  completion_year: number | null;
   title: string;
   cities: { name: string } | null;
   neighborhoods: { name: string } | null;
@@ -33,6 +34,11 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
   const coverPhoto = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
   )[0];
+
+  const stageLabel = constructionLabel(
+    listing.construction_stage,
+    listing.completion_year,
+  );
 
   const location = [listing.neighborhoods?.name, listing.cities?.name]
     .filter(Boolean)
@@ -78,9 +84,9 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
                 {STATUS_LABELS[listing.status]}
               </span>
             )}
-            {listing.construction_stage && (
+            {stageLabel && (
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                {CONSTRUCTION_STAGE_LABELS[listing.construction_stage]}
+                {stageLabel}
               </span>
             )}
           </span>

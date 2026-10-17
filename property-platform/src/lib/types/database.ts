@@ -189,6 +189,7 @@ export interface Database {
           developer_id: string | null;
           project_name: string | null;
           construction_stage: ConstructionStage | null;
+          completion_year: number | null;
           source_url: string | null;
           source_checked_at: string | null;
           source_gone_at: string | null;
@@ -225,6 +226,7 @@ export interface Database {
           developer_id?: string | null;
           project_name?: string | null;
           construction_stage?: ConstructionStage | null;
+          completion_year?: number | null;
           source_url?: string | null;
           source_checked_at?: string | null;
           created_at?: string;

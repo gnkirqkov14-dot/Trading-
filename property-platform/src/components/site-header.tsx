@@ -26,6 +26,9 @@ export async function SiteHeader() {
   const sectionLinks: NavLink[] = [
     { href: "/listings?type=sale", label: "Продажби" },
     { href: "/listings?type=rent", label: "Наеми" },
+    // Обявите на строителите са собствен сегмент: друг купувач, друг
+    // въпрос („кога е готово“ вместо „кога мога да го видя“).
+    { href: "/listings?builder=1", label: "Ново строителство" },
     { href: "/listings", label: "Всички обяви" },
     { href: "/about", label: "За нас" },
   ];

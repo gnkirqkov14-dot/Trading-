@@ -67,6 +67,10 @@ export type ImportInput = {
   permissionNote: string;
   projectName: string | null;
   stage: "planned" | "building" | "act14" | "act15" | "act16" | null;
+  /** Обещаният срок при имот в строеж. */
+  completionYear: number | null;
+  /** Годината, в която сградата е построена — само за готов имот. */
+  yearBuilt: number | null;
   title: string;
   description: string | null;
   address: string;
@@ -159,6 +163,8 @@ export async function importImotListing(input: ImportInput) {
     developer_id: developer.id,
     project_name: input.projectName?.trim() || null,
     construction_stage: input.stage,
+    completion_year: input.completionYear,
+    year_built: input.yearBuilt,
     source_url: input.sourceUrl,
     source_checked_at: new Date().toISOString(),
   });
@@ -262,6 +268,10 @@ export async function importImotAutomatically(
     permissionNote,
     projectName: null,
     stage: guessStage(data.constructionNote, data.description),
+    // Една и съща година значи различно нещо според наклонението:
+    // „въведен 2026 г.“ е факт, „ще бъде въведен 2027 г.“ е обещание.
+    completionYear: data.commissioned ? null : data.commissionYear,
+    yearBuilt: data.commissioned ? data.commissionYear : null,
     title: data.title?.split("::")[0]?.trim() || "Апартамент в Пловдив",
     description: data.description,
     address: data.neighborhood ? `кв. ${data.neighborhood}` : "гр. Пловдив",
