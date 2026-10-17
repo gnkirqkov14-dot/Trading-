@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { PropertyType } from "@/lib/types/database";
+
 /**
  * Разчита една обява от imot.bg.
  *
@@ -51,6 +53,14 @@ export type ImotListing = {
   /** true, когато сградата вече Е въведена в експлоатация. */
   commissioned: boolean;
   /**
+   * Видът имот, познат по адреса на обявата.
+   *
+   * null значи „не е от видовете, които платформата описва“ — склад,
+   * заведение, гараж. Такава обява се пропуска, вместо да влезе под
+   * чужд вид: склад, записан като апартамент, е лъжа към купувача.
+   */
+  propertyType: PropertyType | null;
+  /**
    * Кой подава обявата според самата страница.
    *
    * Това е предпазителят срещу агенции: филтърът в imot.bg живее в сесията
@@ -59,6 +69,17 @@ export type ImotListing = {
    */
   sellerKind: "builder" | "investor" | "agency" | "private" | "unknown";
 };
+
+/** „…-prodava-tristaen-apartament-grad-plovdiv-…“ → apartment. */
+function propertyTypeFromUrl(url: string): PropertyType | null {
+  const slug = url.toLowerCase();
+  if (/-apartament-|-atelie-|-mezonet-/.test(slug)) return "apartment";
+  if (/-kashta-|-vila-|-etazh-ot-kashta-/.test(slug)) return "house";
+  if (/-magazin-/.test(slug)) return "shop";
+  if (/-ofis-/.test(slug)) return "office";
+  if (/-parcel-|-zemedelska-zemya-|-industrialen-teren-/.test(slug)) return "plot";
+  return null;
+}
 
 /** „2-СТАЕН“ → 2, „МНОГОСТАЕН“ → 4 (повече от 3, точният брой не се казва). */
 function roomsFromTitle(title: string | null) {
@@ -198,6 +219,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
       ? Number(commissionYearMatch[1])
       : null,
     commissioned,
+    propertyType: propertyTypeFromUrl(url),
     sellerKind,
   };
 }

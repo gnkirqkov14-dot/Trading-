@@ -173,6 +173,7 @@ export function ImportListingForm({
     try {
       const result = await importImotListing({
         sourceUrl: preview.sourceUrl,
+        propertyType: preview.propertyType ?? "apartment",
         developerName,
         developerPhone,
         permissionNote,
