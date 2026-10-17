@@ -1,12 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
+  CONSTRUCTION_STAGE_LABELS,
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
   formatPrice,
 } from "@/lib/listing-labels";
 import type {
+  ConstructionStage,
   ListingDealType,
   ListingStatus,
   PropertyType,
@@ -20,6 +22,7 @@ export type ListingCardData = {
   area_sqm: number;
   rooms: number | null;
   status: ListingStatus;
+  construction_stage: ConstructionStage | null;
   title: string;
   cities: { name: string } | null;
   neighborhoods: { name: string } | null;
@@ -69,11 +72,18 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
               </span>
             )}
           </span>
-          {listing.status !== "active" && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-              {STATUS_LABELS[listing.status]}
-            </span>
-          )}
+          <span className="flex shrink-0 gap-1">
+            {listing.status !== "active" && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                {STATUS_LABELS[listing.status]}
+              </span>
+            )}
+            {listing.construction_stage && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                {CONSTRUCTION_STAGE_LABELS[listing.construction_stage]}
+              </span>
+            )}
+          </span>
         </div>
 
         <p className="truncate font-medium text-slate-900">{listing.title}</p>

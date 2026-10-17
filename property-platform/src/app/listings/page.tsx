@@ -3,7 +3,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ListingFilters } from "@/components/listing-filters";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
-import type { ListingDealType, PropertyType } from "@/lib/types/database";
+import type {
+  ConstructionStage,
+  ListingDealType,
+  PropertyType,
+} from "@/lib/types/database";
 
 export const metadata: Metadata = {
   title: "Обяви",
@@ -25,6 +29,7 @@ type SearchParams = {
   areaMax?: string;
   rooms?: string;
   floor?: string;
+  stage?: string;
   parking?: string;
   elevator?: string;
   terrace?: string;
@@ -63,7 +68,7 @@ export default async function ListingsPage({
         let query = supabase
           .from("listings")
           .select(
-            "id, type, property_type, price, area_sqm, rooms, status, title, cities(name), neighborhoods(name), listing_photos(url, position)",
+            "id, type, property_type, price, area_sqm, rooms, status, construction_stage, title, cities(name), neighborhoods(name), listing_photos(url, position)",
           );
 
         if (params.type) query = query.eq("type", params.type as ListingDealType);
@@ -77,6 +82,16 @@ export default async function ListingsPage({
         if (params.areaMin) query = query.gte("area_sqm", Number(params.areaMin));
         if (params.areaMax) query = query.lte("area_sqm", Number(params.areaMax));
         if (params.floor) query = query.eq("floor", Number(params.floor));
+        // „new“ не е етап, а „кое да е ново строителство“: етапът е
+        // попълнен само при фирмените обяви.
+        if (params.stage === "new") {
+          query = query.not("construction_stage", "is", null);
+        } else if (params.stage) {
+          query = query.eq(
+            "construction_stage",
+            params.stage as ConstructionStage,
+          );
+        }
         if (params.rooms) {
           if (params.rooms === "4+") {
             query = query.gte("rooms", 4);
