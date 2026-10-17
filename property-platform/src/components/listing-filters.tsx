@@ -1,7 +1,11 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { DEAL_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/listing-labels";
+import {
+  CONSTRUCTION_STAGE_LABELS,
+  DEAL_TYPE_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from "@/lib/listing-labels";
 import {
   SettlementSearch,
   type Settlement,
@@ -105,6 +109,23 @@ export function ListingFilters({
           {neighborhoods.map((n) => (
             <option key={n.id} value={n.id}>
               {n.name}
+            </option>
+          ))}
+        </select>
+
+        {/* Купувачът на ново строителство пита първо „готов ли е“, а чак
+            после за точния акт. Затова най-отгоре стои „само ново
+            строителство“, а отделните етапи са за прецизиране. */}
+        <select
+          className={inputClass}
+          value={searchParams.get("stage") ?? ""}
+          onChange={(e) => updateParams({ stage: e.target.value })}
+        >
+          <option value="">Ново и съществуващо</option>
+          <option value="new">Само ново строителство</option>
+          {Object.entries(CONSTRUCTION_STAGE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
             </option>
           ))}
         </select>

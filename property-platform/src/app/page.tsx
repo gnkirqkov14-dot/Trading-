@@ -43,7 +43,7 @@ export default async function Home() {
     supabase
       .from("listings")
       .select(
-        "id, type, property_type, price, area_sqm, rooms, status, title, cities(name), neighborhoods(name), listing_photos(url, position)",
+        "id, type, property_type, price, area_sqm, rooms, status, construction_stage, title, cities(name), neighborhoods(name), listing_photos(url, position)",
       )
       .eq("status", "active")
       .order("created_at", { ascending: false })
