@@ -7,12 +7,14 @@ import { PhoneLink } from "@/components/phone-link";
 import { PixelEvent } from "@/components/pixel-event";
 import { ListingGallery } from "@/components/listing-gallery";
 import {
+  CONSTRUCTION_STAGE_LABELS,
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
   formatPrice,
 } from "@/lib/listing-labels";
 import type {
+  ConstructionStage,
   ListingDealType,
   ListingStatus,
   PropertyType,
@@ -39,6 +41,8 @@ type ListingDetail = {
   address: string;
   phone: string;
   status: ListingStatus;
+  project_name: string | null;
+  construction_stage: ConstructionStage | null;
   cities: { name: string } | null;
   neighborhoods: { name: string } | null;
   listing_photos: { url: string; position: number }[];
@@ -230,16 +234,31 @@ export default async function ListingDetailPage({
         />
       )}
 
-      {listing.status !== "active" && (
-        <p className="mb-4 inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
-          {STATUS_LABELS[listing.status]}
-        </p>
-      )}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {listing.status !== "active" && (
+          <p className="inline-block rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+            {STATUS_LABELS[listing.status]}
+          </p>
+        )}
+        {listing.construction_stage && (
+          <p className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">
+            {CONSTRUCTION_STAGE_LABELS[listing.construction_stage]}
+          </p>
+        )}
+      </div>
 
       <h1 className="text-2xl font-semibold text-slate-900">
         {listing.title}
       </h1>
       {location && <p className="mt-1 text-slate-500">{location}</p>}
+      {listing.project_name && (
+        <p className="mt-1 text-slate-500">
+          Комплекс{" "}
+          <span className="font-medium text-slate-900">
+            {listing.project_name}
+          </span>
+        </p>
+      )}
 
       <p className="mt-4 text-3xl font-bold text-slate-900">
         {formatPrice(listing.price)}

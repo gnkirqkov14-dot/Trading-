@@ -10,6 +10,7 @@ import {
   type ImportPreview,
   type FoundListing,
 } from "@/lib/actions/import-listing";
+import { CONSTRUCTION_STAGE_LABELS } from "@/lib/listing-labels";
 
 /**
  * Списъкът НЕ се чете от сървъра по адрес на търсенето.
@@ -23,13 +24,9 @@ import {
 
 type Neighborhood = { id: string; name: string };
 
-const STAGES = [
-  { value: "planned", label: "Предстоящ" },
-  { value: "building", label: "В строеж" },
-  { value: "act14", label: "Акт 14" },
-  { value: "act15", label: "Акт 15" },
-  { value: "act16", label: "Акт 16 — готов" },
-] as const;
+// Етикетите идват от общия списък, за да не се разминат с това, което
+// купувачът вижда в обявата.
+const STAGES = Object.entries(CONSTRUCTION_STAGE_LABELS);
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900";
@@ -410,9 +407,9 @@ export function ImportListingForm({
                 className={inputClass}
               >
                 <option value="">Не е посочен</option>
-                {STAGES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
+                {STAGES.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
                   </option>
                 ))}
               </select>

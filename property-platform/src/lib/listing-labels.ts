@@ -1,4 +1,5 @@
 import type {
+  ConstructionStage,
   ListingDealType,
   ListingStatus,
   PropertyType,
@@ -22,6 +23,16 @@ export const STATUS_LABELS: Record<ListingStatus, string> = {
   inactive: "Неактивна",
   expired: "Неактуална",
   archived: "Архивирана",
+};
+
+// Етапите на новото строителство, както ги знае купувачът. „Акт 16“
+// се пояснява, защото точно той значи „можеш да се нанесеш“.
+export const CONSTRUCTION_STAGE_LABELS: Record<ConstructionStage, string> = {
+  planned: "Предстоящ",
+  building: "В строеж",
+  act14: "Акт 14",
+  act15: "Акт 15",
+  act16: "Акт 16 — готов",
 };
 
 export const HEATING_OPTIONS = [
