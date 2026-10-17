@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
+import sharp from "sharp";
 import { fetchImotListing, guessStage, type ImotListing } from "@/lib/imot-bg";
 import type { PropertyType } from "@/lib/types/database";
 
@@ -144,11 +145,30 @@ export async function importImotListing(input: ImportInput) {
           });
           if (!response.ok) return;
 
+          const original = Buffer.from(await response.arrayBuffer());
+          // imot.bg дава слабо компресирани файлове — средно 297 kB за
+          // снимка, която при 1280 пиксела и качество 78 тежи 106 kB без
+          // видима загуба. Разликата е между ~280 и ~780 обяви в същото
+          // хранилище.
+          let bytes: Buffer = original;
+          try {
+            bytes = await sharp(original)
+              .rotate()
+              .resize({ width: 1280, withoutEnlargement: true })
+              .jpeg({ quality: 78, mozjpeg: true })
+              .toBuffer();
+          } catch {
+            // Нечетима от sharp снимка влиза както си е — по-добре
+            // голяма, отколкото никаква.
+          }
+
           const path = `${admin.id}/${listingId}/${index}.jpg`;
           const { error: uploadError } = await supabase.storage
             .from("listing-photos")
-            .upload(path, await response.arrayBuffer(), {
-              contentType: response.headers.get("content-type") ?? "image/jpeg",
+            .upload(path, bytes, {
+              contentType: bytes === original
+                ? response.headers.get("content-type") ?? "image/jpeg"
+                : "image/jpeg",
               upsert: true,
             });
           if (uploadError) return;

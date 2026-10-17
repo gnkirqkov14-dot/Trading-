@@ -155,8 +155,12 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
       if (!src.includes(id)) continue;
       const file = src.split("/").pop()!;
       const full = `https:${src.replace(/([^:])\/\//g, "$1/")}`;
+      // Предпочита се най-големият вариант: 280×209 (без папка),
+      // 800×598 (/big) и 1230×920 (/big1). Смаляваме ние, но по-голям
+      // изходен файл дава по-чист резултат.
+      const tegло = (u: string) => (/\/big1\//.test(u) ? 2 : /\/big\//.test(u) ? 1 : 0);
       const current = byFile.get(file);
-      if (!current || (/\/big\d?\//.test(full) && !/\/big\d?\//.test(current))) {
+      if (!current || tegло(full) > tegло(current)) {
         byFile.set(file, full);
       }
     }
