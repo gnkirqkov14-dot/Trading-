@@ -35,6 +35,23 @@ export const CONSTRUCTION_STAGE_LABELS: Record<ConstructionStage, string> = {
   act16: "Акт 16 — готов",
 };
 
+/**
+ * Етапът, както да го прочете купувачът — заедно със срока, когато го има.
+ *
+ * Самият етап отговаря само наполовина: „в строеж“ не казва дали чакаш
+ * една година или пет. imot.bg дава срока („Ще бъде въведен в експлоатация
+ * 2029 г.“) и той е по-важният от двата за човек, който избира.
+ */
+export function constructionLabel(
+  stage: ConstructionStage | null,
+  completionYear: number | null,
+) {
+  if (!stage) return completionYear ? `Готов ${completionYear}` : null;
+  const base = CONSTRUCTION_STAGE_LABELS[stage];
+  if (stage === "act16" || !completionYear) return base;
+  return `${base} · готов ${completionYear}`;
+}
+
 export const HEATING_OPTIONS = [
   "ТЕЦ",
   "Климатик",

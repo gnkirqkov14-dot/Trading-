@@ -37,6 +37,7 @@ export function ListingFilters({
   const searchParams = useSearchParams();
 
   const selectedCity = searchParams.get("city") ?? "";
+  const onlyBuilders = searchParams.get("builder") === "1";
 
   function updateParams(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -121,14 +122,28 @@ export function ListingFilters({
           value={searchParams.get("stage") ?? ""}
           onChange={(e) => updateParams({ stage: e.target.value })}
         >
-          <option value="">Ново и съществуващо</option>
-          <option value="new">Само ново строителство</option>
+          <option value="">Всички етапи</option>
           {Object.entries(CONSTRUCTION_STAGE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </select>
+
+        <button
+          type="button"
+          onClick={() =>
+            updateParams({ builder: onlyBuilders ? "" : "1" })
+          }
+          aria-pressed={onlyBuilders}
+          className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+            onlyBuilders
+              ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+              : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+          }`}
+        >
+          Само от строителя
+        </button>
 
         <select
           className={inputClass}

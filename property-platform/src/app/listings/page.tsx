@@ -30,6 +30,7 @@ type SearchParams = {
   rooms?: string;
   floor?: string;
   stage?: string;
+  builder?: string;
   parking?: string;
   elevator?: string;
   terrace?: string;
@@ -68,7 +69,7 @@ export default async function ListingsPage({
         let query = supabase
           .from("listings")
           .select(
-            "id, type, property_type, price, area_sqm, rooms, status, construction_stage, title, cities(name), neighborhoods(name), listing_photos(url, position)",
+            "id, type, property_type, price, area_sqm, rooms, status, construction_stage, completion_year, title, cities(name), neighborhoods(name), listing_photos(url, position)",
           );
 
         if (params.type) query = query.eq("type", params.type as ListingDealType);
@@ -82,11 +83,13 @@ export default async function ListingsPage({
         if (params.areaMin) query = query.gte("area_sqm", Number(params.areaMin));
         if (params.areaMax) query = query.lte("area_sqm", Number(params.areaMax));
         if (params.floor) query = query.eq("floor", Number(params.floor));
-        // „new“ не е етап, а „кое да е ново строителство“: етапът е
-        // попълнен само при фирмените обяви.
-        if (params.stage === "new") {
-          query = query.not("construction_stage", "is", null);
-        } else if (params.stage) {
+        // Сегментът „от строителя“ стъпва на фирмата зад обявата, не на
+        // етапа: етап може да липсва, ако обявата не го казва, а тогава
+        // филтърът по етап би скрил точно нея.
+        if (params.builder === "1") {
+          query = query.not("developer_id", "is", null);
+        }
+        if (params.stage) {
           query = query.eq(
             "construction_stage",
             params.stage as ConstructionStage,
@@ -119,11 +122,21 @@ export default async function ListingsPage({
     ]);
 
   const listings = (listingsQuery.data ?? []) as unknown as ListingCardData[];
+  const onlyBuilders = params.builder === "1";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Обяви</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {onlyBuilders ? "Ново строителство" : "Обяви"}
+          </h1>
+          {onlyBuilders && (
+            <p className="mt-1 text-sm text-slate-500">
+              Директно от строителя — без комисиона и без посредник.
+            </p>
+          )}
+        </div>
         <Link
           href="/dashboard/listings/new"
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"

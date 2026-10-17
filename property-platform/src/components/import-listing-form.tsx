@@ -178,6 +178,8 @@ export function ImportListingForm({
         permissionNote,
         projectName: projectName || null,
         stage: (stage || null) as never,
+        completionYear: preview.commissioned ? null : preview.commissionYear,
+        yearBuilt: preview.commissioned ? preview.commissionYear : null,
         title: preview.title?.split("::")[0]?.trim() || "Апартамент в Пловдив",
         description: preview.description,
         address,

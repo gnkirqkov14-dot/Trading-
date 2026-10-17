@@ -8,10 +8,10 @@ import { PixelEvent } from "@/components/pixel-event";
 import { ListingGallery } from "@/components/listing-gallery";
 import { ListingMap } from "@/components/listing-map";
 import {
-  CONSTRUCTION_STAGE_LABELS,
   DEAL_TYPE_LABELS,
   PROPERTY_TYPE_LABELS,
   STATUS_LABELS,
+  constructionLabel,
   formatPrice,
 } from "@/lib/listing-labels";
 import type {
@@ -44,6 +44,7 @@ type ListingDetail = {
   status: ListingStatus;
   project_name: string | null;
   construction_stage: ConstructionStage | null;
+  completion_year: number | null;
   lat: number | null;
   lng: number | null;
   cities: { name: string } | null;
@@ -147,6 +148,10 @@ export default async function ListingDetailPage({
         .join(", ")
     : listing.cities?.name ?? null;
   const video = listing.listing_videos[0];
+  const stageLabel = constructionLabel(
+    listing.construction_stage,
+    listing.completion_year,
+  );
 
   const facts: [string, string][] = [
     ["Тип имот", PROPERTY_TYPE_LABELS[listing.property_type]],
@@ -243,9 +248,9 @@ export default async function ListingDetailPage({
             {STATUS_LABELS[listing.status]}
           </p>
         )}
-        {listing.construction_stage && (
+        {stageLabel && (
           <p className="inline-block rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800">
-            {CONSTRUCTION_STAGE_LABELS[listing.construction_stage]}
+            {stageLabel}
           </p>
         )}
       </div>

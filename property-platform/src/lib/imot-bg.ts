@@ -46,6 +46,10 @@ export type ImotListing = {
   photos: string[];
   /** Суровият ред за строителството — оттам се чете етапът. */
   constructionNote: string | null;
+  /** Годината от реда за експлоатация, без значение минала или бъдеща. */
+  commissionYear: number | null;
+  /** true, когато сградата вече Е въведена в експлоатация. */
+  commissioned: boolean;
   /**
    * Кой подава обявата според самата страница.
    *
@@ -146,7 +150,22 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
           ? "private"
           : "unknown";
 
+  const constructionLine = grab(/Строителство:?\s*([^<\n]{0,90})/i);
   const floorLine = grab(/Етаж:?\s*([^<\n]{0,90})/i);
+  // Редът е от вида „5-ти от 6, Тухла, Ще бъде въведен в експлоатация 2026 г.“
+  // и носи три различни изречения:
+  //   „Ще бъде въведен …“      — още се строи, годината е обещание
+  //   „Въведен в експлоатация“ — готов е, годината е факт
+  //   „Не е въведен …“         — още се строи, година не се казва
+  const commissionLine = `${floorLine ?? ""} ${constructionLine ?? ""}`;
+  const commissionYearMatch = commissionLine.match(
+    /въведен[а]?\s+в\s+експлоатация\s*(20\d\d)/i,
+  );
+  const commissioned =
+    /въведен[а]?\s+в\s+експлоатация/i.test(commissionLine) &&
+    !/(?:ще\s+бъде|не\s+е|предстои|очаква)\s+(?:[а-я]+\s+)?въведен/i.test(
+      commissionLine,
+    );
   const floorPart = floorLine?.split(",")[0] ?? null;
   const floorMatch = floorPart?.match(/(\d+|Партер)\s*(?:от\s*(\d+))?/i);
   const restOfLine = floorLine?.split(",").slice(1).join(",").trim() || null;
@@ -174,7 +193,11 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     company,
     phones,
     photos,
-    constructionNote: grab(/Строителство:?\s*([^<\n]{0,80})/i) ?? restOfLine,
+    constructionNote: constructionLine ?? restOfLine,
+    commissionYear: commissionYearMatch
+      ? Number(commissionYearMatch[1])
+      : null,
+    commissioned,
     sellerKind,
   };
 }
@@ -183,10 +206,15 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
 export function guessStage(note: string | null, description: string | null) {
   const haystack = `${note ?? ""} ${description ?? ""}`.toLowerCase();
 
-  // Бъдещето се проверява ПЪРВО. „Ще бъде въведен в експлоатация 2027 г.“
-  // съдържа „въведен в експлоатация“ и инак минава за Акт 16 — тоест готов
-  // имот, какъвто не е. Грешен етап пред купувач е по-лошо от липсващ.
-  if (/ще бъде|предстои|очаква се|новострояща|в строеж|в процес на строителство/.test(haystack)) {
+  // Отрицанието се проверява ПЪРВО. И „Ще бъде въведен в експлоатация
+  // 2027 г.“, и „Не е въведен в експлоатация“ съдържат „въведен в
+  // експлоатация“ и инак минават за Акт 16 — тоест готов имот, какъвто
+  // не е. Грешен етап пред купувач е по-лошо от липсващ.
+  if (
+    /не\s+е\s+въведен|ще\s+бъде|предстои|очаква се|новострояща|в строеж|в процес на строителство/.test(
+      haystack,
+    )
+  ) {
     return "building" as const;
   }
   if (/акт\s*16|въведен[а]? в експлоатация|разрешение за ползване/.test(haystack)) {
