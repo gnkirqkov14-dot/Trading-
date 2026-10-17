@@ -254,14 +254,18 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     const prvo = chasti[0].match(/^(град|село)\s+(.+)$/);
     if (!prvo) return null;
 
-    // „град Пловдив, бул. Х 5“ — без квартал, но с улица. Разпознава се по
-    // началото: квартал не започва с „ул.“ или „бул.“.
-    const eUlica = (t: string) =>
-      /^(ул|бул|бл|ж\.?к|жк|кв\.\s*\d)\.?\s/i.test(t) || /^(ул|бул)\./i.test(t);
+    // Третата част НЕ е непременно улица.
+    //
+    // imot.bg слага там и подрайон: „град Пловдив, Гагарин, Северен“ или
+    // „…, Христо Смирненски, Пещерско шосе, западен“. Записани като адрес,
+    // излизат „Северен, кв. Гагарин“ — което не е адрес, а бъркотия.
+    //
+    // За улица се брои само това, което почва с „ул.“ или „бул.“.
+    const eUlica = (t: string) => /^(ул|бул)\.?\s*[А-Яа-яA-Za-z0-9]/i.test(t);
 
     const ostatak = chasti.slice(1);
     const kvartal = ostatak.length && !eUlica(ostatak[0]) ? ostatak.shift()! : null;
-    const ulica = ostatak.length ? ostatak.join(", ") : null;
+    const ulica = ostatak.find(eUlica) ?? null;
 
     return {
       selo: prvo[1] === "село",
