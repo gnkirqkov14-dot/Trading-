@@ -6,6 +6,7 @@ import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
 import { PixelEvent } from "@/components/pixel-event";
 import { ListingGallery } from "@/components/listing-gallery";
+import { ListingMap } from "@/components/listing-map";
 import {
   CONSTRUCTION_STAGE_LABELS,
   DEAL_TYPE_LABELS,
@@ -43,6 +44,8 @@ type ListingDetail = {
   status: ListingStatus;
   project_name: string | null;
   construction_stage: ConstructionStage | null;
+  lat: number | null;
+  lng: number | null;
   cities: { name: string } | null;
   neighborhoods: { name: string } | null;
   listing_photos: { url: string; position: number }[];
@@ -307,6 +310,14 @@ export default async function ListingDetailPage({
         </div>
       )}
 
+      {hasFullAccess && listing.lat != null && listing.lng != null && (
+        <ListingMap
+          lat={listing.lat}
+          lng={listing.lng}
+          label={listing.project_name ?? listing.address}
+        />
+      )}
+
       {hasFullAccess && (
         <div className="mt-8 rounded-2xl border border-slate-200 p-6">
           <h2 className="mb-3 text-lg font-semibold">Контакти</h2>
@@ -337,7 +348,7 @@ export default async function ListingDetailPage({
         <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
           <p className="font-medium text-slate-900">
             Регистрирай се безплатно, за да видиш всички снимки, описанието,
-            точния квартал и данните за връзка.
+            мястото на картата и данните за връзка.
           </p>
           <p className="mt-1 text-sm text-slate-500">
             Публикуването и разглеждането на обяви са безплатни — само
