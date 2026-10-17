@@ -40,6 +40,10 @@ export type ImotListing = {
   rooms: number | null;
   floor: number | null;
   floorsTotal: number | null;
+  /** Населеното място от заглавието — вече не само Пловдив. */
+  city: string | null;
+  /** true при „в село …“. Имената се повтарят между градове и села. */
+  isVillage: boolean;
   neighborhood: string | null;
   description: string | null;
   /** Името на строителната фирма, както е изписано в обявата. */
@@ -187,6 +191,47 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     !/(?:ще\s+бъде|не\s+е|предстои|очаква)\s+(?:[а-я]+\s+)?въведен/i.test(
       commissionLine,
     );
+  // „Продава 2-СТАЕН в град Пловдив, Каменица 2 - 66 кв.м / …“
+  //
+  // Заглавието е единственото място, където населеното място и кварталът
+  // стоят заедно и в този ред. Същият израз, пуснат върху тялото на
+  // страницата, лови съседен текст: за обява в Каменица 2 оттам излезе
+  // „Христо Смирненски“, съвсем друг квартал.
+  const mqsto = (() => {
+    // Без \b пред „в“: границата на дума в JS се мери по латиница и пред
+    // кирилско „в“ изобщо не съвпада.
+    //
+    // Краят се закотвя за „ - <число> кв“, а не за първото тире: има
+    // квартали с тире в името („Индустриална зона - Тракия“).
+    const krai = "\\s*(?:,\\s*(.{2,40}?))?\\s*-\\s*[\\d.,\\s]+\\s*кв";
+
+    // Областният център се пише „в град Пловдив, Каменица 2 - …“,
+    // а всичко останало в областта — „в област Пловдив, гр. Асеновград - …“.
+    const pryako = title?.match(
+      new RegExp(`(?:^|\\s)в\\s+(град|село)\\s+([^,]{2,40}?)${krai}`),
+    );
+    if (pryako) {
+      return {
+        selo: pryako[1] === "село",
+        ime: clean(pryako[2]),
+        kvartal: clean(pryako[3] ?? null),
+      };
+    }
+
+    const prezOblast = title?.match(
+      new RegExp(`(?:^|\\s)в\\s+област\\s+[^,]{2,30},\\s*(гр|с)\\.\\s*([^,]{2,40}?)${krai}`),
+    );
+    if (prezOblast) {
+      return {
+        selo: prezOblast[1] === "с",
+        ime: clean(prezOblast[2]),
+        kvartal: clean(prezOblast[3] ?? null),
+      };
+    }
+
+    return null;
+  })();
+
   const floorPart = floorLine?.split(",")[0] ?? null;
   const floorMatch = floorPart?.match(/(\d+|Партер)\s*(?:от\s*(\d+))?/i);
   const restOfLine = floorLine?.split(",").slice(1).join(",").trim() || null;
@@ -203,13 +248,9 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
         : Number(floorMatch[1])
       : null,
     floorsTotal: floorMatch?.[2] ? Number(floorMatch[2]) : null,
-    // Кварталът се чете първо от заглавието: „… в град Пловдив, Каменица 2 -
-    // 66 кв.м …“. Същият израз, пуснат върху тялото на страницата, лови
-    // съседен текст — за обява в Каменица 2 оттам излезе „Христо Смирненски“,
-    // съвсем друг квартал. Тялото остава само за заглавия без град.
-    neighborhood:
-      clean(title?.match(/град Пловдив,\s*([^-]{2,40}?)\s*-/)?.[1] ?? null) ??
-      grab(/град Пловдив,?\s*([А-Яа-я\s-]{3,30}?)\s*(?:-|,|::|<)/),
+    city: mqsto?.ime ?? null,
+    isVillage: mqsto?.selo ?? false,
+    neighborhood: mqsto?.kvartal ?? null,
     description,
     company,
     phones,

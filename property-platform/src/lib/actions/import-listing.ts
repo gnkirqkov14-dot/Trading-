@@ -121,26 +121,51 @@ export async function importImotListing(input: ImportInput) {
 
   // Снимките се теглят от imot.bg и се качват в нашето хранилище от името
   // на администратора — политиката иска първата папка да е неговият id.
-  const photoUrls: string[] = [];
-  for (const [index, source] of input.photos.slice(0, 30).entries()) {
-    const response = await fetch(source, {
-      headers: { "User-Agent": "Mozilla/5.0", Referer: "https://www.imot.bg/" },
-    });
-    if (!response.ok) continue;
+  //
+  // На групи, а не една по една: една обява носи към 17 снимки и всяка
+  // иска сваляне и качване. Последователно това е половин минута на обява
+  // и прави внасянето на цял град въпрос на часове. По шест наведнъж е
+  // достатъчно бързо, без да залива imot.bg.
+  const ZAEDNO = 6;
+  const iztochnici = input.photos.slice(0, 30);
+  const svaleni: (string | null)[] = new Array(iztochnici.length).fill(null);
 
-    const path = `${admin.id}/${listingId}/${index}.jpg`;
-    const { error: uploadError } = await supabase.storage
-      .from("listing-photos")
-      .upload(path, await response.arrayBuffer(), {
-        contentType: response.headers.get("content-type") ?? "image/jpeg",
-        upsert: true,
-      });
-    if (uploadError) continue;
+  for (let start = 0; start < iztochnici.length; start += ZAEDNO) {
+    const grupa = iztochnici.slice(start, start + ZAEDNO);
+    await Promise.all(
+      grupa.map(async (source, offset) => {
+        const index = start + offset;
+        try {
+          const response = await fetch(source, {
+            headers: {
+              "User-Agent": "Mozilla/5.0",
+              Referer: "https://www.imot.bg/",
+            },
+          });
+          if (!response.ok) return;
 
-    photoUrls.push(
-      supabase.storage.from("listing-photos").getPublicUrl(path).data.publicUrl,
+          const path = `${admin.id}/${listingId}/${index}.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from("listing-photos")
+            .upload(path, await response.arrayBuffer(), {
+              contentType: response.headers.get("content-type") ?? "image/jpeg",
+              upsert: true,
+            });
+          if (uploadError) return;
+
+          svaleni[index] = supabase.storage
+            .from("listing-photos")
+            .getPublicUrl(path).data.publicUrl;
+        } catch {
+          // Една пропаднала снимка не бива да спира цялата обява.
+        }
+      }),
     );
   }
+
+  // Редът на снимките е редът в обявата — затова се пази по индекс и
+  // чак накрая се изчистват празните места.
+  const photoUrls = svaleni.filter((url): url is string => url !== null);
 
   if (photoUrls.length === 0) {
     throw new Error("Нито една снимка не се свали. Обявата не е качена.");
@@ -224,7 +249,6 @@ export async function findImotListings(
 export async function importImotAutomatically(
   url: string,
   permissionNote: string,
-  cityId: string,
 ) {
   await requireAdmin();
   const supabase = await createClient();
@@ -253,6 +277,25 @@ export async function importImotAutomatically(
     return { skipped: "няма снимки" as const };
   }
 
+  // Населеното място се чете от обявата, не се подава отвън: иначе целият
+  // внос е заключен за един град, а обявите са в цяла България.
+  if (!data.city) {
+    return { skipped: "не се разбра кое е населеното място" as const };
+  }
+  const { data: grad } = await supabase
+    .from("cities")
+    .select("id")
+    .ilike("name", data.city.trim())
+    .eq("is_village", data.isVillage)
+    .limit(1)
+    .maybeSingle();
+  if (!grad) {
+    return {
+      skipped: `населеното място „${data.city}“ го няма в списъка` as const,
+    };
+  }
+  const cityId = grad.id;
+
   // Кварталът от обявата се сверява със списъка в базата; не се познае ли,
   // обявата пак влиза, само че без квартал — по-добре от грешен квартал.
   let neighborhoodId: string | null = null;
@@ -278,9 +321,12 @@ export async function importImotAutomatically(
     // „въведен 2026 г.“ е факт, „ще бъде въведен 2027 г.“ е обещание.
     completionYear: data.commissioned ? null : data.commissionYear,
     yearBuilt: data.commissioned ? data.commissionYear : null,
-    title: data.title?.split("::")[0]?.trim() || "Апартамент в Пловдив",
+    title:
+      data.title?.split("::")[0]?.trim() || `Имот в ${data.city}`,
     description: data.description,
-    address: data.neighborhood ? `кв. ${data.neighborhood}` : "гр. Пловдив",
+    address: data.neighborhood
+      ? `кв. ${data.neighborhood}`
+      : `${data.isVillage ? "с." : "гр."} ${data.city}`,
     cityId,
     neighborhoodId,
     price: data.priceEur,

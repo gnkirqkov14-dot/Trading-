@@ -115,7 +115,6 @@ export function ImportListingForm({
         const result = await importImotAutomatically(
           item.url,
           batchNote.trim(),
-          cityId,
         );
         if ("skipped" in result) {
           skipped.push(`${item.url.split("/").pop()?.slice(0, 40)} — ${result.skipped}`);
