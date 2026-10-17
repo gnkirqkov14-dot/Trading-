@@ -316,6 +316,29 @@ export async function importImotAutomatically(
     return { skipped: "няма снимки" as const };
   }
 
+  // Втора проверка за агенция, върху самия текст.
+  //
+  // Маркерът на imot.bg („Инвеститор“, „Строителна фирма“) казва за какъв
+  // профил е платила фирмата, не каква е. Обява, която започва с
+  // „Агенция Конто Бг ви предлага“, мина през него без да трепне.
+  //
+  // Нарочно НЕ се гледа думата „посредник“ сама по себе си: строителите
+  // пишат „без посредници“ като предимство. „Посредническа услуга“ е
+  // друго и се лови.
+  //
+  // Правилото е да се сбърка към отказ: по-добре да изпуснем честна
+  // обява, отколкото да качим агенция. Цялата платформа обещава обратното.
+  const tekst = `${data.company ?? ""} ${data.description ?? ""}`;
+  if (/агенц|брокер|посредническ/i.test(tekst)) {
+    return { skipped: "текстът на обявата звучи на агенция" as const };
+  }
+
+  // Без описание няма как да се провери кой подава обявата — а и няма
+  // какво да се покаже на купувача.
+  if (!data.description || data.description.trim().length < 80) {
+    return { skipped: "няма описание" as const };
+  }
+
   // Един и същи имот, качен няколко пъти с различни номера.
   //
   // РИК БИЛДИНГ държат един апартамент в три обяви — веднъж като
@@ -398,4 +421,58 @@ export async function importImotAutomatically(
   });
 
   return { imported: result, company: data.company };
+}
+
+/**
+ * Препрочита описанията на вече качените фирмени обяви.
+ *
+ * Нужно е, защото четенето на описанието се поправя в движение: дълго
+ * време кодовете на емотиконите (`&#127969;`) влизаха както са, а новите
+ * редове се сливаха в един абзац. Записаното тогава не може да се оправи
+ * на място — редовете вече ги няма — затова текстът се взима наново от
+ * източника.
+ *
+ * Снимките не се пипат: те са си качени и тежат.
+ */
+export async function refreshDescriptions() {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: redove } = await supabase
+    .from("listings")
+    .select("id, source_url")
+    .not("developer_id", "is", null)
+    .not("source_url", "is", null);
+
+  let obnoveni = 0;
+  const propadnali: string[] = [];
+
+  for (const red of redove ?? []) {
+    if (!red.source_url) continue;
+    try {
+      const data = await fetchImotListing(red.source_url);
+      if (!data.description) {
+        propadnali.push(`${obiavaId(red.source_url)} — няма описание`);
+        continue;
+      }
+      const { error } = await supabase
+        .from("listings")
+        .update({ description: data.description })
+        .eq("id", red.id);
+      if (error) {
+        propadnali.push(`${obiavaId(red.source_url)} — ${error.message}`);
+        continue;
+      }
+      obnoveni += 1;
+    } catch (caught) {
+      propadnali.push(
+        `${obiavaId(red.source_url)} — ${
+          caught instanceof Error ? caught.message : "грешка"
+        }`,
+      );
+    }
+  }
+
+  revalidatePath("/listings");
+  return { obnoveni, propadnali };
 }
