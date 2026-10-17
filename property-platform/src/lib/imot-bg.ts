@@ -171,3 +171,40 @@ export function guessStage(note: string | null, description: string | null) {
   if (/акт\s*14|груб строеж/.test(haystack)) return "act14" as const;
   return null;
 }
+
+/**
+ * Вади адресите на всички обяви от една страница с резултати.
+ *
+ * Така внасянето спира да е „залепи адрес, повтори 40 пъти": сървърът чете
+ * списъка, какъвто го е подредило самото търсене, с филтъра за строителни
+ * фирми вътре в адреса.
+ */
+export async function collectImotUrls(searchUrl: string): Promise<string[]> {
+  if (!/^https:\/\/(www\.)?imot\.bg\//i.test(searchUrl)) {
+    throw new Error("Адресът не е от imot.bg.");
+  }
+
+  const response = await fetch(searchUrl, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36",
+      "Accept-Language": "bg,en;q=0.8",
+    },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`imot.bg върна ${response.status}.`);
+
+  const html = decodeCyrillic(await response.arrayBuffer());
+
+  // Интересуват ни само обявите за конкретен имот. Страницата сочи и към
+  // цели сгради и комплекси (obiava-7507), които нямат цена и квадратура
+  // на апартамент — те нямат работа в списък с имоти.
+  const links = html.match(/\/obiava-[0-9a-z]+-[a-z0-9-]+/gi) ?? [];
+  return [
+    ...new Set(
+      links
+        .filter((href) => /prodava|naem/i.test(href))
+        .map((href) => `https://www.imot.bg${href}`),
+    ),
+  ];
+}

@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import {
   previewImotListing,
   importImotListing,
+  findImotListings,
+  importImotAutomatically,
   type ImportPreview,
+  type FoundListing,
 } from "@/lib/actions/import-listing";
+
+/** Търсенето в imot.bg с филтъра за строителни фирми и инвеститори. */
+const DEFAULT_SEARCH =
+  "https://www.imot.bg/obiavi/prodazhbi/grad-plovdiv?fe_agkinds=2~4~";
 
 type Neighborhood = { id: string; name: string };
 
@@ -51,6 +58,74 @@ export function ImportListingForm({
   const [address, setAddress] = useState("");
   const [neighborhoodId, setNeighborhoodId] = useState("");
   const [stage, setStage] = useState<string>("");
+
+  // --- партидно внасяне ---
+  const [searchUrl, setSearchUrl] = useState(DEFAULT_SEARCH);
+  const [found, setFound] = useState<FoundListing[] | null>(null);
+  const [batchNote, setBatchNote] = useState("");
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+    ok: number;
+    skipped: string[];
+  } | null>(null);
+
+  async function handleFind() {
+    setBusy(true);
+    setError(null);
+    setDone(null);
+    try {
+      setFound(await findImotListings(searchUrl));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Не се прочете.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleBatch() {
+    if (!found) return;
+    if (!batchNote.trim()) {
+      setError("Опиши откъде е разрешението на фирмите.");
+      return;
+    }
+    const queue = found.filter((f) => !f.alreadyImported);
+    setBusy(true);
+    setError(null);
+    setDone(null);
+
+    const skipped: string[] = [];
+    let ok = 0;
+    // Една по една, нарочно: 40 обяви по 17 снимки са стотици файла и
+    // наведнъж imot.bg ще ни спре.
+    for (const [index, item] of queue.entries()) {
+      setProgress({ done: index, total: queue.length, ok, skipped });
+      try {
+        const result = await importImotAutomatically(
+          item.url,
+          batchNote.trim(),
+          cityId,
+        );
+        if ("skipped" in result) {
+          skipped.push(`${item.url.split("/").pop()?.slice(0, 40)} — ${result.skipped}`);
+        } else {
+          ok += 1;
+        }
+      } catch (caught) {
+        skipped.push(
+          `${item.url.split("/").pop()?.slice(0, 40)} — ${
+            caught instanceof Error ? caught.message : "грешка"
+          }`,
+        );
+      }
+    }
+
+    setProgress({ done: queue.length, total: queue.length, ok, skipped });
+    setDone(`Качени ${ok} от ${queue.length}.`);
+    setBusy(false);
+    setFound(null);
+    router.refresh();
+  }
 
   async function handlePreview() {
     setBusy(true);
@@ -116,8 +191,82 @@ export function ImportListingForm({
 
   return (
     <div className="flex flex-col gap-5">
+      <section className="rounded-xl border border-slate-900 bg-slate-900 p-5 text-white">
+        <h2 className="text-lg font-semibold">Внеси всички наведнъж</h2>
+        <p className="mt-1 text-sm text-slate-300">
+          Адресът долу е търсенето в imot.bg с филтър само за строителни
+          фирми и инвеститори. Прочитам списъка и качвам обявите една по
+          една — със снимките.
+        </p>
+
+        <input
+          value={searchUrl}
+          onChange={(e) => setSearchUrl(e.target.value)}
+          className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-xs text-white outline-none focus:border-white"
+        />
+
+        <input
+          value={batchNote}
+          onChange={(e) => setBatchNote(e.target.value)}
+          placeholder="Откъде е разрешението на фирмите"
+          className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-white"
+        />
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleFind}
+            disabled={busy}
+            className="rounded-lg bg-white px-5 py-2.5 font-medium text-slate-900 transition hover:bg-slate-200 disabled:opacity-60"
+          >
+            {busy && !progress ? "Чета…" : "Намери обявите"}
+          </button>
+
+          {found && (
+            <button
+              type="button"
+              onClick={handleBatch}
+              disabled={busy}
+              className="rounded-lg border border-white px-5 py-2.5 font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
+            >
+              Внеси {found.filter((f) => !f.alreadyImported).length} нови
+            </button>
+          )}
+        </div>
+
+        {found && !progress && (
+          <p className="mt-3 text-sm text-slate-300">
+            Намерих {found.length} обяви ·{" "}
+            {found.filter((f) => f.alreadyImported).length} вече са качени
+          </p>
+        )}
+
+        {progress && (
+          <div className="mt-3 text-sm text-slate-300">
+            <p>
+              {progress.done} от {progress.total} · качени {progress.ok}
+            </p>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-700">
+              <div
+                className="h-full bg-white transition-all"
+                style={{
+                  width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%`,
+                }}
+              />
+            </div>
+            {progress.skipped.length > 0 && (
+              <ul className="mt-3 list-inside list-disc text-xs text-slate-400">
+                {progress.skipped.slice(0, 8).map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
+
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold">Адрес на обявата в imot.bg</h2>
+        <h2 className="text-lg font-semibold">Или една по една</h2>
         <p className="mt-1 text-sm text-slate-500">
           Само обяви на строителни фирми. Агенциите нямат работа тук.
         </p>
