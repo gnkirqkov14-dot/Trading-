@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
-import { fetchImotListing, guessStage, type ImotListing } from "@/lib/imot-bg";
+import {
+  fetchImotListing,
+  collectImotUrls,
+  guessStage,
+  type ImotListing,
+} from "@/lib/imot-bg";
 
 /**
  * Внасяне на фирмена обява от imot.bg.
@@ -177,4 +182,88 @@ export async function importImotListing(input: ImportInput) {
   revalidatePath("/listings");
   revalidatePath("/admin/import");
   return { listingId, photos: photoUrls.length };
+}
+
+export type FoundListing = {
+  url: string;
+  alreadyImported: boolean;
+};
+
+/** Чете списъка с резултати и казва кои обяви още ги няма при нас. */
+export async function findImotListings(
+  searchUrl: string,
+): Promise<FoundListing[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const urls = await collectImotUrls(searchUrl.trim());
+  const { data: existing } = await supabase
+    .from("listings")
+    .select("source_url")
+    .not("source_url", "is", null);
+
+  const known = new Set((existing ?? []).map((row) => row.source_url));
+  return urls.map((url) => ({ url, alreadyImported: known.has(url) }));
+}
+
+/**
+ * Внася една обява без ръчно попълване: всичко се взима от самата обява.
+ *
+ * Използва се от партидното внасяне. Онова, което човек не може да провери
+ * за 40 обяви наведнъж, тук се решава по правило: липсва ли цена или
+ * квадратура, обявата се пропуска, вместо да влезе наполовина.
+ */
+export async function importImotAutomatically(
+  url: string,
+  permissionNote: string,
+  cityId: string,
+) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const data = await fetchImotListing(url);
+
+  if (!data.priceEur || !data.areaSqm) {
+    return { skipped: "няма цена или квадратура" as const };
+  }
+  if (!data.company || data.phones.length === 0) {
+    return { skipped: "няма фирма или телефон" as const };
+  }
+  if (data.photos.length === 0) {
+    return { skipped: "няма снимки" as const };
+  }
+
+  // Кварталът от обявата се сверява със списъка в базата; не се познае ли,
+  // обявата пак влиза, само че без квартал — по-добре от грешен квартал.
+  let neighborhoodId: string | null = null;
+  if (data.neighborhood) {
+    const { data: hood } = await supabase
+      .from("neighborhoods")
+      .select("id")
+      .eq("city_id", cityId)
+      .ilike("name", data.neighborhood.trim())
+      .maybeSingle();
+    neighborhoodId = hood?.id ?? null;
+  }
+
+  const result = await importImotListing({
+    sourceUrl: data.sourceUrl,
+    developerName: data.company,
+    developerPhone: data.phones[0],
+    permissionNote,
+    projectName: null,
+    stage: guessStage(data.constructionNote, data.description),
+    title: data.title?.split("::")[0]?.trim() || "Апартамент в Пловдив",
+    description: data.description,
+    address: data.neighborhood ? `кв. ${data.neighborhood}` : "гр. Пловдив",
+    cityId,
+    neighborhoodId,
+    price: data.priceEur,
+    areaSqm: data.areaSqm,
+    rooms: data.rooms,
+    floor: data.floor,
+    photos: data.photos,
+  });
+
+  return { imported: result, company: data.company };
 }
