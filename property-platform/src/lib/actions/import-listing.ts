@@ -19,6 +19,18 @@ import type { PropertyType } from "@/lib/types/database";
  * чужд трафик.
  */
 
+/**
+ * Номерът на обявата от адреса ѝ.
+ *
+ * imot.bg сменя опашката на адреса, когато обявата се редактира:
+ * същата обява на ГЕРТ ГРУП беше „…-grad-plovdiv-karshiyaka“, а после
+ * „…-grad-plovdiv-ostromila-yuzhen“. Сравнение по целия адрес не я
+ * познава и тя влиза в сайта втори път. Номерът не се мени.
+ */
+function obiavaId(url: string | null) {
+  return url?.match(/obiava-([0-9a-z]+)-/i)?.[1] ?? url ?? "";
+}
+
 export type ImportPreview = ImotListing & {
   stage: ReturnType<typeof guessStage>;
   /** Името на комплекса, ако imot.bg го е сложил в адреса на обявата. */
@@ -47,17 +59,19 @@ export async function previewImotListing(url: string): Promise<ImportPreview> {
 
   const data = await fetchImotListing(url.trim());
 
-  const { data: existing } = await supabase
+  const { data: known } = await supabase
     .from("listings")
-    .select("id")
-    .eq("source_url", data.sourceUrl)
-    .maybeSingle();
+    .select("source_url")
+    .not("source_url", "is", null);
+  const existing = (known ?? []).some(
+    (row) => obiavaId(row.source_url) === obiavaId(data.sourceUrl),
+  );
 
   return {
     ...data,
     stage: guessStage(data.constructionNote, data.description),
     projectName: projectFromUrl(data.sourceUrl, data.neighborhood),
-    alreadyImported: Boolean(existing),
+    alreadyImported: existing,
   };
 }
 
@@ -235,8 +249,13 @@ export async function findImotListings(
     .select("source_url")
     .not("source_url", "is", null);
 
-  const known = new Set((existing ?? []).map((row) => row.source_url));
-  return urls.map((url) => ({ url, alreadyImported: known.has(url) }));
+  const known = new Set(
+    (existing ?? []).map((row) => obiavaId(row.source_url)),
+  );
+  return urls.map((url) => ({
+    url,
+    alreadyImported: known.has(obiavaId(url)),
+  }));
 }
 
 /**
