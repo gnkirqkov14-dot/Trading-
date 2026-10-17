@@ -44,6 +44,8 @@ export type ImotListing = {
   city: string | null;
   /** true при „в село …“. Имената се повтарят между градове и села. */
   isVillage: boolean;
+  /** Улица и номер, когато продавачът ги е попълнил. */
+  street: string | null;
   neighborhood: string | null;
   description: string | null;
   /** Името на строителната фирма, както е изписано в обявата. */
@@ -201,7 +203,37 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
   // стоят заедно и в този ред. Същият израз, пуснат върху тялото на
   // страницата, лови съседен текст: за обява в Каменица 2 оттам излезе
   // „Христо Смирненски“, съвсем друг квартал.
-  const mqsto = (() => {
+  // Най-надеждният източник: самата страница има ред
+  //   Местоположение: <b>град Пловдив, Каменица 2, бул.6-ти Септември 239</b>
+  // В него стоят населеното място, кварталът и — когато продавачът го е
+  // попълнил — улицата с номера. Заглавието носи само първите две.
+  const redMestopolozhenie = (() => {
+    const m = html.match(/Местоположение:\s*<b>([^<]{4,160})<\/b>/i);
+    if (!m) return null;
+    const chasti = m[1].split(",").map((c) => clean(c)).filter(Boolean) as string[];
+    if (chasti.length === 0) return null;
+
+    const prvo = chasti[0].match(/^(град|село)\s+(.+)$/);
+    if (!prvo) return null;
+
+    // „град Пловдив, бул. Х 5“ — без квартал, но с улица. Разпознава се по
+    // началото: квартал не започва с „ул.“ или „бул.“.
+    const eUlica = (t: string) =>
+      /^(ул|бул|бл|ж\.?к|жк|кв\.\s*\d)\.?\s/i.test(t) || /^(ул|бул)\./i.test(t);
+
+    const ostatak = chasti.slice(1);
+    const kvartal = ostatak.length && !eUlica(ostatak[0]) ? ostatak.shift()! : null;
+    const ulica = ostatak.length ? ostatak.join(", ") : null;
+
+    return {
+      selo: prvo[1] === "село",
+      ime: clean(prvo[2]),
+      kvartal,
+      ulica,
+    };
+  })();
+
+  const otZaglavie = (() => {
     // Без \b пред „в“: границата на дума в JS се мери по латиница и пред
     // кирилско „в“ изобщо не съвпада.
     //
@@ -236,6 +268,9 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     return null;
   })();
 
+  // Редът „Местоположение“ бие заглавието: той е полето, не текст.
+  const mqsto = redMestopolozhenie ?? otZaglavie;
+
   const floorPart = floorLine?.split(",")[0] ?? null;
   const floorMatch = floorPart?.match(/(\d+|Партер)\s*(?:от\s*(\d+))?/i);
   const restOfLine = floorLine?.split(",").slice(1).join(",").trim() || null;
@@ -243,8 +278,19 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
   return {
     sourceUrl: url,
     title,
-    priceEur: digits(grab(/([\d\s]{4,})\s*(?:EUR|€|Евро)/i)),
-    areaSqm: digits(grab(/(\d+[.,]?\d*)\s*кв\.?\s*м/i)),
+    // Цената и квадратурата се четат ОТ ЗАГЛАВИЕТО, не от страницата.
+    //
+    // „…, Център - 73 кв.м / При запитване, ГЕРТ ГРУП“ — когато фирмата
+    // не обявява цена, в тялото на страницата първото число с € е от
+    // страничния списък „други обяви“, тоест цена на чужд имот. Така в
+    // сайта влизаше апартамент за 77 980 €, каквато цена никой не е
+    // обявявал. По-добре обявата да отпадне, отколкото да лъже цена.
+    priceEur: digits(
+      clean(title?.match(/кв\.?\s*м\s*\/\s*([\d\s]{3,})\s*€/)?.[1] ?? null),
+    ),
+    areaSqm: digits(
+      clean(title?.match(/-\s*(\d+(?:[.,]\d+)?)\s*кв\.?\s*м/)?.[1] ?? null),
+    ),
     rooms: roomsFromTitle(title),
     floor: floorMatch
       ? /партер/i.test(floorMatch[1])
@@ -255,6 +301,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     city: mqsto?.ime ?? null,
     isVillage: mqsto?.selo ?? false,
     neighborhood: mqsto?.kvartal ?? null,
+    street: (mqsto as { ulica?: string | null } | null)?.ulica ?? null,
     description,
     company,
     phones,
