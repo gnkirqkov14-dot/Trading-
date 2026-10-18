@@ -159,6 +159,30 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
 
   const grab = (re: RegExp) => clean(text.match(re)?.[1]);
 
+  // Адресът често стои в текста, а не в полето: „…, ул. Васил Петлешков
+  // 16, с АКТ 16, …“. Купувачът го вижда, значи и адресът на обявата
+  // трябва да го показва, вместо да го крие в описанието.
+  //
+  // Две неща се пропускат нарочно:
+  //   „нашия офис на бул. Пещерско шосе 157“ — това е офисът на фирмата
+  //   „в близост до ул. Х“          — това е ориентир, не адрес
+  const streetFromDescription = (opis: string | null) => {
+    if (!opis) return null;
+    const re =
+      /((?:ул|бул)\.\s*[„"]?[А-ЯA-Z][А-Яа-яA-Za-z0-9\s.-]{2,34}?\s*№?\s*\d{1,4}[А-Яа-я]?)(?=[\s,.;)]|$)/g;
+    for (const m of opis.matchAll(re)) {
+      // Гледа се само това, което стои НЕПОСРЕДСТВЕНО преди улицата —
+      // до последната запетая. Иначе „в непосредствена близост до Събота
+      // пазара, ул. Васил Петлешков 16“ отпада, а там улицата след
+      // запетаята е точно адресът на имота.
+      const predi = opis.slice(Math.max(0, (m.index ?? 0) - 45), m.index);
+      const plътno = predi.slice(predi.lastIndexOf(",") + 1);
+      if (/офис|близост до|срещу|сградата на|до\s*$/i.test(plътno)) continue;
+      return clean(m[1]);
+    }
+    return null;
+  };
+
   const description = cleanDescription(
     text.match(/Описание(?:\s*на имота)?:?([\s\S]{0,4000}?)(?:За контакти|Особености|ЗА КОНТАКТ)/i)?.[1],
   );
@@ -343,7 +367,9 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     city: mqsto?.ime ?? null,
     isVillage: mqsto?.selo ?? false,
     neighborhood: mqsto?.kvartal ?? null,
-    street: (mqsto as { ulica?: string | null } | null)?.ulica ?? null,
+    street:
+      (mqsto as { ulica?: string | null } | null)?.ulica ??
+      streetFromDescription(description),
     description,
     company,
     phones,
