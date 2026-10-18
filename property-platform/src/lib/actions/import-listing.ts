@@ -416,7 +416,10 @@ export async function importImotAutomatically(
     sourceUrl: data.sourceUrl,
     propertyType: data.propertyType,
     developerName: data.company,
-    developerPhone: data.phones[0],
+    // Всички телефони, не само първият: строителите дават по два-три
+    // и ги пишат в края на описанието. Купувачът трябва да ги вижда в
+    // „Контакти“, а не да ги търси в текста.
+    developerPhone: data.phones.join(", "),
     permissionNote,
     projectName: null,
     stage: guessStage(data.constructionNote, data.description),
@@ -476,6 +479,8 @@ export async function refreshDescriptions() {
         .from("listings")
         .update({
           description: data.description,
+          // Всички телефони от обявата, не само първият.
+          ...(data.phones.length ? { phone: data.phones.join(", ") } : {}),
           // Адресът се пипа САМО ако източникът дава улица.
           //
           // Част от адресите са търсени на ръка — името на комплекса води
