@@ -24,19 +24,31 @@ export function PhoneLink({
   listingId: string;
   city?: string | null;
 }) {
+  // Строителите дават по два-три номера. Полето ги пази разделени със
+  // запетая; тук всеки става отделна връзка, за да може да се натисне.
+  const nomera = phone
+    .split(",")
+    .map((n) => n.trim())
+    .filter(Boolean);
+
   return (
-    <a
-      href={`tel:${phone}`}
-      className="hover:underline"
-      onClick={() =>
-        pixelEvent("Lead", {
-          content_type: "property",
-          content_ids: [listingId],
-          ...(city ? { city } : {}),
-        })
-      }
-    >
-      {phone}
-    </a>
+    <span className="flex flex-col gap-0.5">
+      {nomera.map((nomer) => (
+        <a
+          key={nomer}
+          href={`tel:${nomer}`}
+          className="hover:underline"
+          onClick={() =>
+            pixelEvent("Lead", {
+              content_type: "property",
+              content_ids: [listingId],
+              ...(city ? { city } : {}),
+            })
+          }
+        >
+          {nomer}
+        </a>
+      ))}
+    </span>
   );
 }
