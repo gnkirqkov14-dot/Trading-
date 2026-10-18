@@ -134,6 +134,47 @@ function roomsFromTitle(title: string | null) {
   return null;
 }
 
+/**
+ * Маха телефоните и имейлите от описанието.
+ *
+ * Те вече стоят в „Контакти“, където им е мястото и където ще ги пази
+ * преградата за регистрация. Повторени в текста, същите номера я
+ * заобикалят — а и правят описанието по-дълго без полза.
+ *
+ * Маха се и подканата, която ги е въвела („Свържете се с нас за…:“),
+ * защото без номерата под нея увисва.
+ */
+export function bezKontakti(opis: string | null) {
+  if (!opis) return null;
+  const nomer = /(?:\+?359[\s-]?|0)(?:8[789]|9[89])\d(?:[\s.-]?\d){6}/g;
+  const imeyl = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+
+  const redove = opis
+    .split("\n")
+    .map((red) =>
+      red.replace(nomer, "").replace(imeyl, "").replace(/\s{2,}/g, " ").trim(),
+    )
+    // Ред, в който е имало само номер, вече е празен или само пунктуация.
+    .filter((red, i, vsichki) => {
+      const prazen = /^[\s•·.,;:()\-–—]*$/.test(red);
+      if (!prazen) return true;
+      // Един празен ред между абзаци се пази, поредица от тях — не.
+      return red === "" && vsichki[i - 1] !== "";
+    });
+
+  // Подканата накрая, останала без номера под себе си.
+  while (
+    redove.length &&
+    /^[^\n]{0,80}(обадете|свържете|контакт|оферта|наличности|имейл|e-?mail)[^\n]{0,40}:?\s*$/i.test(
+      redove[redove.length - 1],
+    )
+  ) {
+    redove.pop();
+  }
+
+  return redove.join("\n").replace(/\n{3,}/g, "\n\n").trim() || null;
+}
+
 export async function fetchImotListing(url: string): Promise<ImotListing> {
   if (!/^https:\/\/(www\.)?imot\.bg\/obiava-/i.test(url)) {
     throw new Error("Адресът не е обява от imot.bg.");
@@ -183,45 +224,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     return null;
   };
 
-  /**
-   * Маха телефоните от описанието.
-   *
-   * Те вече стоят в „Контакти“, където им е мястото и където ще ги пази
-   * преградата за регистрация. Повторени в текста, същите номера я
-   * заобикалят — а и правят описанието по-дълго без полза.
-   *
-   * Маха се и подканата, която ги е въвела („Свържете се с нас за…:“),
-   * защото без номерата под нея увисва.
-   */
-  const bezTelefoni = (opis: string | null) => {
-    if (!opis) return null;
-    const nomer = /(?:\+?359[\s-]?|0)8[789]\d(?:[\s.-]?\d){6}/g;
-
-    const redove = opis
-      .split("\n")
-      .map((red) => red.replace(nomer, "").replace(/\s{2,}/g, " ").trim())
-      // Ред, в който е имало само номер, вече е празен или само пунктуация.
-      .filter((red, i, vsichki) => {
-        const prazen = /^[\s•·.,;:()\-–—]*$/.test(red);
-        if (!prazen) return true;
-        // Един празен ред между абзаци се пази, поредица от тях — не.
-        return red === "" && vsichki[i - 1] !== "";
-      });
-
-    // Подканата накрая, останала без номера под себе си.
-    while (
-      redove.length &&
-      /^[^\n]{0,80}(обадете|свържете|контакт|оферта|наличности)[^\n]{0,40}:?\s*$/i.test(
-        redove[redove.length - 1],
-      )
-    ) {
-      redove.pop();
-    }
-
-    return redove.join("\n").replace(/\n{3,}/g, "\n\n").trim() || null;
-  };
-
-  const description = bezTelefoni(cleanDescription(
+  const description = bezKontakti(cleanDescription(
     text.match(/Описание(?:\s*на имота)?:?([\s\S]{0,4000}?)(?:За контакти|Особености|ЗА КОНТАКТ)/i)?.[1],
   ));
 
