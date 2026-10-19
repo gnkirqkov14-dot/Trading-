@@ -5,13 +5,17 @@
 """
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent
 DATA = ROOT / "output" / "kontakti.json"
 OUT = ROOT / "output" / "obazhdania.html"
+
+from contacts_list import fmt_phone  # noqa: E402
 
 TEMPLATE = r"""<title>PHOMI обаждания</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,6 +67,7 @@ header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .toolbar .grow input { width: 100%; }
 .check { display: flex !important; grid-auto-flow: column; align-items: center; gap: 6px !important; font-size: 14px !important;
   color: var(--ink) !important; padding-bottom: 7px; }
+.check[hidden] { display: none !important; }
 .stats { display: flex; flex-wrap: wrap; gap: 6px; }
 .stat { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; background: var(--surface);
   color: var(--ink); cursor: pointer; font-family: var(--font-body); }
@@ -110,6 +115,12 @@ details summary { cursor: pointer; color: var(--accent); font-size: 13px; }
 .empty { text-align: center; color: var(--muted); padding: 28px 0; }
 footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
 .tab.hot { border-color: var(--urgent); }
+.bulk { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bulk .mini { font-size: 13.5px; padding: 5px 12px; }
+.pick { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pick input { width: 18px; height: 18px; accent-color: var(--accent); }
+.card.picked { outline: 2px solid var(--accent); outline-offset: -1px; }
+.ok { color: var(--mid); font-weight: 600; font-size: 12.5px; }
 .tab .n.over { background: var(--urgent); color: var(--surface); border-radius: 999px; padding: 0 6px; opacity: 1; }
 .firms { display: grid; gap: 8px; }
 .firm { border-top: 1px solid var(--line); padding-top: 7px; display: grid; gap: 4px; min-width: 0; }
@@ -152,12 +163,26 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
       <input type="search" id="q" placeholder="напр. Младост, Гербера, 088…" autocomplete="off"></label>
     <label for="city" id="cityBox">Град
       <select id="city"><option value="">Всички</option><option>София</option><option>Пловдив</option></select></label>
+    <label for="role" id="roleBox">Роля
+      <select id="role"><option value="">Всички</option><option value="Инвеститор">Инвеститор</option>
+        <option value="Строител">Строител</option><option value="Проект">Проектант / архитект</option>
+        <option value="надзор">Надзор</option></select></label>
+    <label for="ctype" id="ctypeBox">Контакт
+      <select id="ctype"><option value="">Телефон или имейл</option><option value="phone">С телефон</option>
+        <option value="email">С имейл</option><option value="both">Телефон и имейл</option></select></label>
+    <label for="sort" id="sortBox">Подреди
+      <select id="sort"><option value="">С обекти първо</option><option value="rating">Оценка в Google</option>
+        <option value="name">По име</option></select></label>
+    <label class="check" for="withObj" id="objBox"><input type="checkbox" id="withObj"> Само с обекти</label>
+    <label class="check" for="onlyPick" id="pickBox"><input type="checkbox" id="onlyPick"> Само избраните</label>
     <label for="prio" id="prioBox">Приоритет
       <select id="prio"><option value="">Всички</option><option value="high">Висок</option><option value="mid">Среден</option></select></label>
     <label for="stf" id="stfBox">Статус
       <select id="stf"></select></label>
     <label class="check" for="onlyPhone" id="phoneBox"><input type="checkbox" id="onlyPhone"> Само с телефон</label>
   </div>
+  <div class="bulk" id="bulk"><button class="mini" id="copyMails">Копирай имейлите на показаните</button>
+    <button class="mini" id="copyPhones">Копирай телефоните на показаните</button><span class="muted" id="bulkMsg"></span></div>
   <div class="stats" id="stats"></div>
   <div class="count" id="count"></div>
   <main class="list" id="list"></main>
@@ -221,10 +246,13 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
       return `<button class="tab${s.kind === "obj" ? " hot" : ""}" role="tab" id="tab-${s.code}" aria-selected="${s.code === tab}" data-tab="${s.code}">${esc(s.title)}${n}</button>`;
     }).join("");
     $("#sheetNote").textContent = sheet().note;
-    const k = sheet().kind;
-    $("#cityBox").hidden = k !== "obj";
-    $("#prioBox").hidden = k === "obj" || k === "rem";
-    $("#stfBox").hidden = $("#phoneBox").hidden = k === "rem";
+    const k = sheet().kind, arch = k === "arch";
+    $("#cityBox").hidden = k !== "obj" && !arch;
+    $("#roleBox").hidden = arch || k === "rem";
+    $("#ctypeBox").hidden = $("#sortBox").hidden = $("#objBox").hidden = $("#pickBox").hidden = $("#bulk").hidden = !arch;
+    $("#prioBox").hidden = k === "obj" || k === "rem" || arch;
+    $("#stfBox").hidden = k === "rem";
+    $("#phoneBox").hidden = k === "rem" || arch;
     $("#stats").hidden = k === "rem";
   }
 
@@ -243,7 +271,23 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
   function matches(r) {
     const q = $("#q").value.trim().toLowerCase();
     const prio = $("#prio").value, st = $("#stf").value, city = $("#city").value;
-    const obj = r.kind === "obj";
+    const obj = r.kind === "obj", arch = r.kind === "arch";
+    if (arch) {
+      const ct = $("#ctype").value, s = state[r.id] || {};
+      if (city && r.city !== city) return false;
+      if (ct === "phone" && !r.phones.length) return false;
+      if (ct === "email" && !r.emails.length) return false;
+      if (ct === "both" && !(r.phones.length && r.emails.length)) return false;
+      if ($("#withObj").checked && !r.objects.length) return false;
+      if ($("#onlyPick").checked && !s.pick) return false;
+      if (st && statusOf(r.id) !== st) return false;
+      if (!q) return true;
+      const hay = [r.names.join(" "), r.phones.join(" "), r.phones.join(" ").replace(/\s/g, ""), r.emails.join(" "), r.person,
+                   r.address, r.website, r.objects.map((o) => o.what).join(" "), s.note || "", logText(r.id)].join(" ").toLowerCase();
+      return q.split(/\s+/).every((w) => hay.includes(w));
+    }
+    const role = $("#role").value;
+    if (role && !(obj ? r.firms : [r]).some((f) => f.roles.join(" ").toLowerCase().includes(role.toLowerCase()))) return false;
     if (!obj && prio === "high" && !r.priority.startsWith("Висок")) return false;
     if (!obj && prio === "mid" && r.priority.startsWith("Висок")) return false;
     if (obj && city && r.city !== city) return false;
@@ -347,6 +391,38 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     </article>`;
   }
 
+  function archCard(r) {
+    const s = state[r.id] || {};
+    const objs = r.objects.map((o) => `<li>${esc(fmtDay(o.date))} – ${esc(o.what)}${o.where && o.where !== r.city ? ` <span class="stg">(${esc(o.where)})</span>` : ""}</li>`);
+    const objectsHtml = !objs.length ? "" : `<div class="muted">${r.confirmed ? "Потвърдени проекти:" : "Договори за проектиране (обществени поръчки):"}</div>
+      <ul class="objects">${objs.slice(0, 3).join("")}</ul>` +
+      (objs.length > 3 ? `<details><summary>Още ${objs.length - 3}</summary><ul class="objects">${objs.slice(3).join("")}</ul></details>` : "");
+    const links = [r.kab ? `<a href="${esc(r.kab)}" target="_blank" rel="noopener">профил в КАБ</a>` : "",
+                   r.rating ? `<span>Google: ${esc(r.rating)} ★</span>` : ""].filter(Boolean).join(" · ");
+    return `<article class="card p${r.confirmed ? 0 : r.objects.length ? 2 : 5}${s.pick ? " picked" : ""}" id="card-${r.id}" data-status="${esc(statusOf(r.id))}">
+      <div class="head"><label class="pick" for="pk-${r.id}"><input type="checkbox" id="pk-${r.id}" data-id="${r.id}" data-f="pick"${s.pick ? " checked" : ""} ${readOnly ? "disabled" : ""}> Избран</label>
+        <h3>${esc(r.names[0])}</h3><span class="pill">${esc(r.city)}</span><span class="role">${esc(r.roles.join(", "))}</span>
+        ${r.confirmed ? `<span class="ok">✓ потвърден архитект</span>` : ""}</div>
+      ${r.address ? `<div class="where">${esc(r.address)}</div>` : ""}
+      <div class="contacts">${contactLines(r)}</div>
+      ${objectsHtml}
+      ${links ? `<div class="muted">${links}</div>` : ""}
+      ${track(r)}
+      ${logBlock(r)}
+    </article>`;
+  }
+
+  function shownRows() {
+    const sh = sheet();
+    let rows = sh.rows.filter(matches);
+    if (sh.kind === "arch" && $("#sort").value) {
+      const by = $("#sort").value;
+      rows = rows.slice().sort((a, b) => by === "rating" ? (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0)
+        : a.names[0].replace(/^[\s"„“]+/, "").localeCompare(b.names[0].replace(/^[\s"„“]+/, ""), "bg"));
+    }
+    return rows;
+  }
+
   function renderRem() {
     const q = $("#q").value.trim().toLowerCase();
     const keys = openReminders().filter((k) => { const e = logs[k];
@@ -360,14 +436,32 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     const sh = sheet();
     if (sh.kind === "rem") { renderRem(); return; }
     const open = new Set([...document.querySelectorAll("details.addlog[open]")].map((d) => d.id));
-    const rows = sh.rows.filter(matches);
-    const what = sh.kind === "obj" ? "сгради" : "фирми";
-    $("#count").textContent = `Показани ${rows.length} от ${sh.rows.length} ${what}`;
-    $("#list").innerHTML = rows.length ? rows.map(sh.kind === "obj" ? objCard : card).join("") : `<p class="empty">Няма ${what} с тези филтри.</p>`;
+    const rows = shownRows();
+    const what = sh.kind === "obj" ? "сгради" : sh.kind === "arch" ? "бюра" : "фирми";
+    const picked = sh.kind === "arch" ? sh.rows.filter((r) => (state[r.id] || {}).pick).length : 0;
+    $("#count").textContent = `Показани ${rows.length} от ${sh.rows.length} ${what}` + (sh.kind === "arch" ? ` · избрани ${picked}` : "");
+    const draw = sh.kind === "obj" ? objCard : sh.kind === "arch" ? archCard : card;
+    $("#list").innerHTML = rows.length ? rows.map(draw).join("") : `<p class="empty">Няма ${what} с тези филтри.</p>`;
     open.forEach((id) => { const d = document.getElementById(id); if (d) d.open = true; });
   }
 
   function render() { renderTabs(); renderStats(); renderList(); }
+  function renderCount() {
+    const sh = sheet();
+    if (sh.kind !== "arch") return;
+    const picked = sh.rows.filter((r) => (state[r.id] || {}).pick).length;
+    $("#count").textContent = $("#count").textContent.replace(/избрани \d+/, "избрани " + picked);
+  }
+
+  function copyAll(kind) {
+    const rows = shownRows();
+    const vals = [...new Set(rows.flatMap((r) => kind === "mail" ? r.emails.map((e) => e.replace(/\s*\(.*\)$/, "")) : r.phones))];
+    const msg = $("#bulkMsg");
+    if (!vals.length) { msg.textContent = "Няма какво да се копира."; return; }
+    const text = vals.join(kind === "mail" ? ", " : "\n");
+    const done = () => { msg.textContent = `Копирани ${vals.length} ${kind === "mail" ? "имейла" : "телефона"} от ${rows.length} бюра.`; };
+    try { navigator.clipboard.writeText(text).then(done, () => prompt("Копирай ръчно:", text)); } catch (e) { prompt("Копирай ръчно:", text); }
+  }
 
   // Обновяване на една карта от базата, без да се пипа поле, което се пише в момента
   function refreshCard(id) {
@@ -379,6 +473,8 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     if (st && document.activeElement !== st) st.value = statusOf(id);
     if (dt && document.activeElement !== dt) dt.value = s.date || "";
     if (nt && document.activeElement !== nt && !timers[id]) nt.value = s.note || "";
+    const pk = document.getElementById("pk-" + id);
+    if (pk) { pk.checked = !!s.pick; el.classList.toggle("picked", !!s.pick); }
   }
   function refreshLog(id) { const el = document.getElementById("log-" + id); if (el) el.innerHTML = logList(id); }
 
@@ -395,11 +491,15 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
   function save(id) {
     const st = document.getElementById("st-" + id), dt = document.getElementById("dt-" + id), nt = document.getElementById("nt-" + id);
     const prev = state[id] || {};
+    const pk = document.getElementById("pk-" + id);
     const body = { status: st ? st.value : statusOf(id), date: dt ? dt.value : (prev.date || ""),
-                   note: nt ? nt.value : (prev.note || ""), sheet: tab, updated: new Date().toISOString() };
-    if (prev.status === body.status && (prev.date || "") === body.date && (prev.note || "") === body.note) return;
+                   note: nt ? nt.value : (prev.note || ""), pick: pk ? pk.checked : !!prev.pick,
+                   sheet: tab, updated: new Date().toISOString() };
+    if (prev.status === body.status && (prev.date || "") === body.date && (prev.note || "") === body.note &&
+        !!prev.pick === body.pick) return;
     state[id] = body;
     refreshCard(id); renderStats();
+    if (pk) renderCount();
     if (mode === "local") {
       store.set("phomi-calls", JSON.stringify(state));
       mark(id, "Запазено в този браузър");
@@ -462,6 +562,8 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     if (!t) return;
     if (t.dataset.tab) { tab = t.dataset.tab; store.set("phomi-tab2", tab); $("#stf").value = ""; render(); return; }
     if (t.classList.contains("stat")) { const s = t.dataset.status; $("#stf").value = $("#stf").value === s ? "" : s; renderStats(); renderList(); return; }
+    if (t.id === "copyMails") { copyAll("mail"); return; }
+    if (t.id === "copyPhones") { copyAll("phone"); return; }
     if (t.dataset.addlog) { addLog(t.dataset.addlog, t); return; }
     if (t.dataset.done) { changeLog(t.dataset.done, false); return; }
     if (t.dataset.del) { if (confirm("Да изтрия ли този запис от дневника?")) changeLog(t.dataset.del, true); return; }
@@ -485,7 +587,7 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
       timers[id] = setTimeout(() => { delete timers[id]; save(id); }, 1200);
     }
   });
-  ["#q", "#prio", "#onlyPhone", "#city"].forEach((s) => $(s).addEventListener("input", renderList));
+  ["#q", "#prio", "#onlyPhone", "#city", "#role", "#ctype", "#sort", "#withObj", "#onlyPick"].forEach((s) => $(s).addEventListener("input", renderList));
   $("#stf").addEventListener("change", () => { renderStats(); renderList(); });
 
   render();
@@ -552,9 +654,67 @@ def act14(data: dict) -> dict:
                     "с контакт: инвеститор, строител, надзор. Започни от тук."}
 
 
+# Потвърдени връзки архитект -> обект (data/confirmations.csv и пилотът docs/pilot-sites-2026-10-06.md)
+KNOWN_ARCH = {
+    "114635815": {"name": "„ИПА“ ЕООД (ИПА Архитекти)", "phones": ["+359 2 868 75 74"], "emails": ["info@ip-arch.com"],
+                  "website": "https://www.ip-arch.com",
+                  "objects": [{"where": "София, Младост 4", "what": "Vabul ONE – разрешение 63/27.03.2025", "date": "2025-03-27"},
+                              {"where": "София, Лозенец (Задгарова)", "what": "Capitol Residence – разрешение 96/19.06.2026",
+                               "date": "2026-06-19"}]},
+}
+
+
+def _rows(path: Path) -> list[dict]:
+    with path.open(encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f, delimiter=";"))
+
+
+def _split(v: str) -> list[str]:
+    return [x.strip() for x in re.split(r"[,;]", v or "") if x.strip()]
+
+
+def architects() -> dict:
+    """Архитектурните бюра с телефон или имейл: София (КАБ + Google Maps) и Пловдив (КАБ + договори за
+    проектиране в ЦАИС ЕОП). Обектите са само доказаните връзки и договорите за проектиране."""
+    rows = []
+    for city, path in (("София", ROOT / "output" / "arhitekti.csv"), ("Пловдив", ROOT / "output" / "plovdiv" / "arhitekti.csv")):
+        for x in _rows(path):
+            phones = list(dict.fromkeys(fmt_phone(t) for t in _split(x.get("Телефон"))))[:3]
+            emails = _split(x.get("Имейл"))[:3]
+            if not phones and not emails:
+                continue
+            reg = x.get("Рег. № КАБ", "").strip()
+            key = reg or hashlib.sha1(x["Бюро"].encode()).hexdigest()[:10]
+            objects = []
+            for item in (x.get("Обекти по договори (ЦАИС ЕОП)") or "").split(" | "):
+                m = re.match(r"(\d{4}-\d\d-\d\d)\s+(.*)", item.strip())
+                if m:
+                    objects.append({"where": city, "what": m.group(2).strip(" „“\"")[:140], "date": m.group(1)})
+            src = x.get("Източник") or ("регистър на КАБ" + (" + Google Maps" if x.get("Google Maps") else ""))
+            site = x.get("Сайт", "").strip()
+            if site and not site.startswith("http"):
+                site = "https://" + site
+            rows.append({"id": f"arc-{'p' if city == 'Пловдив' else 's'}{key}", "kind": "arch", "city": city,
+                         "names": [x["Бюро"].strip()], "roles": ["Архитект" if "КАБ" in src else "Проектант (обществени поръчки)"],
+                         "phones": phones, "emails": emails, "website": site,
+                         "person": x.get("Лице за контакт") or x.get("Архитекти / управители") or x.get("Архитекти") or "",
+                         "address": x.get("Адрес", ""), "rating": x.get("Оценка в Google", ""), "kab": x.get("Профил в КАБ", ""),
+                         "objects": objects, "confirmed": False, "source": src})
+    for eik, k in KNOWN_ARCH.items():
+        rows.insert(0, {"id": f"arc-e{eik}", "kind": "arch", "city": "София", "names": [k["name"]], "roles": ["Архитект"],
+                        "phones": k["phones"], "emails": k["emails"], "website": k["website"], "person": "",
+                        "address": "", "rating": "", "kab": "", "objects": k["objects"], "confirmed": True,
+                        "source": "потвърдено от сайта на архитекта и на инвеститора"})
+    rows.sort(key=lambda r: (not r["confirmed"], not r["objects"], not r["phones"], r["names"][0].strip('"„“ ').lower()))
+    return {"code": "arc", "kind": "arch", "title": "Архитекти", "rows": rows,
+            "note": "Архитектурни бюра с телефон или имейл в София и Пловдив. Филтрирай, отбележи „Избран“ и копирай "
+                    "имейлите или телефоните на избраните наведнъж."}
+
+
 def main() -> None:
     data = json.loads(DATA.read_text(encoding="utf-8"))
     data["sheets"].insert(0, act14(data))
+    data["sheets"].insert(1, architects())
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     OUT.write_text(TEMPLATE.replace("__DATA__", blob), encoding="utf-8")
     print(f"{OUT} ({OUT.stat().st_size // 1024} KB)")
