@@ -664,9 +664,6 @@ KNOWN_ARCH = {
 }
 
 
-MAPS_ARCH = {"Архитект", "Архитектурна фирма", "Архитектурен дизайнер"}
-
-
 def web_domain(url: str) -> str:
     host = re.sub(r"^https?://", "", (url or "").strip().lower()).split("/")[0]
     return host[4:] if host.startswith("www.") else host
@@ -685,13 +682,20 @@ def architects() -> dict:
     """Архитектурните бюра с телефон или имейл: София (КАБ + Google Maps) и Пловдив (КАБ + договори за
     проектиране в ЦАИС ЕОП). Обектите са само доказаните връзки и договорите за проектиране."""
     rows = []
+    kg = ROOT / "output" / "plovdiv" / "kab_google_kontakti.json"
+    found = json.loads(kg.read_text(encoding="utf-8")) if kg.exists() else {}
     for city, path in (("София", ROOT / "output" / "arhitekti.csv"), ("Пловдив", ROOT / "output" / "plovdiv" / "arhitekti.csv")):
         for x in _rows(path):
             phones = list(dict.fromkeys(fmt_phone(t) for t in _split(x.get("Телефон"))))[:3]
             emails = _split(x.get("Имейл"))[:3]
+            reg = x.get("Рег. № КАБ", "").strip()
+            g = found.get(reg or x["Бюро"]) if city == "Пловдив" and not phones and not emails else None
+            if g and (g["phones"] or g["emails"]):  # от Google/сайта на бюрото (plovdiv_kab_google.py)
+                phones = [fmt_phone(t) for t in g["phones"]][:3]
+                emails, x = g["emails"][:3], dict(x, Сайт=x.get("Сайт") or g["website"],
+                                                  Източник=(x.get("Източник") or "регистър на КАБ") + " + Google")
             if not phones and not emails:
                 continue
-            reg = x.get("Рег. № КАБ", "").strip()
             key = reg or hashlib.sha1(x["Бюро"].encode()).hexdigest()[:10]
             objects = []
             for item in (x.get("Обекти по договори (ЦАИС ЕОП)") or "").split(" | "):
@@ -708,26 +712,22 @@ def architects() -> dict:
                          "person": x.get("Лице за контакт") or x.get("Архитекти / управители") or x.get("Архитекти") or "",
                          "address": x.get("Адрес", ""), "rating": x.get("Оценка в Google", ""), "kab": x.get("Профил в КАБ", ""),
                          "objects": objects, "confirmed": False, "source": src})
-    # Google Maps (Apify, „архитект“ в Пловдив) – само бюрата, които ги няма в КАБ по телефон или сайт
-    maps = ROOT / "output" / "plovdiv" / "maps_arhitekti.json"
+    # Google Maps (Apify, plovdiv_maps.py) – само бюрата, които ги няма в КАБ по телефон или сайт
+    maps = ROOT / "output" / "plovdiv" / "maps_arhitekti_vsichki.json"
     if maps.exists():
         seen_ph = {ph for r in rows for ph in r["phones"]}
         seen_dom = {web_domain(r["website"]) for r in rows if r["website"]}
         for x in json.loads(maps.read_text(encoding="utf-8")):
-            cat, title = x.get("categoryName"), x.get("title") or ""
-            if not (cat in MAPS_ARCH or (cat is None and re.search(r"(?i)арх|archi", title))):
-                continue
-            if "Пловдив" not in (x.get("address") or "") + (x.get("city") or ""):
-                continue
+            title = (x.get("title") or "").strip()
             ph = fmt_phone(x["phone"]) if x.get("phone") else ""
             dom = web_domain(x.get("website") or "")
-            if (ph and ph in seen_ph) or (dom and dom in seen_dom) or not (ph or x.get("website")):
+            if (ph and ph in seen_ph) or (dom and dom in seen_dom) or not (ph or x.get("emails")):
                 continue
             seen_ph.add(ph); seen_dom.add(dom)
             rows.append({"id": "arc-m" + hashlib.sha1((x.get("placeId") or title).encode()).hexdigest()[:10], "kind": "arch",
-                         "city": "Пловдив", "names": [title.strip()], "roles": ["Архитект (Google Maps)"],
-                         "phones": [ph] if ph else [], "emails": [], "website": x.get("website") or "", "person": "",
-                         "address": (x.get("address") or "").replace(", България", ""),
+                         "city": "Пловдив", "names": [title], "roles": ["Архитект (Google Maps)"],
+                         "phones": [ph] if ph else [], "emails": x.get("emails") or [], "website": x.get("website") or "",
+                         "person": "", "address": (x.get("address") or "").replace(", България", ""),
                          "rating": str(x.get("totalScore") or ""), "kab": x.get("url") or "",
                          "objects": [], "confirmed": False, "source": "Google Maps"})
     for eik, k in KNOWN_ARCH.items():
