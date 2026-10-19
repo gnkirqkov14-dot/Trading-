@@ -397,7 +397,7 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     const objectsHtml = !objs.length ? "" : `<div class="muted">${r.confirmed ? "Потвърдени проекти:" : "Договори за проектиране (обществени поръчки):"}</div>
       <ul class="objects">${objs.slice(0, 3).join("")}</ul>` +
       (objs.length > 3 ? `<details><summary>Още ${objs.length - 3}</summary><ul class="objects">${objs.slice(3).join("")}</ul></details>` : "");
-    const links = [r.kab ? `<a href="${esc(r.kab)}" target="_blank" rel="noopener">профил в КАБ</a>` : "",
+    const links = [r.kab ? `<a href="${esc(r.kab)}" target="_blank" rel="noopener">${r.source === "Google Maps" ? "в Google Maps" : "профил в КАБ"}</a>` : "",
                    r.rating ? `<span>Google: ${esc(r.rating)} ★</span>` : ""].filter(Boolean).join(" · ");
     return `<article class="card p${r.confirmed ? 0 : r.objects.length ? 2 : 5}${s.pick ? " picked" : ""}" id="card-${r.id}" data-status="${esc(statusOf(r.id))}">
       <div class="head"><label class="pick" for="pk-${r.id}"><input type="checkbox" id="pk-${r.id}" data-id="${r.id}" data-f="pick"${s.pick ? " checked" : ""} ${readOnly ? "disabled" : ""}> Избран</label>
@@ -664,6 +664,14 @@ KNOWN_ARCH = {
 }
 
 
+MAPS_ARCH = {"Архитект", "Архитектурна фирма", "Архитектурен дизайнер"}
+
+
+def web_domain(url: str) -> str:
+    host = re.sub(r"^https?://", "", (url or "").strip().lower()).split("/")[0]
+    return host[4:] if host.startswith("www.") else host
+
+
 def _rows(path: Path) -> list[dict]:
     with path.open(encoding="utf-8-sig") as f:
         return list(csv.DictReader(f, delimiter=";"))
@@ -700,6 +708,28 @@ def architects() -> dict:
                          "person": x.get("Лице за контакт") or x.get("Архитекти / управители") or x.get("Архитекти") or "",
                          "address": x.get("Адрес", ""), "rating": x.get("Оценка в Google", ""), "kab": x.get("Профил в КАБ", ""),
                          "objects": objects, "confirmed": False, "source": src})
+    # Google Maps (Apify, „архитект“ в Пловдив) – само бюрата, които ги няма в КАБ по телефон или сайт
+    maps = ROOT / "output" / "plovdiv" / "maps_arhitekti.json"
+    if maps.exists():
+        seen_ph = {ph for r in rows for ph in r["phones"]}
+        seen_dom = {web_domain(r["website"]) for r in rows if r["website"]}
+        for x in json.loads(maps.read_text(encoding="utf-8")):
+            cat, title = x.get("categoryName"), x.get("title") or ""
+            if not (cat in MAPS_ARCH or (cat is None and re.search(r"(?i)арх|archi", title))):
+                continue
+            if "Пловдив" not in (x.get("address") or "") + (x.get("city") or ""):
+                continue
+            ph = fmt_phone(x["phone"]) if x.get("phone") else ""
+            dom = web_domain(x.get("website") or "")
+            if (ph and ph in seen_ph) or (dom and dom in seen_dom) or not (ph or x.get("website")):
+                continue
+            seen_ph.add(ph); seen_dom.add(dom)
+            rows.append({"id": "arc-m" + hashlib.sha1((x.get("placeId") or title).encode()).hexdigest()[:10], "kind": "arch",
+                         "city": "Пловдив", "names": [title.strip()], "roles": ["Архитект (Google Maps)"],
+                         "phones": [ph] if ph else [], "emails": [], "website": x.get("website") or "", "person": "",
+                         "address": (x.get("address") or "").replace(", България", ""),
+                         "rating": str(x.get("totalScore") or ""), "kab": x.get("url") or "",
+                         "objects": [], "confirmed": False, "source": "Google Maps"})
     for eik, k in KNOWN_ARCH.items():
         rows.insert(0, {"id": f"arc-e{eik}", "kind": "arch", "city": "София", "names": [k["name"]], "roles": ["Архитект"],
                         "phones": k["phones"], "emails": k["emails"], "website": k["website"], "person": "",
