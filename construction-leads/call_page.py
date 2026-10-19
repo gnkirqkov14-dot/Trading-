@@ -247,7 +247,7 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     }).join("");
     $("#sheetNote").textContent = sheet().note;
     const k = sheet().kind, arch = k === "arch";
-    $("#cityBox").hidden = k !== "obj" && !arch;
+    $("#cityBox").hidden = k !== "obj";
     $("#roleBox").hidden = arch || k === "rem";
     $("#ctypeBox").hidden = $("#sortBox").hidden = $("#objBox").hidden = $("#pickBox").hidden = $("#bulk").hidden = !arch;
     $("#prioBox").hidden = k === "obj" || k === "rem" || arch;
@@ -274,7 +274,6 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     const obj = r.kind === "obj", arch = r.kind === "arch";
     if (arch) {
       const ct = $("#ctype").value, s = state[r.id] || {};
-      if (city && r.city !== city) return false;
       if (ct === "phone" && !r.phones.length) return false;
       if (ct === "email" && !r.emails.length) return false;
       if (ct === "both" && !(r.phones.length && r.emails.length)) return false;
@@ -678,7 +677,7 @@ def _split(v: str) -> list[str]:
     return [x.strip() for x in re.split(r"[,;]", v or "") if x.strip()]
 
 
-def architects() -> dict:
+def architects() -> list[dict]:
     """Архитектурните бюра с телефон или имейл: София (КАБ + Google Maps) и Пловдив (КАБ + договори за
     проектиране в ЦАИС ЕОП). Обектите са само доказаните връзки и договорите за проектиране."""
     rows = []
@@ -736,15 +735,20 @@ def architects() -> dict:
                         "address": "", "rating": "", "kab": "", "objects": k["objects"], "confirmed": True,
                         "source": "потвърдено от сайта на архитекта и на инвеститора"})
     rows.sort(key=lambda r: (not r["confirmed"], not r["objects"], not r["phones"], r["names"][0].strip('"„“ ').lower()))
-    return {"code": "arc", "kind": "arch", "title": "Архитекти", "rows": rows,
-            "note": "Архитектурни бюра с телефон или имейл в София и Пловдив. Филтрирай, отбележи „Избран“ и копирай "
-                    "имейлите или телефоните на избраните наведнъж."}
+    note = ("Архитектурни бюра с телефон или имейл ({}). Филтрирай, отбележи „Избран“ и копирай имейлите или "
+            "телефоните на избраните наведнъж.")
+    return [{"code": "arc", "kind": "arch", "title": "Архитекти София", "rows": [r for r in rows if r["city"] == "София"],
+             "note": note.format("КАБ, Google Maps")},
+            {"code": "arp", "kind": "arch", "title": "Архитекти Пловдив", "rows": [r for r in rows if r["city"] == "Пловдив"],
+             "note": note.format("Пловдив и областта: КАБ, Google Maps, Google")}]
 
 
 def main() -> None:
     data = json.loads(DATA.read_text(encoding="utf-8"))
     data["sheets"].insert(0, act14(data))
-    data["sheets"].insert(1, architects())
+    for sh in data["sheets"]:
+        sh["title"] = {"sof": "София – фирми", "plv": "Пловдив – фирми"}.get(sh["code"], sh["title"])
+    data["sheets"][1:1] = architects()
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     OUT.write_text(TEMPLATE.replace("__DATA__", blob), encoding="utf-8")
     print(f"{OUT} ({OUT.stat().st_size // 1024} KB)")
