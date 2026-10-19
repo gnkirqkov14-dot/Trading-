@@ -24,19 +24,33 @@ function decodeCyrillic(buffer: ArrayBuffer) {
 /** &#127969; → 🏡, &amp; → &. Без това описанията излизат с голи кодове. */
 function decodeEntities(value: string) {
   const imena: Record<string, string> = {
-    amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
-    laquo: "«", raquo: "»", ndash: "–", mdash: "—", hellip: "…",
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+    laquo: "«",
+    raquo: "»",
+    ndash: "–",
+    mdash: "—",
+    hellip: "…",
   };
   return value
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) =>
+      String.fromCodePoint(parseInt(h, 16)),
+    )
     .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
     .replace(/&([a-z]+);/gi, (цяло, име) => imena[име.toLowerCase()] ?? цяло);
 }
 
 function clean(value: string | undefined | null) {
   if (!value) return null;
-  return decodeEntities(value.replace(/<[^>]*>/g, " "))
-    .replace(/\s+/g, " ").trim() || null;
+  return (
+    decodeEntities(value.replace(/<[^>]*>/g, " "))
+      .replace(/\s+/g, " ")
+      .trim() || null
+  );
 }
 
 /**
@@ -121,7 +135,8 @@ function propertyTypeFromUrl(url: string): PropertyType | null {
   if (/-kashta-|-vila-|-etazh-ot-kashta-/.test(slug)) return "house";
   if (/-magazin-/.test(slug)) return "shop";
   if (/-ofis-/.test(slug)) return "office";
-  if (/-parcel-|-zemedelska-zemya-|-industrialen-teren-/.test(slug)) return "plot";
+  if (/-parcel-|-zemedelska-zemya-|-industrialen-teren-/.test(slug))
+    return "plot";
   return null;
 }
 
@@ -153,10 +168,19 @@ export function bezKontakti(opis: string | null) {
     /\(?\+ ?359\)?[\s.-]{0,2}(?:8[\s.-]?[789]|9[\s.-]?[89])(?:[\s.-]?\d){7}|0(?:8[789]|9[89])\d(?:[\s.-]?\d){6}/g;
   const imeyl = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 
+  // imot.bg крие имейлите като „[email protected]“, а сайта на фирмата дава
+  // като поддомейн на imot.bg. Редът с тях е само контакт — маха се целият.
+  const skrit = /email\s*protected|[a-z0-9-]+\.imot\.bg/i;
+
   const redove = opis
     .split("\n")
+    .filter((red) => !(skrit.test(red) && red.length < 200))
     .map((red) =>
-      red.replace(nomer, "").replace(imeyl, "").replace(/\s{2,}/g, " ").trim(),
+      red
+        .replace(nomer, "")
+        .replace(imeyl, "")
+        .replace(/\s{2,}/g, " ")
+        .trim(),
     )
     // Ред, в който е имало само номер, вече е празен или само пунктуация.
     .filter((red, i, vsichki) => {
@@ -169,14 +193,20 @@ export function bezKontakti(opis: string | null) {
   // Подканата накрая, останала без номера под себе си.
   while (
     redove.length &&
-    /^[^\n]{0,80}(обадете|свържете|контакт|оферта|наличности|имейл|e-?mail)[^\n]{0,40}:?\s*$/i.test(
+    (/^[^\n]{0,80}(обадете|свържете|контакт|оферта|наличности|имейл|e-?mail)[^\n]{0,40}:?\s*$/i.test(
       redove[redove.length - 1],
-    )
+    ) ||
+      /^[^\n]{0,60}информация\s*:[\s,]*$/i.test(redove[redove.length - 1]))
   ) {
     redove.pop();
   }
 
-  return redove.join("\n").replace(/\n{3,}/g, "\n\n").trim() || null;
+  return (
+    redove
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim() || null
+  );
 }
 
 export async function fetchImotListing(url: string): Promise<ImotListing> {
@@ -228,9 +258,13 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     return null;
   };
 
-  const description = bezKontakti(cleanDescription(
-    text.match(/Описание(?:\s*на имота)?:?([\s\S]{0,4000}?)(?:За контакти|Особености|ЗА КОНТАКТ)/i)?.[1],
-  ));
+  const description = bezKontakti(
+    cleanDescription(
+      text.match(
+        /Описание(?:\s*на имота)?:?([\s\S]{0,4000}?)(?:За контакти|Особености|ЗА КОНТАКТ)/i,
+      )?.[1],
+    ),
+  );
 
   // Телефоните са пръснати на няколко места в страницата; събираме всички
   // български мобилни и ги подреждаме по реда на срещане.
@@ -239,8 +273,8 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
   // обявата влиза телефон, на който никой не отговаря.
   const phones = [
     ...new Set(
-      (text.match(/0(?:8[789]|9[89])\d[\s-]?\d{3}[\s-]?\d{3}/g) ?? []).map((p) =>
-        p.replace(/[\s-]/g, ""),
+      (text.match(/0(?:8[789]|9[89])\d[\s-]?\d{3}[\s-]?\d{3}/g) ?? []).map(
+        (p) => p.replace(/[\s-]/g, ""),
       ),
     ),
   ].filter((p) => p.length === 10);
@@ -267,7 +301,8 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
       // Предпочита се най-големият вариант: 280×209 (без папка),
       // 800×598 (/big) и 1230×920 (/big1). Смаляваме ние, но по-голям
       // изходен файл дава по-чист резултат.
-      const tegло = (u: string) => (/\/big1\//.test(u) ? 2 : /\/big\//.test(u) ? 1 : 0);
+      const tegло = (u: string) =>
+        /\/big1\//.test(u) ? 2 : /\/big\//.test(u) ? 1 : 0;
       const current = byFile.get(file);
       if (!current || tegло(full) > tegло(current)) {
         byFile.set(file, full);
@@ -317,7 +352,10 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
   const redMestopolozhenie = (() => {
     const m = html.match(/Местоположение:\s*<b>([^<]{4,160})<\/b>/i);
     if (!m) return null;
-    const chasti = m[1].split(",").map((c) => clean(c)).filter(Boolean) as string[];
+    const chasti = m[1]
+      .split(",")
+      .map((c) => clean(c))
+      .filter(Boolean) as string[];
     if (chasti.length === 0) return null;
 
     const prvo = chasti[0].match(/^(град|село)\s+(.+)$/);
@@ -333,7 +371,8 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     const eUlica = (t: string) => /^(ул|бул)\.?\s*[А-Яа-яA-Za-z0-9]/i.test(t);
 
     const ostatak = chasti.slice(1);
-    const kvartal = ostatak.length && !eUlica(ostatak[0]) ? ostatak.shift()! : null;
+    const kvartal =
+      ostatak.length && !eUlica(ostatak[0]) ? ostatak.shift()! : null;
     const ulica = ostatak.find(eUlica) ?? null;
 
     return {
@@ -366,7 +405,9 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     }
 
     const prezOblast = title?.match(
-      new RegExp(`(?:^|\\s)в\\s+област\\s+[^,]{2,30},\\s*(гр|с)\\.\\s*([^,]{2,40}?)${krai}`),
+      new RegExp(
+        `(?:^|\\s)в\\s+област\\s+[^,]{2,30},\\s*(гр|с)\\.\\s*([^,]{2,40}?)${krai}`,
+      ),
     );
     if (prezOblast) {
       return {
@@ -420,9 +461,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     phones,
     photos,
     constructionNote: constructionLine ?? restOfLine,
-    commissionYear: commissionYearMatch
-      ? Number(commissionYearMatch[1])
-      : null,
+    commissionYear: commissionYearMatch ? Number(commissionYearMatch[1]) : null,
     commissioned,
     propertyType: propertyTypeFromUrl(url),
     sellerKind,
@@ -444,7 +483,9 @@ export function guessStage(note: string | null, description: string | null) {
   ) {
     return "building" as const;
   }
-  if (/акт\s*16|въведен[а]? в експлоатация|разрешение за ползване/.test(haystack)) {
+  if (
+    /акт\s*16|въведен[а]? в експлоатация|разрешение за ползване/.test(haystack)
+  ) {
     return "act16" as const;
   }
   if (/акт\s*15/.test(haystack)) return "act15" as const;
