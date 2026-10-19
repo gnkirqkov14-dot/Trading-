@@ -308,8 +308,10 @@ export function ImportListingForm({
               />
             </div>
             {progress.skipped.length > 0 && (
-              <ul className="mt-3 list-inside list-disc text-xs text-slate-400">
-                {progress.skipped.slice(0, 8).map((line) => (
+              // Всички, не първите осем: при партида от 25 пропуснатите са
+              // точно тези, които трябва да се прегледат на ръка.
+              <ul className="mt-3 max-h-64 list-inside list-disc overflow-y-auto text-xs text-slate-400">
+                {progress.skipped.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
