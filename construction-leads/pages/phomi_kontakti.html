@@ -147,6 +147,7 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   <nav class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" data-tab="all" aria-selected="true">Контакти<span class="n" id="nAll">0</span></button>
+    <button class="tab" role="tab" data-tab="inq" aria-selected="false">Запитвания<span class="n" id="nInq">0</span></button>
     <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
     <button class="tab" role="tab" data-tab="rem" aria-selected="false">Напомняния<span class="n" id="nRem">0</span></button>
   </nav>
@@ -210,7 +211,9 @@ footer { color: var(--muted); font-size: 12.5px; }
                  "Чака да изпратим имейл": "--st-mail", "Изпратен имейл": "--st-offer",
                  "Уговорена среща": "--st-meet", "Проведена среща": "--st-meet", "Изпратена оферта": "--st-offer",
                  "Не се интересува": "--st-no", "Грешен номер": "--st-no"};
-  const KINDS = ["Архитект", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
+  const KINDS = ["Архитект", "Клиент", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
+  // Раздел „Запитвания“: контакти с group "inq" (запитвания от сайта/имейл), отделно от архитектите
+  const isInq = (c) => c.group === "inq";
   const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед"];
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -282,6 +285,8 @@ footer { color: var(--muted); font-size: 12.5px; }
   function matches(id) {
     const c = contacts[id], q = $("#q").value.trim().toLowerCase();
     if (tab === "pick" && !c.pick) return false;
+    if (tab === "inq" && !isInq(c)) return false;
+    if (tab === "all" && isInq(c)) return false;
     if ($("#city").value && c.city !== $("#city").value) return false;
     if ($("#kind").value && c.kind !== $("#kind").value) return false;
     if ($("#stf").value && statusOf(c) !== $("#stf").value) return false;
@@ -308,7 +313,8 @@ footer { color: var(--muted); font-size: 12.5px; }
   function renderTabs() {
     const ids = Object.keys(contacts), rem = openSteps(), fu = followUps().length;
     const over = rem.filter((k) => logs[k].due && logs[k].due <= today()).length + fu;
-    $("#nAll").textContent = ids.length;
+    $("#nAll").textContent = ids.filter((i) => !isInq(contacts[i])).length;
+    $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
     $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
     $("#nRem").textContent = over ? over + " за днес" : rem.length;
     $("#nRem").classList.toggle("over", !!over);
@@ -407,7 +413,8 @@ footer { color: var(--muted); font-size: 12.5px; }
       return;
     }
     const ids = shown();
-    $("#count").textContent = `Показани ${ids.length} от ${Object.keys(contacts).length} контакта`;
+    const total = Object.keys(contacts).filter((i) => tab === "inq" ? isInq(contacts[i]) : tab === "all" ? !isInq(contacts[i]) : true).length;
+    $("#count").textContent = `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
     $("#list").innerHTML = ids.length ? ids.map(rowHtml).join("") :
       `<p class="empty">${!loaded ? "Контактите се зареждат…" : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
@@ -442,7 +449,7 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   function openDialog(id) {
     editing = id || null;
-    const c = id ? contacts[id] : {kind: "Архитект", city: $("#city").value || "Пловдив"};
+    const c = id ? contacts[id] : tab === "inq" ? {kind: "Клиент", city: ""} : {kind: "Архитект", city: $("#city").value || "Пловдив"};
     $("#dlgTitle").textContent = id ? "Редактирай контакт" : "Нов контакт";
     $("#f-name").value = c.name || ""; $("#f-kind").value = c.kind || "Друго"; $("#f-city").value = c.city || "";
     $("#f-person").value = c.person || ""; $("#f-phones").value = (c.phones || []).join(", ");
@@ -462,7 +469,8 @@ footer { color: var(--muted); font-size: 12.5px; }
                    phones: split($("#f-phones").value), emails: split($("#f-emails").value), website: site,
                    address: $("#f-address").value.trim(), note: $("#f-note").value.trim()};
     const id = editing || "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    if (!editing) Object.assign(patch, {status: "Не е звъняно", pick: false, created: new Date().toISOString(), source: "добавен ръчно"});
+    if (!editing) Object.assign(patch, {status: "Не е звъняно", pick: false, created: new Date().toISOString(), source: "добавен ръчно"},
+      tab === "inq" ? {group: "inq"} : {});
     // промяна в бележката се брои за последно действие
     else if ((contacts[editing].note || "") !== patch.note) patch.noteAt = new Date().toISOString();
     current = id; store.set("phomi-c-current", id); narrowShow = true;
