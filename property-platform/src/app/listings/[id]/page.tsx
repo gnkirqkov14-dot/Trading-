@@ -79,10 +79,15 @@ export async function generateMetadata({
   const location = [listing.neighborhoods?.name, listing.cities?.name]
     .filter(Boolean)
     .join(", ");
-  const description = `${formatPrice(listing.price)} · ${listing.area_sqm} м²${location ? ` · ${location}` : ""}`;
+  const kind = `${PROPERTY_TYPE_LABELS[listing.property_type]} ${listing.type === "rent" ? "под наем" : "за продажба"}`;
+  const description = `${kind}${location ? ` в ${location}` : ""}: ${listing.area_sqm} м²${listing.rooms ? `, ${listing.rooms} стаи` : ""}, ${formatPrice(listing.price)}. Директно от собственика или строителя — без агенция и без комисиона.`;
   // По-добро CTR в резултатите от търсене — цена/локация направо в
-  // заглавието, не само в описанието.
-  const seoTitle = `${listing.title} — ${formatPrice(listing.price)}${location ? `, ${location}` : ""}`;
+  // заглавието, не само в описанието. Внесените от imot.bg заглавия вече
+  // носят цената („… - 95 кв.м / 291 660 €, ФИРМА“) — тях не ги
+  // удвояваме.
+  const seoTitle = listing.title.includes("€")
+    ? listing.title
+    : `${listing.title} — ${formatPrice(listing.price)}${location ? `, ${location}` : ""}`;
   const coverPhoto = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
   )[0];
@@ -179,10 +184,13 @@ export default async function ListingDetailPage({
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
     name: listing.title,
-    description: listing.description ?? undefined,
+    // Google иска structured data да съвпада с видимото на страницата.
+    // Нерегистриран посетител (вкл. Googlebot) не вижда описанието и
+    // вижда само първата снимка — затова и тук е същото.
+    description: hasFullAccess ? listing.description ?? undefined : undefined,
     url: `${siteUrl}/listings/${listing.id}`,
     datePosted: listing.created_at,
-    image: photos.map((photo) => photo.url),
+    image: visiblePhotos.map((photo) => photo.url),
     address: listing.cities?.name
       ? {
           "@type": "PostalAddress",
