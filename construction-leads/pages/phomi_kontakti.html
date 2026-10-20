@@ -85,6 +85,9 @@ textarea { resize: vertical; }
 .chip { font-size: 11.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
 .due { color: var(--warn); font-weight: 600; }
 .late { color: var(--gold); font-weight: 600; }
+.mailbox { border: 2px solid var(--accent); border-radius: 10px; padding: 12px; display: grid; gap: 10px; background: var(--surface); }
+.mailbox iframe { width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
+.mailbox .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 /* „Чака да изпратим имейл“ – ярко оранжево, за да напомня */
 .row.mail-due { background: var(--mail-soft); border-color: var(--mail); border-left: 6px solid var(--mail); }
 .chip[style*="--st-mail"] { color: var(--mail-ink); font-weight: 700; border-color: var(--mail); }
@@ -240,7 +243,8 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   const contacts = {}, logs = {};
   let db = null, mode = "loading", readOnly = false, loaded = false;
-  let tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null;
+  let tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null, mailOpen = null, mailBusy = false, mailDraft = null;
+  let mcp = null;
 
   $("#stf").innerHTML += STATUSES.map((s) => `<option>${esc(s)}</option>`).join("");
   $("#kind").innerHTML += KINDS.map((s) => `<option>${esc(s)}</option>`).join("");
@@ -377,10 +381,12 @@ footer { color: var(--muted); font-size: 12.5px; }
         <label for="p-status">Статус<select id="p-status" ${readOnly ? "disabled" : ""}>${STATUSES.map((s) => `<option${s === st ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
         ${st === "Изпратен имейл" ? `<label for="p-mail" style="flex:0 1 180px">Имейлът е изпратен на<input type="date" id="p-mail" value="${esc(c.emailSent || "")}" ${readOnly ? "disabled" : ""}></label>` : ""}
         ${readOnly ? "" : `<button class="btn" type="button" data-edit="1">Редактирай</button>`}
+        ${readOnly || !(c.emails || []).length ? "" : `<button class="btn primary" type="button" data-mailtpl="1">✉ Представителен имейл</button>`}
         ${readOnly ? "" : confirmDel === "c:" + current ? `<span class="confirm">Да изтрия ли контакта и дневника му?
           <button class="mini" type="button" data-delcontact="1">Да, изтрий</button><button class="mini" type="button" data-cancel="1">Не</button></span>`
           : `<button class="btn danger" type="button" data-askdel="1">Изтрий</button>`}
       </div>
+      ${mailOpen === current ? mailPanel(c) : ""}
       ${readOnly ? "" : `<section>
         <h3>Запиши разговор</h3>
         <div class="form" id="logForm">
@@ -419,10 +425,12 @@ footer { color: var(--muted); font-size: 12.5px; }
       `<p class="empty">${!loaded ? "Контактите се зареждат…" : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
   function renderProfile() {
-    // не пипаме формата за разговор, докато се пише в нея
+    // не пипаме формите (разговор, имейл), докато се пише в тях
     const a = document.activeElement;
-    if (a && a.closest && a.closest("#logForm") && contacts[current]) return;
+    if (a && a.matches && a.matches("input,textarea,select") && (a.closest("#logForm") || a.closest("#mailbox")) && contacts[current]) return;
+    captureDraft();
     $("#profile").innerHTML = profileHtml();
+    if (mailOpen === current) refreshPreview();
   }
   function render() { renderTabs(); renderList(); renderProfile(); $("#main").classList.toggle("showing", !!contacts[current] && narrowShow); }
   let narrowShow = false;
@@ -480,6 +488,108 @@ footer { color: var(--muted); font-size: 12.5px; }
   });
   $("#cancelContact").addEventListener("click", () => $("#contactDlg").close());
 
+
+  // ---------- представителен имейл (шаблон PHOMI, изпраща се през Gmail на зрителя) ----------
+  const MAIL_TPL = "<div style=\"margin:0;padding:0;background:#f2f4f4\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background:#f2f4f4\">\n<tr><td align=\"center\" style=\"padding:24px 12px\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:100%;max-width:600px;background:#ffffff;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1d2526\">\n<tr><td style=\"padding:26px 32px 14px 32px\">\n<div style=\"font-size:26px;line-height:28px;font-weight:800;letter-spacing:4px;color:#111111\">PHOMI<\/div>\n<div style=\"font-size:11px;line-height:16px;letter-spacing:3px;color:#007F8B;font-weight:700\">БЪЛГАРИЯ<\/div>\n<\/td><\/tr>\n<tr><td style=\"padding:0 32px 18px 32px\">\n<div style=\"font-size:22px;line-height:28px;font-weight:700;color:#111111\">PHOMI за вашите проекти<\/div>\n<\/td><\/tr>\n<tr><td style=\"padding:0\">\n<a href=\"https://www.phomi.bg/nov-proekti\" style=\"text-decoration:none\"><img src=\"https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6ac3a926669321a4225a1514_phomi-20261005-ai-20261003-other-032-31.webp\" width=\"600\" alt=\"Фасада с PHOMI – вила с облицовка травертин\" style=\"display:block;width:100%;max-width:600px;height:auto;border:0\"><\/a>\n<\/td><\/tr>\n<tr><td style=\"padding:26px 32px 4px 32px;font-size:15px;line-height:23px\">\n<p style=\"margin:0 0 14px 0;font-size:17px;font-weight:700;color:#007F8B\">{{GREETING}}<\/p>\n<p style=\"margin:0 0 14px 0\">{{OPENER}}<\/p>\n<p style=\"margin:0 0 14px 0\"><b>Визия на камък, дърво или бетон.<\/b> Тънка и лека минерална облицовка с дебелина около 3–4 мм и тегло около 4 кг/м².<\/p>\n<p style=\"margin:0 0 14px 0\">PHOMI е натурален и екологичен материал от кварцов пясък и глина. PHOMI eCovering дава свобода при оформянето на фасади и интериори: разнообразни текстури и формати, ниско тегло и решения за прави и извити повърхности.<\/p>\n<p style=\"margin:0 0 18px 0\"><b>Монтажът е лесен:<\/b> облицовката се залепва с циментово лепило към подготвената основа. Материалът е UV защитен, удароустойчив и мразоустойчив, с клас по реакция на огън A1 или A2 според модела. Предлага се с 10-годишна гаранция и експлоатационен живот над 50 години според проведените тестове.<\/p>\n<\/td><\/tr>\n<tr><td style=\"padding:0 32px 6px 32px\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n<tr>\n<td width=\"50%\" style=\"padding:0 6px 10px 0\"><a href=\"https://www.phomi.bg/nov-katalozi-2026\" style=\"display:block;background:#007F8B;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:12px 8px;border-radius:4px\">Каталози 2026<\/a><\/td>\n<td width=\"50%\" style=\"padding:0 0 10px 6px\"><a href=\"https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6aba35ed3ddd713780d6df3b_PHOMI-Cenorazpis-EUR-2026.pdf\" style=\"display:block;background:#007F8B;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:12px 8px;border-radius:4px\">Ценоразпис<\/a><\/td>\n<\/tr>\n<tr>\n<td width=\"50%\" style=\"padding:0 6px 10px 0\"><a href=\"https://drive.google.com/drive/folders/1oeSXggnm4eGaXYEbMHVYJiINEwak878v\" style=\"display:block;background:#ffffff;color:#007F8B;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:11px 8px;border-radius:4px;border:1px solid #007F8B\">Сертификати и документи<\/a><\/td>\n<td width=\"50%\" style=\"padding:0 0 10px 6px\"><a href=\"https://www.phomi.bg/nov-proekti\" style=\"display:block;background:#ffffff;color:#007F8B;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:11px 8px;border-radius:4px;border:1px solid #007F8B\">Реализирани проекти<\/a><\/td>\n<\/tr>\n<\/table>\n<p style=\"margin:2px 0 0 0;font-size:12px;line-height:18px;color:#6b7678\">Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.<\/p>\n<\/td><\/tr>\n<tr><td style=\"padding:20px 32px 6px 32px;font-size:15px;line-height:23px\">\n<p style=\"margin:0 0 8px 0;font-weight:700\">Имате ли проект, за който търсите подобна визия?<\/p>\n<p style=\"margin:0 0 18px 0\">Изпратете ми снимка или чертеж, за да обсъдим подходящите модели. Можете да видите текстурите и мострите на живо в <a href=\"https://www.phomi.bg/nov-kontakti\" style=\"color:#007F8B;font-weight:700\">шоурумите ни в София и Пловдив<\/a>.<\/p>\n<\/td><\/tr>\n<tr><td style=\"padding:6px 32px 28px 32px;font-size:14px;line-height:21px;border-top:1px solid #e3e8e8\">\n<p style=\"margin:16px 0 0 0\">Поздрави,<br><b>{{SENDER_NAME}}<\/b><br>PHOMI България<br>\n<span style=\"color:#007F8B;font-weight:700\">{{SENDER_EMAIL}} · {{SENDER_PHONE}}<\/span><br>\n<a href=\"https://www.phomi.bg/\" style=\"color:#007F8B\">phomi.bg<\/a><\/p>\n<\/td><\/tr>\n<\/table>\n<\/td><\/tr>\n<\/table>\n<\/div>";
+  const MAIL_SUBJECT = "PHOMI – материали за вашия проект";
+  const OPENERS = {
+    interest: "Благодаря за интереса към PHOMI. Изпращам ви кратко представяне и полезните материали на едно място.",
+    call: "Както се разбрахме по телефона, изпращам ви кратко представяне на PHOMI и полезните материали на едно място.",
+  };
+  const sender = () => { try { return JSON.parse(store.get("phomi-sender") || "{}"); } catch (e) { return {}; } };
+  function firstName(c) {
+    const p = (c.person || "").split(/[,;]/)[0].replace(/^(арх|инж|проф|доц)\.\s*/i, "").trim();
+    if (!p) return "";
+    const parts = p.split(/\s+/);
+    return parts.length >= 3 ? parts[0] : parts[0];  // само първото име
+  }
+  function fillMail(v) {
+    const e = (x) => esc(x);
+    return MAIL_TPL.replace("{{GREETING}}", e(v.greeting)).replace("{{OPENER}}", e(v.opener))
+      .replace("{{SENDER_NAME}}", e(v.name || "PHOMI България")).replace("{{SENDER_EMAIL}}", e(v.email || "info@phomi.bg"))
+      .replace("{{SENDER_PHONE}}", e(v.phone || "+359 884 30 30 70"));
+  }
+  function mailText(v) {
+    return [v.greeting, "", v.opener, "",
+      "Визия на камък, дърво или бетон. Тънка и лека минерална облицовка с дебелина около 3–4 мм и тегло около 4 кг/м².", "",
+      "Каталози 2026: https://www.phomi.bg/nov-katalozi-2026",
+      "Ценоразпис: https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6aba35ed3ddd713780d6df3b_PHOMI-Cenorazpis-EUR-2026.pdf",
+      "Сертификати и документи: https://drive.google.com/drive/folders/1oeSXggnm4eGaXYEbMHVYJiINEwak878v",
+      "Реализирани проекти: https://www.phomi.bg/nov-proekti", "",
+      "Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.", "",
+      "Поздрави,", v.name || "PHOMI България", "PHOMI България", (v.email || "info@phomi.bg") + " · " + (v.phone || "+359 884 30 30 70"), "phomi.bg"].join("\n");
+  }
+  function mailValues() {
+    const val = (id) => ($(id) ? $(id).value.trim() : "");
+    return {to: val("#m-to"), greeting: val("#m-greet") || "Здравейте,", opener: OPENERS[val("#m-open")] || OPENERS.interest,
+            name: val("#m-name"), phone: val("#m-phone"), email: "info@phomi.bg"};
+  }
+  function mailPanel(c) {
+    const s = sender(), fn = firstName(c), d = mailDraft || {};
+    return `<section class="mailbox" id="mailbox">
+      <h3>Представителен имейл</h3>
+      <div class="form">
+        <label for="m-to">До<select id="m-to">${(c.emails || []).map((m) => `<option${m === d.to ? " selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
+        <label for="m-open">Начало<select id="m-open"><option value="interest">Благодаря за интереса…</option><option value="call"${d.open === "call" ? " selected" : ""}>Както се разбрахме по телефона…</option></select></label>
+        <label class="wide" for="m-greet">Обръщение<input id="m-greet" value="${esc(d.greet ?? (fn ? "Здравейте, " + fn + "," : "Здравейте,"))}" autocomplete="off"></label>
+        <label for="m-name">Подпис – име<input id="m-name" value="${esc(d.name ?? s.name ?? "")}" placeholder="напр. Станислав Каадан" autocomplete="off"></label>
+        <label for="m-phone">Подпис – телефон<input id="m-phone" value="${esc(d.phone ?? s.phone ?? "+359 884 30 30 70")}" autocomplete="off"></label>
+      </div>
+      <p class="meta">Тема: „${esc(MAIL_SUBJECT)}“ · изпраща се от вашия Gmail, свързан с Claude.</p>
+      <iframe id="m-preview" title="Преглед на имейла" sandbox=""></iframe>
+      <div class="actions">
+        ${mailBusy === "confirm" ? `<span class="confirm">Да изпратя ли имейла до <b>${esc(d.to || (c.emails || [])[0])}</b>?
+            <button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button><button class="btn" type="button" data-mailcancel="1">Не</button></span>`
+          : `<button class="btn primary" type="button" data-mailask="1" ${mailBusy ? "disabled" : ""}>Изпрати</button>
+             <button class="btn" type="button" data-mailclose="1">Затвори</button>`}
+        <span class="msg" id="m-msg"></span>
+      </div>
+    </section>`;
+  }
+  function captureDraft() {
+    if (!$("#mailbox")) return;
+    mailDraft = {to: $("#m-to").value, open: $("#m-open").value, greet: $("#m-greet").value, name: $("#m-name").value, phone: $("#m-phone").value};
+  }
+  function refreshPreview() {
+    const f = $("#m-preview");
+    if (f) f.srcdoc = '<!doctype html><meta charset="utf-8"><body style="margin:0">' + fillMail(mailValues()) + "</body>";
+  }
+  function mailFail(e) {
+    const code = e && e.code;
+    if (code === "server_not_connected") return "Gmail не е свързан с вашия Claude. Свържете го от claude.ai → Settings → Connectors и опитайте пак.";
+    if (code === "needs_reauth") return "Връзката с Gmail е изтекла. Свържете Gmail отново от claude.ai → Settings → Connectors.";
+    if (code === "approval_required") return "Трябва да разрешите на страницата да ползва Gmail – отворете я в claude.ai и разрешете, когато ви попита.";
+    if (code === "not_in_manifest" || code === "capability_disabled") return "Изпращането не е налично в тази версия на страницата.";
+    if (code === "blocked_by_policy") return "Изпращането е спряно от настройките на организацията.";
+    if (code === "server_unavailable" || code === "upstream_error")
+      return "Не е ясно дали имейлът тръгна – проверете папка „Изпратени“ в Gmail, преди да пробвате отново.";
+    if (code === "tool_error") return "Gmail отказа: " + (e.message || "неизвестна грешка");
+    return "Не успях да изпратя имейла" + (e && e.message ? ": " + e.message : ".");
+  }
+  async function sendMail() {
+    captureDraft();
+    const v = mailValues(), id = current, msg = () => $("#m-msg");
+    store.set("phomi-sender", JSON.stringify({name: v.name, phone: v.phone}));
+    if (!v.to) { mailBusy = false; renderProfile(); return; }
+    if (!mcp) { mailBusy = false; renderProfile(); refreshPreview(); msg().textContent = "Изпращането не е налично тук – отворете страницата в claude.ai."; msg().classList.add("err"); return; }
+    mailBusy = "sending"; renderProfile(); refreshPreview(); msg().textContent = "Изпращане…";
+    try {
+      await mcp.callTool("Gmail", "send_message", {to: [v.to], subject: MAIL_SUBJECT, htmlBody: fillMail(v), body: mailText(v)});
+      mailBusy = false; mailOpen = null; mailDraft = null;
+      const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+      saveContact(id, {status: "Изпратен имейл", statusAt: now, emailSent: today()});
+      const entry = {contact: id, kind: "Имейл", who: v.to, said: "Изпратен представителен имейл (каталози, ценоразпис, сертификати, проекти).",
+                     next: "Да провериш за отговор", due, done: false, at: now};
+      if (mode === "local") { logs["l" + Date.now()] = entry; persistLocal(); render(); }
+      else if (db && !readOnly) db.collection("log").add(entry).catch((e) => fail(e));
+      note("Имейлът е изпратен до " + v.to + ".");
+      renderProfile();
+    } catch (e) {
+      mailBusy = false; renderProfile(); refreshPreview();
+      msg().textContent = mailFail(e); msg().classList.add("err");
+    }
+  }
+
   function addLog() {
     const val = (s) => ($(s) ? $(s).value.trim() : "");
     const body = {contact: current, kind: val("#l-kind"), who: val("#l-who"), said: val("#l-said"), next: val("#l-next"),
@@ -526,7 +636,7 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   // ---------- събития ----------
   document.addEventListener("click", (ev) => {
-    const t = ev.target.closest("[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    const t = ev.target.closest("[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
     if (!t) return;
     if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
@@ -539,12 +649,20 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (t.dataset.delcontact) { deleteContact(current); return; }
     if (t.dataset.cancel) { confirmDel = null; render(); return; }
     if (t.dataset.addlog) { addLog(); return; }
+    if (t.dataset.mailtpl) { mailOpen = current; mailBusy = false; mailDraft = null; renderProfile(); $("#mailbox").scrollIntoView({block: "nearest"}); return; }
+    if (t.dataset.mailclose) { mailOpen = null; mailBusy = false; mailDraft = null; renderProfile(); return; }
+    if (t.dataset.mailask) { captureDraft(); mailBusy = "confirm"; renderProfile(); return; }
+    if (t.dataset.mailcancel) { mailBusy = false; renderProfile(); refreshPreview(); return; }
+    if (t.dataset.mailsend) { sendMail(); return; }
     if (t.dataset.done) { changeLog(t.dataset.done, false); return; }
     if (t.dataset.askdellog) { confirmDel = "log:" + t.dataset.askdellog; render(); return; }
     if (t.dataset.dellog) { changeLog(t.dataset.dellog, true); return; }
     if (t.id === "addBtn") { openDialog(null); return; }
     if (t.id === "copyPhones") { copyAll("phone"); return; }
     if (t.id === "copyMails") { copyAll("mail"); return; }
+  });
+  document.addEventListener("input", (ev) => {
+    if (ev.target.closest && ev.target.closest("#mailbox")) { captureDraft(); refreshPreview(); }
   });
   document.addEventListener("change", (ev) => {
     if (ev.target.id === "p-status" && contacts[current]) {
@@ -566,6 +684,9 @@ footer { color: var(--muted); font-size: 12.5px; }
     try { Object.assign(logs, JSON.parse(store.get("phomi-c-log") || "{}")); } catch (e) { /* празно */ }
     note("Записва се само в този браузър (няма връзка с базата).", true);
     renderFilters(); render();
+  }
+  if (window.claude && typeof window.claude.use === "function") {
+    Promise.resolve(window.claude.use("mcp")).then((ns) => { mcp = ns; }).catch(() => { mcp = null; });
   }
   const use = window.claude && typeof window.claude.use === "function" ? window.claude.use("db") : Promise.resolve(null);
   Promise.resolve(use).then((ns) => {
