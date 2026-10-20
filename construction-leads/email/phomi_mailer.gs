@@ -5,8 +5,8 @@
  * Скриптът праща имейла директно от Gmail – дизайнът, снимката и линковете остават непроменени
  * (Gmail конекторът на Claude трие снимките и пренасочва линковете, затова не минаваме през него).
  *
- * Снимки: качете в Google Drive на info@phomi.bg файловете phomi-email-hero.jpg (снимката горе) и
- * phomi-email-logo.png (логото). Ако снимката липсва в Drive, имейлът тръгва без снимка.
+ * Снимки: снимката на къщата и логото се теглят от IMG_BASE (папка email/img в репото).
+ * Ако в Google Drive има файлове phomi-email-hero.jpg / phomi-email-logo.png, те се ползват с предимство.
  */
 const KEY = "JPyiDWlI4wi4Foj71WRMDxci";              // същият ключ е в страницата – пази от случайни изпращания
 const SUBJECT = "PHOMI – материали за вашия проект";
@@ -36,8 +36,8 @@ function doGet(e) {
     phone: String(p.sphone || "+359 884 30 30 70").slice(0, 40),
   };
   const images = {};
-  const logo = driveImage_("phomi-email-logo.png");
-  const hero = driveImage_("phomi-email-hero.jpg");
+  const logo = driveImage_("phomi-email-logo.png") || urlImage_(IMG_BASE + "phomi-email-logo.png");
+  const hero = driveImage_("phomi-email-hero.jpg") || urlImage_(IMG_BASE + "phomi-email-hero.jpg");
   if (logo) images.logo = logo;
   if (hero) images.hero = hero;
   try {
@@ -46,6 +46,15 @@ function doGet(e) {
     return page_("Имейлът НЕ е изпратен", String(err), true);
   }
   return page_("✓ Имейлът е изпратен", "До: " + to + ". Можете да затворите този раздел.", false);
+}
+
+const IMG_BASE = "https://raw.githubusercontent.com/gnkirqkov14-dot/Trading-/claude/lucid-bell-kzypht/construction-leads/email/img/";
+
+function urlImage_(url) {
+  try {
+    const r = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    return r.getResponseCode() === 200 ? r.getBlob() : null;
+  } catch (err) { return null; }
 }
 
 function driveImage_(name) {
