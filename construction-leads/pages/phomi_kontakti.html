@@ -247,7 +247,9 @@ footer { color: var(--muted); font-size: 12.5px; }
   function lastAction(id) {
     const c = contacts[id];
     // добавянето на контакта не се брои – само нещата, които си направил с него
-    return [lastTalk(id), c.statusAt, c.emailSent, c.noteAt].filter(Boolean).sort().pop() || "";
+    // статус, сменен без записан час (от по-стара версия на страницата) – взима се часът на последната промяна
+    const statusTime = c.statusAt || (statusOf(c) !== "Не е звъняно" ? c.updated : "");
+    return [lastTalk(id), statusTime, c.emailSent, c.noteAt].filter(Boolean).sort().pop() || "";
   }
   function whenText(iso) {
     if (!iso) return {short: "—", long: "няма действие"};
