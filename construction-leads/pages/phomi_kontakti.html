@@ -1,0 +1,507 @@
+<title>PHOMI контакти</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: списък с контакти вляво, профил на избрания контакт вдясно (на телефон – профилът е отделен изглед) */
+:root {
+  --bg: #eef1f1; --surface: #ffffff; --surface-2: #f5f8f8; --ink: #1a2224; --muted: #5a676b; --line: #d5dcdd;
+  --accent: #0e6a70; --accent-ink: #ffffff; --accent-soft: #dcefef;
+  --warn: #c2410c; --ok: #3c7a36; --gold: #a86a12;
+  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
+  --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
+  --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
+  --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
+  --st-none: #232c2e; --st-try: #3a3220; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
+  --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
+  --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
+  --st-none: #232c2e; --st-try: #3a3220; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 48px; display: grid; gap: 12px; }
+header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; justify-content: space-between; }
+header h1 { font: 600 clamp(20px, 4vw, 26px)/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.save-note.warn { color: var(--warn); }
+.btn { font: 600 14px var(--font-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--warn); }
+.btn:disabled { opacity: .5; cursor: default; }
+.mini { font: 500 12px var(--font-body); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  border-radius: 6px; padding: 2px 8px; cursor: pointer; text-decoration: none; }
+.mini:hover { border-color: var(--accent); }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 14px;
+  font: 600 14px var(--font-body); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tab .n { font-weight: 500; opacity: .8; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.tab .n.over { background: var(--warn); color: var(--surface); border-radius: 999px; padding: 0 6px; opacity: 1; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; }
+.toolbar label, .form label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); min-width: 0; }
+input, select, textarea { font: 14px var(--font-body); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 7px; padding: 7px 9px; min-width: 0; width: 100%; }
+textarea { resize: vertical; }
+.toolbar .grow { flex: 1 1 220px; }
+.check { display: flex !important; align-items: center; gap: 6px !important; font-size: 14px !important; color: var(--ink) !important;
+  padding-bottom: 7px; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.count { color: var(--muted); font-size: 13px; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 14px; align-items: start; }
+.list { display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; cursor: pointer; text-align: left; color: var(--ink);
+  font: inherit; width: 100%; }
+.row:hover { border-color: var(--accent); }
+.row[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
+.row .nm { font-weight: 600; overflow-wrap: anywhere; }
+.row .sub { grid-column: 2 / 4; color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.row .sub .ph { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+.star { font-size: 18px; line-height: 1; color: var(--line); background: none; border: 0; cursor: pointer; padding: 2px; }
+.star[aria-pressed="true"] { color: var(--gold); }
+.chip { font-size: 11.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
+.due { color: var(--warn); font-weight: 600; }
+.profile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px;
+  position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 24px); overflow: auto; min-width: 0; }
+.profile h2 { margin: 0; font: 600 19px/1.25 var(--font-display); overflow-wrap: anywhere; text-wrap: balance; }
+.phead { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; }
+.meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.back { display: none; }
+.lines { display: grid; gap: 5px; }
+.line { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
+.val { font-family: var(--font-mono); font-size: 14px; user-select: all; overflow-wrap: anywhere; min-width: 0; }
+.note { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.status-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; border-top: 1px dashed var(--line); padding-top: 10px; }
+.status-row label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); flex: 1 1 200px; }
+section h3 { margin: 0 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.entry { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 8px 10px; display: grid; gap: 3px;
+  background: var(--surface-2); min-width: 0; }
+.entry.over { border-left-color: var(--warn); } .entry.done { opacity: .6; }
+.entry .em { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.entry .said { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry .nx { font-weight: 600; } .entry.over .nx { color: var(--warn); }
+.log { display: grid; gap: 6px; }
+.form { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }
+.form label { flex: 1 1 200px; }
+.form label.wide { flex-basis: 100%; }
+.form label.short { flex: 0 1 170px; }
+.form .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.msg { font-size: 12.5px; color: var(--muted); min-height: 1em; }
+.msg.err { color: var(--warn); }
+.empty { color: var(--muted); text-align: center; padding: 30px 12px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
+.confirm { background: var(--st-try); border-radius: 8px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); width: min(640px, calc(100% - 32px));
+  padding: 16px; }
+dialog::backdrop { background: rgba(0, 0, 0, .35); }
+dialog h2 { margin: 0 0 10px; font: 600 18px var(--font-display); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+footer { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 860px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .main.showing .list-col { display: none; }
+  .main:not(.showing) .profile { display: none; }
+  .profile { position: static; max-height: none; }
+  .back { display: inline-block; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>PHOMI контакти</h1>
+      <p class="save-note" id="saveNote">Контактите се зареждат…</p>
+    </div>
+    <button class="btn primary" id="addBtn" type="button">+ Нов контакт</button>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="all" aria-selected="true">Контакти<span class="n" id="nAll">0</span></button>
+    <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
+    <button class="tab" role="tab" data-tab="rem" aria-selected="false">Напомняния<span class="n" id="nRem">0</span></button>
+  </nav>
+
+  <div class="toolbar" role="search">
+    <label class="grow" for="q">Търсене (фирма, лице, телефон, бележка)
+      <input type="search" id="q" placeholder="напр. Студио, Каменица, 088…" autocomplete="off"></label>
+    <label for="city">Град
+      <select id="city"><option value="">Всички</option></select></label>
+    <label for="kind">Вид
+      <select id="kind"><option value="">Всички</option></select></label>
+    <label for="stf">Статус
+      <select id="stf"><option value="">Всички</option></select></label>
+  </div>
+
+  <div class="bar">
+    <span class="count" id="count"></span>
+    <span class="line">
+      <button class="mini" id="copyPhones" type="button">Копирай телефоните на показаните</button>
+      <button class="mini" id="copyMails" type="button">Копирай имейлите на показаните</button>
+      <span class="msg" id="bulkMsg"></span>
+    </span>
+  </div>
+
+  <div class="main" id="main">
+    <div class="list-col"><div class="list" id="list"></div></div>
+    <aside class="profile" id="profile" aria-live="polite"></aside>
+  </div>
+
+  <footer>Всичко, което пишеш тук, се записва автоматично и се вижда на всичките ти устройства.</footer>
+</div>
+
+<dialog id="contactDlg">
+  <form id="contactForm" class="form" method="dialog">
+    <h2 id="dlgTitle" style="flex-basis:100%">Нов контакт</h2>
+    <label class="wide" for="f-name">Фирма / бюро *<input id="f-name" required autocomplete="off"></label>
+    <label for="f-kind">Вид<select id="f-kind"></select></label>
+    <label for="f-city">Град<input id="f-city" list="cityList" autocomplete="off" placeholder="Пловдив"></label>
+    <label for="f-person">Лице за контакт<input id="f-person" autocomplete="off"></label>
+    <label for="f-phones">Телефон(и) – със запетая<input id="f-phones" autocomplete="off" placeholder="+359 88 123 4567"></label>
+    <label for="f-emails">Имейл(и) – със запетая<input id="f-emails" autocomplete="off"></label>
+    <label for="f-site">Сайт<input id="f-site" autocomplete="off" placeholder="https://"></label>
+    <label class="wide" for="f-address">Адрес<input id="f-address" autocomplete="off"></label>
+    <label class="wide" for="f-note">Бележка (обект, откъде е контактът)<textarea id="f-note" rows="2"></textarea></label>
+    <div class="actions" style="flex-basis:100%">
+      <button class="btn primary" id="saveContact" type="submit">Запази</button>
+      <button class="btn" id="cancelContact" type="button">Откажи</button>
+      <span class="msg" id="formMsg"></span>
+    </div>
+  </form>
+</dialog>
+<datalist id="cityList"></datalist>
+
+<script>
+(function () {
+  "use strict";
+  const STATUSES = ["Не е звъняно", "Звъннато – няма отговор", "Разговор – интерес", "Уговорена среща", "Проведена среща",
+                    "Изпратена оферта", "Не се интересува", "Грешен номер"];
+  const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Разговор – интерес": "--st-int",
+                 "Уговорена среща": "--st-meet", "Проведена среща": "--st-meet", "Изпратена оферта": "--st-offer",
+                 "Не се интересува": "--st-no", "Грешен номер": "--st-no"};
+  const KINDS = ["Архитект", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
+  const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед"];
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* без запомняне */ } } };
+  const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const fmtDay = (iso) => iso ? iso.slice(8, 10) + "." + iso.slice(5, 7) + "." + iso.slice(0, 4) : "";
+  const fmtAt = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("bg-BG", {day: "2-digit", month: "2-digit", year: "numeric"}) +
+    " " + d.toLocaleTimeString("bg-BG", {hour: "2-digit", minute: "2-digit"}); };
+  const split = (v) => String(v || "").split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+
+  const contacts = {}, logs = {};
+  let db = null, mode = "loading", readOnly = false, loaded = false;
+  let tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null;
+
+  $("#stf").innerHTML += STATUSES.map((s) => `<option>${esc(s)}</option>`).join("");
+  $("#kind").innerHTML += KINDS.map((s) => `<option>${esc(s)}</option>`).join("");
+  $("#f-kind").innerHTML = KINDS.map((s) => `<option>${esc(s)}</option>`).join("");
+
+  // ---------- изчисления ----------
+  const statusOf = (c) => c.status || "Не е звъняно";
+  function entriesFor(id) { return Object.keys(logs).filter((k) => logs[k].contact === id).sort((a, b) => (logs[b].at || "").localeCompare(logs[a].at || "")); }
+  function openSteps() { return Object.keys(logs).filter((k) => !logs[k].done && (logs[k].next || logs[k].due) && contacts[logs[k].contact])
+    .sort((a, b) => (logs[a].due || "9999").localeCompare(logs[b].due || "9999")); }
+  function nextDue(id) { const d = entriesFor(id).map((k) => logs[k]).filter((e) => !e.done && e.due).map((e) => e.due).sort(); return d[0] || ""; }
+  function lastTalk(id) { const e = entriesFor(id)[0]; return e ? logs[e].at : ""; }
+
+  function matches(id) {
+    const c = contacts[id], q = $("#q").value.trim().toLowerCase();
+    if (tab === "pick" && !c.pick) return false;
+    if ($("#city").value && c.city !== $("#city").value) return false;
+    if ($("#kind").value && c.kind !== $("#kind").value) return false;
+    if ($("#stf").value && statusOf(c) !== $("#stf").value) return false;
+    if (!q) return true;
+    const hay = [c.name, c.person, c.city, c.kind, c.address, c.note, c.website, (c.phones || []).join(" "),
+                 (c.phones || []).join(" ").replace(/\s/g, ""), (c.emails || []).join(" "),
+                 entriesFor(id).map((k) => [logs[k].who, logs[k].said, logs[k].next].join(" ")).join(" ")].join(" ").toLowerCase();
+    return q.split(/\s+/).every((w) => hay.includes(w));
+  }
+  function shown() {
+    return Object.keys(contacts).filter(matches).sort((a, b) => {
+      const A = contacts[a], B = contacts[b];
+      return (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.order ?? 999) - (B.order ?? 999) || (A.name || "").localeCompare(B.name || "", "bg");
+    });
+  }
+
+  // ---------- изглед ----------
+  function renderFilters() {
+    const cities = [...new Set(Object.values(contacts).map((c) => c.city).filter(Boolean))].sort();
+    const cur = $("#city").value;
+    $("#city").innerHTML = '<option value="">Всички</option>' + cities.map((c) => `<option${c === cur ? " selected" : ""}>${esc(c)}</option>`).join("");
+    $("#cityList").innerHTML = cities.map((c) => `<option value="${esc(c)}">`).join("");
+  }
+  function renderTabs() {
+    const ids = Object.keys(contacts), rem = openSteps(), over = rem.filter((k) => logs[k].due && logs[k].due <= today()).length;
+    $("#nAll").textContent = ids.length;
+    $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
+    $("#nRem").textContent = over ? over + " за днес" : rem.length;
+    $("#nRem").classList.toggle("over", !!over);
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
+  }
+
+  function rowHtml(id) {
+    const c = contacts[id], st = statusOf(c), due = nextDue(id), last = lastTalk(id);
+    return `<button class="row" type="button" data-open="${esc(id)}" aria-current="${id === current}">
+      <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
+      <span class="nm">${esc(c.name)}</span>
+      <span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}</span>
+      <span class="sub">${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
+        ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}
+        ${due ? `<span class="${due <= today() ? "due" : ""}">следва до ${esc(fmtDay(due))}</span>` : last ? `<span>последно ${esc(fmtAt(last).slice(0, 10))}</span>` : ""}</span>
+    </button>`;
+  }
+
+  function entryHtml(k, withName) {
+    const e = logs[k], c = contacts[e.contact] || {}, over = !e.done && e.due && e.due <= today();
+    return `<div class="entry${over ? " over" : ""}${e.done ? " done" : ""}">
+      ${withName ? `<div class="line"><button class="mini" type="button" data-open="${esc(e.contact)}">${esc(c.name || "—")}</button>
+        ${(c.phones || [])[0] ? `<span class="val">${esc(c.phones[0])}</span>` : ""}</div>` : ""}
+      <div class="em"><b>${esc(fmtAt(e.at))}</b>${e.kind ? `<span>${esc(e.kind)}</span>` : ""}${e.who ? `<span>с: ${esc(e.who)}</span>` : ""}</div>
+      ${e.said ? `<div class="said">${esc(e.said)}</div>` : ""}
+      ${e.next || e.due ? `<div class="nx">Следва: ${esc(e.next || "обаждане")}${e.due ? " · до " + esc(fmtDay(e.due)) : ""}${e.done ? " · ✓ готово" : ""}</div>` : ""}
+      ${readOnly ? "" : `<div class="em">${(e.next || e.due) && !e.done ? `<button class="mini" type="button" data-done="${esc(k)}">Готово</button>` : ""}
+        ${confirmDel === "log:" + k ? `<span class="confirm">Да изтрия ли записа? <button class="mini" type="button" data-dellog="${esc(k)}">Да, изтрий</button>
+          <button class="mini" type="button" data-cancel="1">Не</button></span>` : `<button class="mini" type="button" data-askdellog="${esc(k)}">Изтрий</button>`}</div>`}
+    </div>`;
+  }
+
+  function profileHtml() {
+    const c = contacts[current];
+    if (!c) {
+      const n = Object.keys(contacts).length;
+      return `<p class="empty">${!loaded ? "Контактите се зареждат…" : n ? "Избери контакт от списъка, за да видиш профила му и да запишеш разговор."
+        : "Още няма контакти. Натисни „+ Нов контакт“, за да добавиш първия."}</p>`;
+    }
+    const st = statusOf(c), ents = entriesFor(current);
+    const phones = (c.phones || []).map((p) => `<div class="line"><span class="val">${esc(p)}</span>
+      <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}">Обади се</a><button class="mini" type="button" data-copy="${esc(p)}">Копирай</button></div>`).join("");
+    const emails = (c.emails || []).map((m) => `<div class="line"><span class="val">${esc(m)}</span>
+      <a class="mini" href="mailto:${esc(m)}">Пиши</a><button class="mini" type="button" data-copy="${esc(m)}">Копирай</button></div>`).join("");
+    const site = c.website ? `<div class="line"><a href="${esc(c.website)}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></div>` : "";
+    return `
+      <button class="btn back" type="button" data-back="1">← Към списъка</button>
+      <div class="phead">
+        <button class="star" type="button" data-star="${esc(current)}" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран" style="font-size:24px">★</button>
+        <div><h2>${esc(c.name)}</h2>
+          <div class="meta">${c.kind ? `<span>${esc(c.kind)}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.person ? `<span>Лице: ${esc(c.person)}</span>` : ""}</div></div>
+      </div>
+      <div class="lines">${phones}${emails}${site}${c.address ? `<div class="meta">${esc(c.address)}</div>` : ""}</div>
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
+      <div class="status-row">
+        <label for="p-status">Статус<select id="p-status" ${readOnly ? "disabled" : ""}>${STATUSES.map((s) => `<option${s === st ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+        ${readOnly ? "" : `<button class="btn" type="button" data-edit="1">Редактирай</button>`}
+        ${readOnly ? "" : confirmDel === "c:" + current ? `<span class="confirm">Да изтрия ли контакта и дневника му?
+          <button class="mini" type="button" data-delcontact="1">Да, изтрий</button><button class="mini" type="button" data-cancel="1">Не</button></span>`
+          : `<button class="btn danger" type="button" data-askdel="1">Изтрий</button>`}
+      </div>
+      ${readOnly ? "" : `<section>
+        <h3>Запиши разговор</h3>
+        <div class="form" id="logForm">
+          <label class="short" for="l-kind">Вид<select id="l-kind">${LOG_KINDS.map((k) => `<option>${k}</option>`).join("")}</select></label>
+          <label for="l-who">С кого говорих<input id="l-who" autocomplete="off" value="${esc(c.person ? split(c.person)[0] : "")}"></label>
+          <label class="wide" for="l-said">Какво се разбрахме<textarea id="l-said" rows="3" placeholder="напр. проектират 2 жилищни сгради в Тракия, фасадата се решава през януари, искат мостри"></textarea></label>
+          <label for="l-next">Следваща стъпка<input id="l-next" autocomplete="off" placeholder="напр. среща в офиса, мостри, оферта"></label>
+          <label class="short" for="l-due">До кога<input type="date" id="l-due"></label>
+          <div class="actions"><button class="btn primary" type="button" data-addlog="1">Запази разговора</button><span class="msg" id="logMsg"></span></div>
+        </div>
+      </section>`}
+      <section>
+        <h3>Дневник${ents.length ? ` (${ents.length})` : ""}</h3>
+        <div class="log">${ents.length ? ents.map((k) => entryHtml(k, false)).join("") : `<p class="meta">Още няма записани разговори.</p>`}</div>
+      </section>`;
+  }
+
+  function renderList() {
+    if (tab === "rem") {
+      const keys = openSteps().filter((k) => { const q = $("#q").value.trim().toLowerCase(); const e = logs[k];
+        return !q || [contacts[e.contact].name, e.who, e.said, e.next].join(" ").toLowerCase().includes(q); });
+      $("#count").textContent = `${keys.length} отворени следващи стъпки`;
+      $("#list").innerHTML = keys.length ? keys.map((k) => entryHtml(k, true)).join("")
+        : `<p class="empty">Няма отворени стъпки. Запиши разговор със „Следваща стъпка“ и дата – ще се появи тук.</p>`;
+      return;
+    }
+    const ids = shown();
+    $("#count").textContent = `Показани ${ids.length} от ${Object.keys(contacts).length} контакта`;
+    $("#list").innerHTML = ids.length ? ids.map(rowHtml).join("") :
+      `<p class="empty">${!loaded ? "Контактите се зареждат…" : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
+  }
+  function renderProfile() {
+    // не пипаме формата за разговор, докато се пише в нея
+    const a = document.activeElement;
+    if (a && a.closest && a.closest("#logForm") && contacts[current]) return;
+    $("#profile").innerHTML = profileHtml();
+  }
+  function render() { renderTabs(); renderList(); renderProfile(); $("#main").classList.toggle("showing", !!contacts[current] && narrowShow); }
+  let narrowShow = false;
+
+  // ---------- запис ----------
+  function note(text, err) { const el = $("#saveNote"); el.textContent = text; el.classList.toggle("warn", !!err); }
+  function fail(e, where) {
+    const t = e && e.code === "invalid_argument" ? "Нямате право да записвате тук." : e && e.code === "quota_exceeded" ? "Базата е пълна – не е записано."
+      : "Не е записано – опитайте пак след малко.";
+    if (where) { where.textContent = t; where.classList.add("err"); } else note(t, true);
+    if (e && e.code === "invalid_argument") { readOnly = true; render(); }
+  }
+  function persistLocal() { store.set("phomi-c-contacts", JSON.stringify(contacts)); store.set("phomi-c-log", JSON.stringify(logs)); }
+  const pending = {};
+  function saveContact(id, patch) {
+    contacts[id] = Object.assign({}, contacts[id], patch, {updated: new Date().toISOString()});
+    render();
+    if (mode === "local") { persistLocal(); return Promise.resolve(); }
+    if (!db || readOnly) return Promise.resolve();
+    const body = contacts[id];
+    pending[id] = (pending[id] || Promise.resolve()).then(() => db.doc("contacts/" + id).set(body)).catch((e) => fail(e));
+    return pending[id];
+  }
+
+  function openDialog(id) {
+    editing = id || null;
+    const c = id ? contacts[id] : {kind: "Архитект", city: $("#city").value || "Пловдив"};
+    $("#dlgTitle").textContent = id ? "Редактирай контакт" : "Нов контакт";
+    $("#f-name").value = c.name || ""; $("#f-kind").value = c.kind || "Друго"; $("#f-city").value = c.city || "";
+    $("#f-person").value = c.person || ""; $("#f-phones").value = (c.phones || []).join(", ");
+    $("#f-emails").value = (c.emails || []).join(", "); $("#f-site").value = c.website || "";
+    $("#f-address").value = c.address || ""; $("#f-note").value = c.note || "";
+    $("#formMsg").textContent = "";
+    try { $("#contactDlg").showModal(); } catch (e) { $("#contactDlg").setAttribute("open", ""); }
+    $("#f-name").focus();
+  }
+  $("#contactForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const name = $("#f-name").value.trim();
+    if (!name) { $("#formMsg").textContent = "Напиши името на фирмата."; $("#formMsg").classList.add("err"); return; }
+    let site = $("#f-site").value.trim();
+    if (site && !/^https?:\/\//.test(site)) site = "https://" + site;
+    const patch = {name, kind: $("#f-kind").value, city: $("#f-city").value.trim(), person: $("#f-person").value.trim(),
+                   phones: split($("#f-phones").value), emails: split($("#f-emails").value), website: site,
+                   address: $("#f-address").value.trim(), note: $("#f-note").value.trim()};
+    const id = editing || "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    if (!editing) Object.assign(patch, {status: "Не е звъняно", pick: false, created: new Date().toISOString(), source: "добавен ръчно"});
+    current = id; store.set("phomi-c-current", id); narrowShow = true;
+    $("#contactDlg").close();
+    saveContact(id, patch).then(() => note(editing ? "Контактът е обновен." : "Контактът е добавен."));
+    renderFilters();
+  });
+  $("#cancelContact").addEventListener("click", () => $("#contactDlg").close());
+
+  function addLog() {
+    const val = (s) => ($(s) ? $(s).value.trim() : "");
+    const body = {contact: current, kind: val("#l-kind"), who: val("#l-who"), said: val("#l-said"), next: val("#l-next"),
+                  due: val("#l-due"), done: false, at: new Date().toISOString()};
+    const msg = $("#logMsg");
+    if (!body.said && !body.next && !body.due) { msg.textContent = "Напиши какво се разбрахте или следващата стъпка."; msg.classList.add("err"); return; }
+    // статусът се вдига сам, ако още е „Не е звъняно“
+    const c = contacts[current];
+    if (statusOf(c) === "Не е звъняно") saveContact(current, {status: body.kind === "Среща" ? "Проведена среща" : "Разговор – интерес"});
+    if (mode === "local") { logs["l" + Date.now()] = body; persistLocal(); document.activeElement.blur(); render(); return; }
+    if (!db || readOnly) return;
+    msg.textContent = "Запазване…"; msg.classList.remove("err");
+    db.collection("log").add(body).then(() => { document.activeElement && document.activeElement.blur(); renderProfile(); note("Разговорът е записан."); })
+      .catch((e) => fail(e, msg));
+  }
+  function changeLog(k, del) {
+    if (mode === "local") { if (del) delete logs[k]; else logs[k].done = true; persistLocal(); confirmDel = null; render(); return; }
+    if (!db || readOnly) return;
+    confirmDel = null;
+    (del ? db.doc("log/" + k).delete() : db.doc("log/" + k).update({done: true})).catch((e) => fail(e));
+  }
+  function deleteContact(id) {
+    const ks = entriesFor(id);
+    confirmDel = null; narrowShow = false;
+    if (mode === "local") { delete contacts[id]; ks.forEach((k) => delete logs[k]); persistLocal(); current = ""; render(); return; }
+    if (!db || readOnly) return;
+    current = "";
+    Promise.all([db.doc("contacts/" + id).delete(), ...ks.map((k) => db.doc("log/" + k).delete())])
+      .then(() => note("Контактът е изтрит.")).catch((e) => fail(e));
+  }
+
+  function copy(text, btn) {
+    const ok = () => { if (btn) { const t = btn.textContent; btn.textContent = "Копирано"; setTimeout(() => { btn.textContent = t; }, 1400); } };
+    try { navigator.clipboard.writeText(text).then(ok, () => { $("#bulkMsg").textContent = text; }); } catch (e) { $("#bulkMsg").textContent = text; }
+  }
+  function copyAll(kind) {
+    const ids = tab === "rem" ? [...new Set(openSteps().map((k) => logs[k].contact))] : shown();
+    const vals = [...new Set(ids.flatMap((i) => (kind === "mail" ? contacts[i].emails : contacts[i].phones) || []))];
+    if (!vals.length) { $("#bulkMsg").textContent = "Няма какво да се копира."; return; }
+    const text = vals.join(kind === "mail" ? ", " : "\n");
+    try { navigator.clipboard.writeText(text).then(() => { $("#bulkMsg").textContent = `Копирани ${vals.length} ${kind === "mail" ? "имейла" : "телефона"}.`; },
+      () => { $("#bulkMsg").textContent = text; }); } catch (e) { $("#bulkMsg").textContent = text; }
+  }
+
+  // ---------- събития ----------
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest("[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    if (!t) return;
+    if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
+    if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
+    if (t.dataset.open) { current = t.dataset.open; store.set("phomi-c-current", current); confirmDel = null; narrowShow = true; render();
+      if (window.matchMedia("(max-width: 860px)").matches) window.scrollTo({top: 0}); return; }
+    if (t.dataset.back) { narrowShow = false; render(); return; }
+    if (t.dataset.copy) { copy(t.dataset.copy, t); return; }
+    if (t.dataset.edit) { openDialog(current); return; }
+    if (t.dataset.askdel) { confirmDel = "c:" + current; renderProfile(); return; }
+    if (t.dataset.delcontact) { deleteContact(current); return; }
+    if (t.dataset.cancel) { confirmDel = null; render(); return; }
+    if (t.dataset.addlog) { addLog(); return; }
+    if (t.dataset.done) { changeLog(t.dataset.done, false); return; }
+    if (t.dataset.askdellog) { confirmDel = "log:" + t.dataset.askdellog; render(); return; }
+    if (t.dataset.dellog) { changeLog(t.dataset.dellog, true); return; }
+    if (t.id === "addBtn") { openDialog(null); return; }
+    if (t.id === "copyPhones") { copyAll("phone"); return; }
+    if (t.id === "copyMails") { copyAll("mail"); return; }
+  });
+  document.addEventListener("change", (ev) => {
+    if (ev.target.id === "p-status" && contacts[current]) saveContact(current, {status: ev.target.value});
+  });
+  ["#q", "#city", "#kind", "#stf"].forEach((s) => $(s).addEventListener("input", renderList));
+
+  render();
+
+  // ---------- база ----------
+  function goLocal() {
+    mode = "local"; loaded = true;
+    try { Object.assign(contacts, JSON.parse(store.get("phomi-c-contacts") || "{}")); } catch (e) { /* празно */ }
+    try { Object.assign(logs, JSON.parse(store.get("phomi-c-log") || "{}")); } catch (e) { /* празно */ }
+    note("Записва се само в този браузър (няма връзка с базата).", true);
+    renderFilters(); render();
+  }
+  const use = window.claude && typeof window.claude.use === "function" ? window.claude.use("db") : Promise.resolve(null);
+  Promise.resolve(use).then((ns) => {
+    if (!ns) { goLocal(); return; }
+    db = ns; mode = "db";
+    const lost = () => note("Връзката с базата прекъсна – презаредете страницата.", true);
+    db.collection("contacts").onSnapshot((snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") delete contacts[ch.doc.id];
+        else contacts[ch.doc.id] = Object.assign({}, ch.doc.data());
+      });
+      if (!loaded) note("Всичко се записва автоматично и се вижда на всичките ви устройства.");
+      loaded = true;
+      renderFilters(); render();
+    }, lost);
+    db.collection("log").onSnapshot((snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") delete logs[ch.doc.id];
+        else logs[ch.doc.id] = Object.assign({}, ch.doc.data());
+      });
+      render();
+    }, lost);
+  }).catch(goLocal);
+})();
+</script>
