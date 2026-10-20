@@ -27,8 +27,47 @@ const LINKS = {
 function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.key !== KEY) return page_("Невалиден линк", "Отворете изпращането от „PHOMI контакти“.", true);
+  try {
+    const to = sendPhomi_(p);
+    return page_("✓ Имейлът е изпратен", "До: " + to + ". Можете да затворите този раздел.", false);
+  } catch (err) {
+    return page_("Имейлът НЕ е изпратен", String(err.message || err), true);
+  }
+}
+
+/** „PHOMI контакти“ праща заявка до info@phomi.bg с тема [PHOMI-MAIL]; този скрипт я поема (тригер на всяка минута). */
+const QUEUE_TAG = "[PHOMI-MAIL]";
+function processQueue() {
+  const threads = GmailApp.search('subject:"' + QUEUE_TAG + '" is:unread newer_than:2d', 0, 20);
+  threads.forEach((t) => {
+    t.getMessages().forEach((m) => {
+      if (!m.isUnread()) return;
+      m.markRead();
+      try {
+        const body = m.getPlainBody().replace(/\r?\n/g, "");
+        const json = (body.match(/<<<(\{.*?\})>>>/) || [])[1];
+        const p = JSON.parse(json || "{}");
+        if (p.key !== KEY) throw new Error("невалиден ключ");
+        sendPhomi_(p);
+      } catch (err) {
+        console.error("PHOMI заявка: " + err);
+      }
+    });
+    t.moveToTrash();
+  });
+}
+
+/** Пусни веднъж: включва проверката на заявките на всяка минута. */
+function setupTrigger() {
+  ScriptApp.getProjectTriggers().forEach((tr) => {
+    if (tr.getHandlerFunction() === "processQueue") ScriptApp.deleteTrigger(tr);
+  });
+  ScriptApp.newTrigger("processQueue").timeBased().everyMinutes(1).create();
+}
+
+function sendPhomi_(p) {
   const to = String(p.to || "").trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return page_("Липсва имейл", "Няма валиден имейл адрес на получателя.", true);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw new Error("Няма валиден имейл адрес на получателя.");
   const v = {
     greeting: String(p.greeting || "Здравейте,").slice(0, 120),
     opener: OPENERS[p.opener] || OPENERS.interest,
@@ -40,12 +79,8 @@ function doGet(e) {
   const hero = driveImage_("phomi-email-hero.jpg") || urlImage_(IMG_BASE + "phomi-email-hero.jpg");
   if (logo) images.logo = logo;
   if (hero) images.hero = hero;
-  try {
-    GmailApp.sendEmail(to, SUBJECT, plain_(v), {htmlBody: html_(v, !!logo, !!hero), inlineImages: images, name: FROM_NAME});
-  } catch (err) {
-    return page_("Имейлът НЕ е изпратен", String(err), true);
-  }
-  return page_("✓ Имейлът е изпратен", "До: " + to + ". Можете да затворите този раздел.", false);
+  GmailApp.sendEmail(to, SUBJECT, plain_(v), {htmlBody: html_(v, !!logo, !!hero), inlineImages: images, name: FROM_NAME});
+  return to;
 }
 
 const IMG_BASE = "https://raw.githubusercontent.com/gnkirqkov14-dot/Trading-/claude/lucid-bell-kzypht/construction-leads/email/img/";
