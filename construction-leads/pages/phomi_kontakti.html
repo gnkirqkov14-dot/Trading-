@@ -246,7 +246,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   // последно действие: запис в дневника, смяна на статус, изпратен имейл или добавяне на контакта
   function lastAction(id) {
     const c = contacts[id];
-    return [lastTalk(id), c.statusAt, c.emailSent, c.created].filter(Boolean).sort().pop() || "";
+    return [lastTalk(id), c.statusAt, c.emailSent, c.noteAt, c.created].filter(Boolean).sort().pop() || "";
   }
   function whenText(iso) {
     if (!iso) return {short: "—", long: "няма действие"};
@@ -441,6 +441,8 @@ footer { color: var(--muted); font-size: 12.5px; }
                    address: $("#f-address").value.trim(), note: $("#f-note").value.trim()};
     const id = editing || "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     if (!editing) Object.assign(patch, {status: "Не е звъняно", pick: false, created: new Date().toISOString(), source: "добавен ръчно"});
+    // промяна в бележката се брои за последно действие
+    else if ((contacts[editing].note || "") !== patch.note) patch.noteAt = new Date().toISOString();
     current = id; store.set("phomi-c-current", id); narrowShow = true;
     $("#contactDlg").close();
     saveContact(id, patch).then(() => note(editing ? "Контактът е обновен." : "Контактът е добавен."));
