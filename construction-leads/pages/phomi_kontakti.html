@@ -606,7 +606,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     try {
       // със свързан скрипт: заявка до info@phomi.bg, скриптът я поема до минута и праща имейла с дизайна и снимките
       if (mailerUrl) await mcp.callTool("Gmail", "send_message", {to: ["info@phomi.bg"], subject: MAIL_QUEUE + " " + v.to,
-        body: "<<<" + JSON.stringify({key: MAILER_KEY, to: v.to, greeting: v.greeting, opener, sname: v.name, sphone: v.phone}) + ">>>"});
+        body: "Служебна заявка от „PHOMI контакти“ – не я пипайте, скриптът праща имейла до " + v.to + " и я изтрива до минута.\n\n<<<" + JSON.stringify({key: MAILER_KEY, to: v.to, greeting: v.greeting, opener, sname: v.name, sphone: v.phone}) + ">>>"});
       else await mcp.callTool("Gmail", "send_message", {to: [v.to], subject: MAIL_SUBJECT, htmlBody: fillMail(v), body: mailText(v)});
       mailBusy = false; mailOpen = null; mailDraft = null;
       const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
