@@ -38,13 +38,12 @@ function doGet(e) {
 /** „PHOMI контакти“ праща заявка до info@phomi.bg с тема [PHOMI-MAIL]; този скрипт я поема (тригер на всяка минута). */
 const QUEUE_TAG = "[PHOMI-MAIL]";
 function processQueue() {
-  const threads = GmailApp.search('subject:"' + QUEUE_TAG + '" is:unread newer_than:2d', 0, 20);
+  // заявките са пратени от info@phomi.bg до самия него, затова Gmail ги води прочетени – след обработка отиват в кошчето
+  const threads = GmailApp.search('subject:"' + QUEUE_TAG + '" -in:trash newer_than:2d', 0, 20);
   threads.forEach((t) => {
     t.getMessages().forEach((m) => {
-      if (!m.isUnread()) return;
-      m.markRead();
       try {
-        const body = m.getPlainBody().replace(/\r?\n/g, "");
+        const body = m.getPlainBody().replace(/\r?\n/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
         const json = (body.match(/<<<(\{.*?\})>>>/) || [])[1];
         const p = JSON.parse(json || "{}");
         if (p.key !== KEY) throw new Error("невалиден ключ");
