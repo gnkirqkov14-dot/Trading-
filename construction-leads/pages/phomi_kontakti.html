@@ -244,7 +244,8 @@ footer { color: var(--muted); font-size: 12.5px; }
   const contacts = {}, logs = {};
   let db = null, mode = "loading", readOnly = false, loaded = false;
   let tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null, mailOpen = null, mailBusy = false, mailDraft = null;
-  let mcp = null;
+  let mcp = null, mailerUrl = "";
+  const MAILER_KEY = "JPyiDWlI4wi4Foj71WRMDxci";  // същият ключ е в email/phomi_mailer.gs
 
   $("#stf").innerHTML += STATUSES.map((s) => `<option>${esc(s)}</option>`).join("");
   $("#kind").innerHTML += KINDS.map((s) => `<option>${esc(s)}</option>`).join("");
@@ -524,6 +525,31 @@ footer { color: var(--muted); font-size: 12.5px; }
     return {to: val("#m-to"), greeting: val("#m-greet") || "Здравейте,", opener: OPENERS[val("#m-open")] || OPENERS.interest,
             name: val("#m-name"), phone: val("#m-phone"), email: "info@phomi.bg"};
   }
+  // Версия през Google Apps Script (email/phomi_mailer.gs): твоят дизайн и чисти линкове
+  function scriptHtml(v) {
+    const teal = "#007F8B", e = (x) => esc(x);
+    const link = (t) => `<span style="color:${teal};font-weight:700;text-decoration:underline">${t}</span>`;
+    const p = (t) => `<p style="margin:0 0 14px 0;font-weight:700">${t}</p>`;
+    return `<div style="background:#f2f4f4;padding:20px 10px;font-family:Arial,Helvetica,sans-serif;color:#1d2526">
+      <div style="max-width:600px;margin:0 auto;background:#fff">
+      <div style="text-align:center;padding:24px 24px 6px"><div style="font-size:24px;font-weight:800;letter-spacing:4px">PHOMI</div><div style="font-size:10px;color:#888">(логото от твоя шаблон)</div></div>
+      <div style="text-align:center;font-size:21px;font-weight:700;padding:4px 24px 16px">PHOMI за вашите проекти</div>
+      <div style="padding:22px 28px 4px;font-size:15px;line-height:23px">
+      <p style="margin:0 0 14px 0;font-weight:700;color:${teal}">${e(v.greeting)}</p>${p(e(v.opener))}
+      ${p("Визия на камък, дърво или бетон. Тънка и лека минерална облицовка с дебелина около 3–4 мм и тегло около 4 кг/м².")}
+      ${p("PHOMI е изцяло натурален и екологичен материал, изработен от кварцов пясък и глина. PHOMI eCovering дава свобода при оформянето на фасади и интериори: разнообразни текстури и формати, ниско тегло и решения за прави и извити повърхности.")}
+      ${p("Монтажът е изключително лесен: облицовката се залепва с циментово лепило към подготвената фасада. Материалът е UV защитен, удароустойчив и мразоустойчив, с клас на реакция на огън A1 или A2 според модела. Предлага се с 10-годишна гаранция и експлоатационен живот над 50 години според проведените тестове.")}</div>
+      <div style="text-align:center;font-size:15px;line-height:26px;padding:0 24px">${link("Каталог eCovering 2026")} | ${link("Ценоразпис")}<br>${link("Сертификати и технически документи")} | ${link("Реализирани проекти")}</div>
+      <div style="text-align:center;font-size:12px;font-weight:700;color:#4b5658;padding:8px 24px">Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.</div>
+      <div style="padding:16px 28px 4px;font-size:15px;line-height:23px">${p("Имате ли проект, за който търсите подобна визия?")}${p("Изпратете ми снимка или чертеж, за да обсъдим подходящите модели. Можете да видите текстурите и мострите на живо в " + link("шоурумите ни в София и Пловдив") + ".")}</div>
+      <div style="padding:14px 28px 24px;font-size:14px;line-height:21px;border-top:1px solid #e3e8e8">Поздрави,<br><b>${e(v.name || "PHOMI България")}</b><br>PHOMI България<br><span style="color:${teal};font-weight:700">info@phomi.bg · ${e(v.phone || "+359 884 30 30 70")}</span><br>${link("phomi.bg")}</div>
+      </div></div>`;
+  }
+  function scriptLink(v) {
+    const q = new URLSearchParams({key: MAILER_KEY, to: v.to, greeting: v.greeting, opener: $("#m-open") ? $("#m-open").value : "interest",
+                                   sname: v.name, sphone: v.phone});
+    return mailerUrl + (mailerUrl.includes("?") ? "&" : "?") + q.toString();
+  }
   function mailPanel(c) {
     const s = sender(), fn = firstName(c), d = mailDraft || {};
     return `<section class="mailbox" id="mailbox">
@@ -535,11 +561,17 @@ footer { color: var(--muted); font-size: 12.5px; }
         <label for="m-name">Подпис – име<input id="m-name" value="${esc(d.name ?? s.name ?? "")}" placeholder="напр. Станислав Каадан" autocomplete="off"></label>
         <label for="m-phone">Подпис – телефон<input id="m-phone" value="${esc(d.phone ?? s.phone ?? "+359 884 30 30 70")}" autocomplete="off"></label>
       </div>
-      <p class="meta">Тема: „${esc(MAIL_SUBJECT)}“ · изпраща се от вашия Gmail, свързан с Claude.</p>
+      <p class="meta">Тема: „${esc(MAIL_SUBJECT)}“ · ${mailerUrl ? "изпраща се от Gmail на info@phomi.bg с твоя дизайн (отваря се нов раздел с потвърждение)."
+        : "изпраща се през Gmail конектора на Claude – без снимка. За твоя дизайн свържи скрипта (виж по-долу)."}</p>
+      ${mailerUrl ? "" : `<details><summary>Свържи скрипта за твоя дизайн</summary><div class="form" style="padding-top:8px">
+        <label class="wide" for="m-url">Адрес на скрипта (https://script.google.com/macros/s/…/exec)<input id="m-url" autocomplete="off"></label>
+        <button class="btn" type="button" data-mailurl="1">Запази</button></div></details>`}
       <iframe id="m-preview" title="Преглед на имейла" sandbox=""></iframe>
       <div class="actions">
         ${mailBusy === "confirm" ? `<span class="confirm">Да изпратя ли имейла до <b>${esc(d.to || (c.emails || [])[0])}</b>?
-            <button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button><button class="btn" type="button" data-mailcancel="1">Не</button></span>`
+            ${mailerUrl ? `<a class="btn primary" id="m-script" href="#" target="_blank" rel="noopener" data-mailscript="1">Да, изпрати</a>`
+              : `<button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button>`}
+            <button class="btn" type="button" data-mailcancel="1">Не</button></span>`
           : `<button class="btn primary" type="button" data-mailask="1" ${mailBusy ? "disabled" : ""}>Изпрати</button>
              <button class="btn" type="button" data-mailclose="1">Затвори</button>`}
         <span class="msg" id="m-msg"></span>
@@ -552,7 +584,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
   function refreshPreview() {
     const f = $("#m-preview");
-    if (f) f.srcdoc = '<!doctype html><meta charset="utf-8"><body style="margin:0">' + fillMail(mailValues()) + "</body>";
+    if (f) f.srcdoc = '<!doctype html><meta charset="utf-8"><body style="margin:0">' + (mailerUrl ? scriptHtml(mailValues()) : fillMail(mailValues())) + "</body>";
   }
   function mailFail(e) {
     const code = e && e.code;
@@ -565,6 +597,14 @@ footer { color: var(--muted); font-size: 12.5px; }
       return "Не е ясно дали имейлът тръгна – проверете папка „Изпратени“ в Gmail, преди да пробвате отново.";
     if (code === "tool_error") return "Gmail отказа: " + (e.message || "неизвестна грешка");
     return "Не успях да изпратя имейла" + (e && e.message ? ": " + e.message : ".");
+  }
+  function markMailed(id, to) {
+    const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+    saveContact(id, {status: "Изпратен имейл", statusAt: now, emailSent: today()});
+    const entry = {contact: id, kind: "Имейл", who: to, said: "Изпратен представителен имейл (каталози, ценоразпис, сертификати, проекти).",
+                   next: "Да провериш за отговор", due, done: false, at: now};
+    if (mode === "local") { logs["l" + Date.now()] = entry; persistLocal(); render(); }
+    else if (db && !readOnly) db.collection("log").add(entry).catch((e) => fail(e));
   }
   async function sendMail() {
     captureDraft();
@@ -636,7 +676,7 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   // ---------- събития ----------
   document.addEventListener("click", (ev) => {
-    const t = ev.target.closest("[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    const t = ev.target.closest("[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
     if (!t) return;
     if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
@@ -654,6 +694,20 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (t.dataset.mailask) { captureDraft(); mailBusy = "confirm"; renderProfile(); return; }
     if (t.dataset.mailcancel) { mailBusy = false; renderProfile(); refreshPreview(); return; }
     if (t.dataset.mailsend) { sendMail(); return; }
+    if (t.dataset.mailscript) {
+      // линкът се попълва точно преди отварянето – новият раздел показва дали имейлът е тръгнал
+      const v = mailValues(); t.href = scriptLink(v);
+      store.set("phomi-sender", JSON.stringify({name: v.name, phone: v.phone}));
+      const id = current; mailOpen = null; mailBusy = false; mailDraft = null;
+      setTimeout(() => { markMailed(id, v.to); note("Имейлът е изпратен до " + v.to + " – потвърждението е в новия раздел."); renderProfile(); }, 0);
+      return;
+    }
+    if (t.dataset.mailurl) {
+      const u = ($("#m-url").value || "").trim();
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(u)) { $("#m-msg").textContent = "Адресът трябва да е от вида https://script.google.com/macros/s/…/exec"; $("#m-msg").classList.add("err"); return; }
+      if (db && !readOnly) db.doc("settings/mailer").set({url: u, updated: new Date().toISOString()}).catch((e) => fail(e));
+      mailerUrl = u; renderProfile(); return;
+    }
     if (t.dataset.done) { changeLog(t.dataset.done, false); return; }
     if (t.dataset.askdellog) { confirmDel = "log:" + t.dataset.askdellog; render(); return; }
     if (t.dataset.dellog) { changeLog(t.dataset.dellog, true); return; }
@@ -702,6 +756,10 @@ footer { color: var(--muted); font-size: 12.5px; }
       loaded = true;
       renderFilters(); render();
     }, lost);
+    db.doc("settings/mailer").onSnapshot((d) => {
+      mailerUrl = (d && d.exists && d.data().url) || "";
+      if (mailOpen) renderProfile();
+    }, () => {});
     db.collection("log").onSnapshot((snap) => {
       snap.docChanges().forEach((ch) => {
         if (ch.type === "removed") delete logs[ch.doc.id];
