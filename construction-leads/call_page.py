@@ -205,6 +205,19 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
                      "Грешен номер": "--st-no"};
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+
+  // На телефона: нов имейл направо в приложението Gmail (iPhone – googlegmail://, Android – intent към Gmail)
+  const UA = navigator.userAgent || "";
+  const IOS = /iPhone|iPad|iPod/i.test(UA), ANDROID = /Android/i.test(UA);
+  function gmailApp(addr) {
+    if (IOS) return "googlegmail:///co?to=" + encodeURIComponent(addr);
+    if (ANDROID) return "intent:" + encodeURIComponent(addr).replace(/%40/g, "@") + "#Intent;scheme=mailto;package=com.google.android.gm;end";
+    return "";
+  }
+  function appBtn(addr) {
+    const u = gmailApp(addr);
+    return u ? `<a class="mini" href="${esc(u)}" target="_blank" rel="noopener">Gmail приложение</a>` : "";
+  }
   const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
                   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* без запомняне */ } } };
 
@@ -307,7 +320,7 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
         <button class="mini copy" data-copy="${esc(p)}">Копирай</button></div>`).join("");
     const emails = f.emails.map((e) => { const addr = e.replace(/\s*\(.*\)$/, "");
       return `<div class="line"><span class="val">${esc(e)}</span>
-        <a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(addr)}" target="_blank" rel="noopener">Gmail</a>
+        ${appBtn(addr)}<a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${IOS || ANDROID ? "Gmail в браузър" : "Gmail"}</a>
         <button class="mini copy" data-copy="${esc(addr)}">Копирай</button></div>`; }).join("");
     const site = f.website ? `<div class="line"><a href="${esc(f.website)}" target="_blank" rel="noopener">${esc(f.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></div>` : "";
     const person = f.person ? `<div class="muted">Лице за контакт: ${esc(f.person)}</div>` : "";

@@ -214,6 +214,19 @@ footer { color: var(--muted); font-size: 12.5px; }
   const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед"];
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+
+  // На телефона: нов имейл направо в приложението Gmail (iPhone – googlegmail://, Android – intent към Gmail)
+  const UA = navigator.userAgent || "";
+  const IOS = /iPhone|iPad|iPod/i.test(UA), ANDROID = /Android/i.test(UA);
+  function gmailApp(addr) {
+    if (IOS) return "googlegmail:///co?to=" + encodeURIComponent(addr);
+    if (ANDROID) return "intent:" + encodeURIComponent(addr).replace(/%40/g, "@") + "#Intent;scheme=mailto;package=com.google.android.gm;end";
+    return "";
+  }
+  function appBtn(addr) {
+    const u = gmailApp(addr);
+    return u ? `<a class="mini" href="${esc(u)}" target="_blank" rel="noopener">Gmail приложение</a>` : "";
+  }
   const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
                   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* без запомняне */ } } };
   const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
@@ -341,7 +354,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     const phones = (c.phones || []).map((p) => `<div class="line"><span class="val">${esc(p)}</span>
       <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}" target="_blank" rel="noopener">Обади се</a><button class="mini" type="button" data-copy="${esc(p)}">Копирай</button></div>`).join("");
     const emails = (c.emails || []).map((m) => `<div class="line"><span class="val">${esc(m)}</span>
-      <a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m)}" target="_blank" rel="noopener">Gmail</a><button class="mini" type="button" data-copy="${esc(m)}">Копирай</button></div>`).join("");
+      ${appBtn(m)}<a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m)}" target="_blank" rel="noopener">${IOS || ANDROID ? "Gmail в браузър" : "Gmail"}</a><button class="mini" type="button" data-copy="${esc(m)}">Копирай</button></div>`).join("");
     const site = c.website ? `<div class="line"><a href="${esc(c.website)}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></div>` : "";
     return `
       <button class="btn back" type="button" data-back="1">← Към списъка</button>
