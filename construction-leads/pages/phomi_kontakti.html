@@ -11,6 +11,7 @@
   --warn: #c2410c; --ok: #3c7a36; --gold: #a86a12;
   --st-none: #e7ebeb; --st-try: #fdf0d5; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
   --mail: #ff7a00; --st-mail: #ff7a00; --mail-ink: #ffffff; --mail-soft: #fff0e0;
+  --meet: #1f9d3a; --meet-ink: #ffffff; --meet-soft: #dcf5e1;
   --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -21,6 +22,7 @@
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
   --st-none: #232c2e; --st-try: #3a3220; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
+  --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
@@ -28,6 +30,7 @@
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
   --st-none: #232c2e; --st-try: #3a3220; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
+  --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; }
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); }
@@ -85,6 +88,9 @@ textarea { resize: vertical; }
 /* „Чака да изпратим имейл“ – ярко оранжево, за да напомня */
 .row.mail-due { background: var(--mail-soft); border-color: var(--mail); border-left: 6px solid var(--mail); }
 .chip[style*="--st-mail"] { color: var(--mail-ink); font-weight: 700; border-color: var(--mail); }
+/* „Уговорена среща“ – целият ред зелен */
+.row.meet-due { background: var(--meet-soft); border-color: var(--meet); border-left: 6px solid var(--meet); }
+.row.meet-due .chip { background: var(--meet) !important; color: var(--meet-ink); font-weight: 700; border-color: var(--meet); }
 .profile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px;
   position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 24px); overflow: auto; min-width: 0; }
 .profile h2 { margin: 0; font: 600 19px/1.25 var(--font-display); overflow-wrap: anywhere; text-wrap: balance; }
@@ -299,7 +305,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   function rowHtml(id) {
     const c = contacts[id], st = statusOf(c), due = nextDue(id), last = lastTalk(id);
     const w = whenText(lastAction(id));
-    return `<button class="row${st === "Чака да изпратим имейл" ? " mail-due" : ""}" type="button" data-open="${esc(id)}" aria-current="${id === current}">
+    return `<button class="row${st === "Чака да изпратим имейл" ? " mail-due" : st === "Уговорена среща" ? " meet-due" : ""}" type="button" data-open="${esc(id)}" aria-current="${id === current}">
       <span class="when" title="Последно действие: ${esc(w.long)}"><small>последно</small>${esc(w.short)}</span>
       <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
       <span class="nm">${esc(c.name)}</span>
