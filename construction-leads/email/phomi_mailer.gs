@@ -5,8 +5,8 @@
  * Скриптът праща имейла директно от Gmail – дизайнът, снимката и линковете остават непроменени
  * (Gmail конекторът на Claude трие снимките и пренасочва линковете, затова не минаваме през него).
  *
- * Без снимка на сграда (по желание). Логото: ако в Google Drive на info@phomi.bg има файл
- * phomi-email-logo.png, се слага като картинка; иначе „PHOMI“ се изписва с текст.
+ * Снимки: качете в Google Drive на info@phomi.bg файловете phomi-email-hero.jpg (снимката горе) и
+ * phomi-email-logo.png (логото). Ако снимката липсва в Drive, се взима същата вила от сайта phomi.bg.
  */
 const KEY = "JPyiDWlI4wi4Foj71WRMDxci";              // същият ключ е в страницата – пази от случайни изпращания
 const SUBJECT = "PHOMI – материали за вашия проект";
@@ -37,13 +37,21 @@ function doGet(e) {
   };
   const images = {};
   const logo = driveImage_("phomi-email-logo.png");
+  const hero = driveImage_("phomi-email-hero.jpg") || urlImage_(HERO_URL);
   if (logo) images.logo = logo;
+  if (hero) images.hero = hero;
   try {
-    GmailApp.sendEmail(to, SUBJECT, plain_(v), {htmlBody: html_(v, !!logo, false), inlineImages: images, name: FROM_NAME});
+    GmailApp.sendEmail(to, SUBJECT, plain_(v), {htmlBody: html_(v, !!logo, !!hero), inlineImages: images, name: FROM_NAME});
   } catch (err) {
     return page_("Имейлът НЕ е изпратен", String(err), true);
   }
   return page_("✓ Имейлът е изпратен", "До: " + to + ". Можете да затворите този раздел.", false);
+}
+
+const HERO_URL = "https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6ac3a926669321a4225a1514_phomi-20261005-ai-20261003-other-032-31.webp";
+
+function urlImage_(url) {
+  try { return UrlFetchApp.fetch(url).getBlob(); } catch (err) { return null; }
 }
 
 function driveImage_(name) {
@@ -74,9 +82,11 @@ ${hasHero ? `<tr><td style="padding:0"><img src="cid:hero" width="600" alt="Фа
 <p style="margin:0 0 14px 0;font-weight:700">PHOMI е изцяло натурален и екологичен материал, изработен от кварцов пясък и глина. PHOMI eCovering дава свобода при оформянето на фасади и интериори: разнообразни текстури и формати, ниско тегло и решения за прави и извити повърхности.</p>
 <p style="margin:0 0 18px 0;font-weight:700">Монтажът е изключително лесен: облицовката се залепва с циментово лепило към подготвената фасада. Материалът е UV защитен, удароустойчив и мразоустойчив, с клас на реакция на огън A1 или A2 според модела. Предлага се с 10-годишна гаранция и експлоатационен живот над 50 години според проведените тестове.</p>
 </td></tr>
-<tr><td align="center" style="padding:4px 32px 4px 32px;font-size:15px;line-height:26px">
-${link(LINKS.catalog, "Каталог eCovering 2026")} &nbsp;|&nbsp; ${link(LINKS.prices, "Ценоразпис")}<br>
-${link(LINKS.docs, "Сертификати и технически документи")} &nbsp;|&nbsp; ${link(LINKS.projects, "Реализирани проекти")}
+<tr><td style="padding:4px 27px 4px 27px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>${button_(LINKS.catalog, "Каталог eCovering 2026", true)}${button_(LINKS.prices, "Ценоразпис", true)}</tr>
+<tr>${button_(LINKS.docs, "Сертификати и документи", false)}${button_(LINKS.projects, "Реализирани проекти", false)}</tr>
+</table>
 </td></tr>
 <tr><td align="center" style="padding:8px 32px 6px 32px;font-size:12px;line-height:18px;font-weight:700;color:#4b5658">Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.</td></tr>
 <tr><td style="padding:18px 32px 6px 32px;font-size:15px;line-height:23px">
@@ -88,6 +98,16 @@ ${link(LINKS.docs, "Сертификати и технически докуме�
 <span style="color:${teal};font-weight:700">info@phomi.bg · ${esc_(v.phone)}</span><br>${link(LINKS.site, "phomi.bg")}</p>
 </td></tr>
 </table></td></tr></table></div>`;
+}
+
+/** Бутон за имейл: клетка с цвят (bgcolor) + линк – работи в Gmail, Outlook и на телефон. */
+function button_(href, text, filled) {
+  const teal = "#007F8B";
+  const bg = filled ? teal : "#ffffff", fg = filled ? "#ffffff" : teal;
+  return `<td width="50%" style="padding:0 5px 10px 5px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td align="center" bgcolor="${bg}" style="background-color:${bg};border:1px solid ${teal};border-radius:4px">
+<a href="${href}" target="_blank" style="display:block;padding:12px 8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:${fg};text-decoration:none">${text}</a>
+</td></tr></table></td>`;
 }
 
 function plain_(v) {
