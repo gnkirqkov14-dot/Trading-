@@ -176,7 +176,14 @@ export async function importImotListing(input: ImportInput) {
   // и прави внасянето на цял град въпрос на часове. По шест наведнъж е
   // достатъчно бързо, без да залива imot.bg.
   const ZAEDNO = 6;
-  const iztochnici = input.photos.slice(0, 30);
+  // До 10 снимки на обява: безплатното хранилище е 1 GB, а строителите
+  // качват по 17 почти еднакви рендера. Последната се пази — там обикновено
+  // е планът на апартамента, който купувачът търси.
+  const MAKS_SNIMKI = 10;
+  const iztochnici =
+    input.photos.length > MAKS_SNIMKI
+      ? [...input.photos.slice(0, MAKS_SNIMKI - 1), input.photos[input.photos.length - 1]]
+      : input.photos;
   const svaleni: (string | null)[] = new Array(iztochnici.length).fill(null);
 
   for (let start = 0; start < iztochnici.length; start += ZAEDNO) {
