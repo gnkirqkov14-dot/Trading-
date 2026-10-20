@@ -339,9 +339,9 @@ footer { color: var(--muted); font-size: 12.5px; }
     }
     const st = statusOf(c), ents = entriesFor(current);
     const phones = (c.phones || []).map((p) => `<div class="line"><span class="val">${esc(p)}</span>
-      <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}">Обади се</a><button class="mini" type="button" data-copy="${esc(p)}">Копирай</button></div>`).join("");
+      <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}" target="_blank" rel="noopener">Обади се</a><button class="mini" type="button" data-copy="${esc(p)}">Копирай</button></div>`).join("");
     const emails = (c.emails || []).map((m) => `<div class="line"><span class="val">${esc(m)}</span>
-      <a class="mini" href="mailto:${esc(m)}">Пиши</a><button class="mini" type="button" data-copy="${esc(m)}">Копирай</button></div>`).join("");
+      <a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m)}" target="_blank" rel="noopener">Gmail</a><button class="mini" type="button" data-copy="${esc(m)}">Копирай</button></div>`).join("");
     const site = c.website ? `<div class="line"><a href="${esc(c.website)}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></div>` : "";
     return `
       <button class="btn back" type="button" data-back="1">← Към списъка</button>

@@ -303,11 +303,11 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
 
   function contactLines(f) {
     const phones = f.phones.map((p) => `<div class="line"><span class="val">${esc(p)}</span>
-        <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}">Обади се</a>
+        <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}" target="_blank" rel="noopener">Обади се</a>
         <button class="mini copy" data-copy="${esc(p)}">Копирай</button></div>`).join("");
     const emails = f.emails.map((e) => { const addr = e.replace(/\s*\(.*\)$/, "");
       return `<div class="line"><span class="val">${esc(e)}</span>
-        <a class="mini" href="mailto:${esc(addr)}">Пиши</a>
+        <a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(addr)}" target="_blank" rel="noopener">Gmail</a>
         <button class="mini copy" data-copy="${esc(addr)}">Копирай</button></div>`; }).join("");
     const site = f.website ? `<div class="line"><a href="${esc(f.website)}" target="_blank" rel="noopener">${esc(f.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></div>` : "";
     const person = f.person ? `<div class="muted">Лице за контакт: ${esc(f.person)}</div>` : "";
@@ -320,7 +320,7 @@ footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
     const phones = withTitle && card ? (card.kind === "obj" ? card.firms.flatMap((f) => f.phones) : card.phones).slice(0, 3) : [];
     return `<div class="entry${over ? " over" : ""}${e.done ? " done" : ""}">
       ${withTitle ? `<div class="remhead"><h3>${esc(e.title || titleOf(card))}</h3></div>` +
-        phones.map((p) => `<div class="line"><span class="val">${esc(p)}</span><a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}">Обади се</a></div>`).join("") : ""}
+        phones.map((p) => `<div class="line"><span class="val">${esc(p)}</span><a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}" target="_blank" rel="noopener">Обади се</a></div>`).join("") : ""}
       <div class="meta"><b>${esc(fmtAt(e.at))}</b>${e.who ? `<span>говорих с: ${esc(e.who)}</span>` : ""}</div>
       ${e.said ? `<div class="said">${esc(e.said)}</div>` : ""}
       ${e.next || e.due ? `<div class="nx">Следва: ${esc(e.next || "обаждане")}${e.due ? " · до " + fmtDay(e.due) : ""}${e.done ? " · ✓ готово" : ""}</div>` : ""}
