@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -26,10 +27,17 @@ CACHE = ROOT / "cache" / "oesut"
 OUT = ROOT / "output" / "oesut_proektanti.csv"
 
 ITEM = re.compile(r"(?im)^\s*(?:по\s+)?т(?:очка|\.)\s*(\d+)\b.*$")
-DESIGNER = re.compile(r"(?i)((?:проф\.\s*|доц\.\s*|д-р\s*)*(?:арх|инж|урб|ланд\.\s*арх)\.\s*[А-ЯA-Z][\w\-]+(?:\s+[А-ЯA-Z][\w\-]+){0,2})"
-                      r"\s*[\(\-–—,]\s*(?:проектант|автор|представител на проектанта)[^\)\n]{0,80}\)?")
-DESIGNER2 = re.compile(r"(?i)проектант(?:и|ът)?\s*[:\-–—]?\s*((?:арх|инж)\.\s*[А-Я][\w\-]+(?:\s+[А-Я][\w\-]+){0,2}"
-                       r"(?:\s*[\(,–-]\s*[„\"]?[^\n\)]{2,60}(?:ООД|ЕООД|АД|ЕТ)[\"“]?)?)")
+NAME = r"(?:(?:[Пп]роф|[Дд]оц)\.\s*)?(?:д-р\s*)?(?:[Аа]рх|[Ии]нж|[Уу]рб)\.\s*(?:[А-Я]\.\s*|[А-Я][а-я]+\s+)[А-Я][а-яА-ЯКВ\-]{2,}"
+DESIGNER_RX = [
+    # „арх. Б. Цветков – проектант“, „арх. И. Дачев проектант на възложителя“
+    re.compile(rf"({NAME})\s*[\(\-–—,]*\s*проектант(?!ск)"),
+    # „проектантът арх. Б. Цветков“, „проектант: арх. …“
+    re.compile(rf"проектант(?:ът|ите|а)?\s*[:\-–—]?\s*({NAME})"),
+    # „проектантски екип „Ковачев архитекти“ ЕООД“
+    re.compile(r"(?i)проектантск\w*\s+екип\w*\s*[„\"]([^”\"“\n]{3,60})[”\"“]\s*(Е?ООД|АД|ЕАД)?"),
+    # „(проектант – „ТрансКонсулт 22“ ЕООД)“
+    re.compile(r"проектант\s*[\-–—]+\s*[„\"]([^”\"“\n]{3,60})[”\"“]\s*(Е?ООД|АД|ЕАД)?"),
+]
 PLACE = re.compile(r"(?i)(УПИ\s+[IVXLCDM\d\-–,\s]+(?:-|–)?\s*[\d\.,\s]*|ПИ\s+(?:с\s+)?(?:идентификатор\s+)?\d{5}\.\d+\.\d+|"
                    r"кв\.\s*\d+[а-я]?|м\.\s*[„\"]?[А-Я][^,\n]{2,40}|ж\.к\.\s*[„\"]?[А-Я][^,\n]{2,30}|р-н\s*[„\"]?[А-Я][^,\n]{2,25})")
 INVESTOR = re.compile(r"(?i)(?:възложител(?:и|ят)?|заявител(?:и|ят)?|по искане на)\s*[:\-–]?\s*([^\n]{3,90})")
@@ -40,7 +48,7 @@ def pdf(url: str) -> Path | None:
     path = CACHE / (hashlib.sha1(url.encode()).hexdigest()[:16] + ".pdf")
     if not path.exists():
         try:
-            r = requests.get(url, timeout=60)
+            r = requests.get(url, timeout=(20, 120))
             r.raise_for_status()
         except Exception as exc:
             print(f"  не се свали {url}: {exc}")
@@ -54,10 +62,14 @@ def ocr(path: Path) -> str:
     if txt.exists():
         return txt.read_text(encoding="utf-8")
     with tempfile.TemporaryDirectory() as tmp:
-        subprocess.run(["pdftoppm", "-r", "220", "-png", str(path), f"{tmp}/p"], check=True, capture_output=True)
+        subprocess.run(["pdftoppm", "-r", "220", "-png", str(path), f"{tmp}/p"], check=True, capture_output=True,
+                       timeout=600)
         parts = []
+        # една нишка на tesseract – иначе паралелните процеси се задушават един друг
+        env = dict(os.environ, OMP_THREAD_LIMIT="1")
         for img in sorted(Path(tmp).glob("p-*.png")):
-            out = subprocess.run(["tesseract", str(img), "-", "-l", "bul"], capture_output=True, text=True)
+            out = subprocess.run(["tesseract", str(img), "-", "-l", "bul"], capture_output=True, text=True,
+                                 timeout=180, env=env)
             parts.append(out.stdout)
     text = "\n".join(parts)
     txt.write_text(text, encoding="utf-8")
@@ -76,6 +88,14 @@ def items(text: str) -> list[tuple[str, str]]:
     return out
 
 
+LAT2CYR = str.maketrans("KBCEHMOPTXaceopxyAk", "КВСЕНМОРТХасеорхуАк")
+
+
+def norm(text: str) -> str:
+    """OCR смесва латиница и кирилица („проектантскКи еКип“) – в думи с кирилица латиницата става кирилица."""
+    return re.sub(r"\S+", lambda m: m.group(0).translate(LAT2CYR) if re.search("[а-яА-Я]", m.group(0)) else m.group(0), text)
+
+
 def clean(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip(" ;,.")
 
@@ -87,21 +107,27 @@ def one(p: dict) -> list[dict]:
         if not path:
             continue
         try:
-            text = ocr(path)
+            text = norm(ocr(path))
         except Exception as exc:
             print(f"  OCR не успя {url}: {exc}")
             continue
-        for num, body in items(text):
-            found = [clean(m.group(0)) for m in DESIGNER.finditer(body)] + \
-                    [clean("проектант " + m.group(1)) for m in DESIGNER2.finditer(body)]
-            if not found:
-                continue
-            places = list(dict.fromkeys(clean(m.group(0)) for m in PLACE.finditer(body[:1500])))[:4]
-            inv = INVESTOR.search(body)
-            rows.append({"Протокол": p["number"], "Дата": p["date"], "Вид": p["type"], "Точка": num,
-                         "Проектант (както е в протокола)": " | ".join(dict.fromkeys(found))[:300],
-                         "Имот / място": "; ".join(places), "Възложител": clean(inv.group(1)) if inv else "",
-                         "Откъс": clean(body[:400]), "PDF": url})
+        seen = set()
+        for rx in DESIGNER_RX:
+            for m in rx.finditer(text):
+                who = clean(" ".join(g for g in m.groups() if g))
+                if (who, m.start() // 400) in seen:
+                    continue
+                seen.add((who, m.start() // 400))
+                before = text[max(0, m.start() - 1800):m.start()]
+                # точката от дневния ред започва след последното „становището на ОЕСУТ“ / „По точка“
+                cut = max(before.rfind("становището на ОЕСУТ"), before.rfind("По точка"), before.rfind("Приема проекта"))
+                ctx = before[cut + 1:] if cut > 0 else before
+                places = list(dict.fromkeys(clean(x.group(0)) for x in PLACE.finditer(ctx)))[:4]
+                inv = INVESTOR.search(ctx)
+                rows.append({"Протокол": p["number"], "Дата": p["date"], "Вид": p["type"], "Точка": "",
+                             "Проектант (както е в протокола)": who,
+                             "Имот / място": "; ".join(places), "Възложител": clean(inv.group(1)) if inv else "",
+                             "Откъс": clean(text[max(0, m.start() - 300): m.end() + 100]), "PDF": url})
     return rows
 
 
