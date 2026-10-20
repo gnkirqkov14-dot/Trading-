@@ -6,7 +6,7 @@
  * (Gmail конекторът на Claude трие снимките и пренасочва линковете, затова не минаваме през него).
  *
  * Снимки: качете в Google Drive на info@phomi.bg файловете phomi-email-hero.jpg (снимката горе) и
- * phomi-email-logo.png (логото). Ако снимката липсва в Drive, се взима същата вила от сайта phomi.bg.
+ * phomi-email-logo.png (логото). Ако снимката липсва в Drive, имейлът тръгва без снимка.
  */
 const KEY = "JPyiDWlI4wi4Foj71WRMDxci";              // същият ключ е в страницата – пази от случайни изпращания
 const SUBJECT = "PHOMI – материали за вашия проект";
@@ -37,7 +37,7 @@ function doGet(e) {
   };
   const images = {};
   const logo = driveImage_("phomi-email-logo.png");
-  const hero = driveImage_("phomi-email-hero.jpg") || urlImage_(HERO_URL);
+  const hero = driveImage_("phomi-email-hero.jpg");
   if (logo) images.logo = logo;
   if (hero) images.hero = hero;
   try {
@@ -46,12 +46,6 @@ function doGet(e) {
     return page_("Имейлът НЕ е изпратен", String(err), true);
   }
   return page_("✓ Имейлът е изпратен", "До: " + to + ". Можете да затворите този раздел.", false);
-}
-
-const HERO_URL = "https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6ac3a926669321a4225a1514_phomi-20261005-ai-20261003-other-032-31.webp";
-
-function urlImage_(url) {
-  try { return UrlFetchApp.fetch(url).getBlob(); } catch (err) { return null; }
 }
 
 function driveImage_(name) {
