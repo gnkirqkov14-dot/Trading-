@@ -576,7 +576,8 @@ footer { color: var(--muted); font-size: 12.5px; }
       <div class="actions">
         ${mailBusy === "confirm" && badDomain(d.to || (c.emails || [])[0]) ? `<p class="msg err">Внимание: адресът изглежда сгрешен (${esc(badDomain(d.to || (c.emails || [])[0]))}). Поправи го от „Редактирай“, иначе имейлът няма да стигне.</p>` : ""}
         ${mailBusy === "confirm" ? `<span class="confirm">Да изпратя ли имейла до <b>${esc(d.to || (c.emails || [])[0])}</b>?
-            <button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button>
+            ${mailerUrl && !mcp ? `<a class="btn primary" href="${esc(viaScriptUrl(c, d))}" target="_blank" rel="noopener" data-mailscript="1">Да, изпрати</a>`
+              : `<button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button>`}
             <button class="btn" type="button" data-mailcancel="1">Не</button></span>`
           : `<button class="btn primary" type="button" data-mailask="1" ${mailBusy ? "disabled" : ""}>Изпрати</button>
              <button class="btn" type="button" data-mailclose="1">Затвори</button>`}
@@ -604,6 +605,21 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (code === "tool_error") return "Gmail отказа: " + (e.message || "неизвестна грешка");
     return "Не успях да изпратя имейла" + (e && e.message ? ": " + e.message : ".");
   }
+  function recordMailed(id, to) {
+    const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+    saveContact(id, {status: "Изпратен имейл", statusAt: now, emailSent: today()});
+    const entry = {contact: id, kind: "Имейл", who: to, said: "Изпратен представителен имейл (каталози, ценоразпис, сертификати, проекти).",
+                   next: "Да провериш за отговор", due, done: false, at: now};
+    if (mode === "local") { logs["l" + Date.now()] = entry; persistLocal(); render(); }
+    else if (db && !readOnly) db.collection("log").add(entry).catch((e) => fail(e));
+  }
+  // без връзка с Gmail (напр. в приложението на телефона): линк към скрипта, отваря се в браузъра и праща веднага
+  function viaScriptUrl(c, d) {
+    const fn = firstName(c), s = sender();
+    const q = new URLSearchParams({key: MAILER_KEY, to: d.to || (c.emails || [])[0] || "", opener: d.open || "interest",
+      greeting: d.greet ?? (fn ? "Здравейте, " + fn + "," : "Здравейте,"), sname: d.name ?? s.name ?? "", sphone: d.phone ?? s.phone ?? "+359 884 30 30 70"});
+    return mailerUrl + (mailerUrl.includes("?") ? "&" : "?") + q.toString();
+  }
   async function sendMail() {
     captureDraft();
     const v = mailValues(), id = current, msg = () => $("#m-msg"), opener = (mailDraft && mailDraft.open) || "interest";
@@ -617,12 +633,7 @@ footer { color: var(--muted); font-size: 12.5px; }
         body: "Служебна заявка от „PHOMI контакти“ – не я пипайте, скриптът праща имейла до " + v.to + " и я изтрива до минута.\n\n<<<" + JSON.stringify({key: MAILER_KEY, to: v.to, greeting: v.greeting, opener, sname: v.name, sphone: v.phone}) + ">>>"});
       else await mcp.callTool("Gmail", "send_message", {to: [v.to], subject: MAIL_SUBJECT, htmlBody: fillMail(v), body: mailText(v)});
       mailBusy = false; mailOpen = null; mailDraft = null;
-      const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
-      saveContact(id, {status: "Изпратен имейл", statusAt: now, emailSent: today()});
-      const entry = {contact: id, kind: "Имейл", who: v.to, said: "Изпратен представителен имейл (каталози, ценоразпис, сертификати, проекти).",
-                     next: "Да провериш за отговор", due, done: false, at: now};
-      if (mode === "local") { logs["l" + Date.now()] = entry; persistLocal(); render(); }
-      else if (db && !readOnly) db.collection("log").add(entry).catch((e) => fail(e));
+      recordMailed(id, v.to);
       note(mailerUrl ? "Имейлът до " + v.to + " тръгва от info@phomi.bg до 1 минута." : "Имейлът е изпратен до " + v.to + ".");
       renderProfile();
     } catch (e) {
@@ -695,6 +706,14 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (t.dataset.mailask) { captureDraft(); mailBusy = "confirm"; renderProfile(); return; }
     if (t.dataset.mailcancel) { mailBusy = false; renderProfile(); refreshPreview(); return; }
     if (t.dataset.mailsend) { sendMail(); return; }
+    if (t.dataset.mailscript) {
+      // линкът се отваря от браузъра (не спираме клика); тук само отбелязваме изпращането
+      const d = mailDraft || {}, id = current, to = d.to || (contacts[id].emails || [])[0];
+      store.set("phomi-sender", JSON.stringify({name: d.name || "", phone: d.phone || ""}));
+      mailOpen = null; mailBusy = false; mailDraft = null;
+      setTimeout(() => { recordMailed(id, to); note("Имейлът до " + to + " се изпраща – потвърждението е в браузъра."); renderProfile(); }, 0);
+      return;
+    }
     if (t.dataset.mailurl) {
       const u = ($("#m-url").value || "").trim();
       if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(u)) { $("#m-msg").textContent = "Адресът трябва да е от вида https://script.google.com/macros/s/…/exec"; $("#m-msg").classList.add("err"); return; }
