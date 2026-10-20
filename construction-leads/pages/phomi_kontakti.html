@@ -576,7 +576,9 @@ footer { color: var(--muted); font-size: 12.5px; }
       <div class="actions">
         ${mailBusy === "confirm" && badDomain(d.to || (c.emails || [])[0]) ? `<p class="msg err">Внимание: адресът изглежда сгрешен (${esc(badDomain(d.to || (c.emails || [])[0]))}). Поправи го от „Редактирай“, иначе имейлът няма да стигне.</p>` : ""}
         ${mailBusy === "confirm" ? `<span class="confirm">Да изпратя ли имейла до <b>${esc(d.to || (c.emails || [])[0])}</b>?
-            ${mailerUrl && !mcp ? `<a class="btn primary" href="${esc(viaScriptUrl(c, d))}" target="_blank" rel="noopener" data-mailscript="1">Да, изпрати</a>`
+            ${mailerUrl && !mcp ? `<a class="btn primary" href="${esc(viaScriptUrl(c, d))}" target="_blank" rel="noopener" data-mailscript="1">Да, изпрати</a>
+              <button class="btn" type="button" data-copy="${esc(viaScriptUrl(c, d))}">Копирай линка</button>
+              <small class="meta">Ако не се отвори браузър: „Копирай линка“ и го постави в Safari/Chrome – имейлът тръгва веднага.</small>`
               : `<button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button>`}
             <button class="btn" type="button" data-mailcancel="1">Не</button></span>`
           : `<button class="btn primary" type="button" data-mailask="1" ${mailBusy ? "disabled" : ""}>Изпрати</button>
