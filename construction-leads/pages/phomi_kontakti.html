@@ -243,10 +243,11 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (d >= FOLLOW_DAYS) return `<span class="${d >= 14 ? "due" : "late"}">без отговор ${d} дни – потърси пак</span>`;
     return `<span>имейл преди ${d === 0 ? "по-малко от ден" : d + (d === 1 ? " ден" : " дни")}</span>`;
   }
-  // последно действие: запис в дневника, смяна на статус, изпратен имейл или добавяне на контакта
+  // последно действие: запис в дневника, смяна на статус, изпратен имейл или промяна в бележката
   function lastAction(id) {
     const c = contacts[id];
-    return [lastTalk(id), c.statusAt, c.emailSent, c.noteAt, c.created].filter(Boolean).sort().pop() || "";
+    // добавянето на контакта не се брои – само нещата, които си направил с него
+    return [lastTalk(id), c.statusAt, c.emailSent, c.noteAt].filter(Boolean).sort().pop() || "";
   }
   function whenText(iso) {
     if (!iso) return {short: "—", long: "няма действие"};
