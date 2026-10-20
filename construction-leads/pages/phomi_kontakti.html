@@ -66,13 +66,16 @@ textarea { resize: vertical; }
 .count { color: var(--muted); font-size: 13px; }
 .main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 14px; align-items: start; }
 .list { display: grid; gap: 6px; }
-.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface);
+.row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface);
   border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; cursor: pointer; text-align: left; color: var(--ink);
   font: inherit; width: 100%; }
 .row:hover { border-color: var(--accent); }
 .row[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
 .row .nm { font-weight: 600; overflow-wrap: anywhere; }
-.row .sub { grid-column: 2 / 4; color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.row .when { grid-row: 1 / 3; display: grid; justify-items: center; min-width: 54px; padding-right: 10px; border-right: 1px solid var(--line);
+  font: 600 13px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.row .when small { font: 500 10px var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.row .sub { grid-column: 3 / 5; color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .row .sub .ph { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
 .star { font-size: 18px; line-height: 1; color: var(--line); background: none; border: 0; cursor: pointer; padding: 2px; }
 .star[aria-pressed="true"] { color: var(--gold); }
@@ -240,6 +243,17 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (d >= FOLLOW_DAYS) return `<span class="${d >= 14 ? "due" : "late"}">без отговор ${d} дни – потърси пак</span>`;
     return `<span>имейл преди ${d === 0 ? "по-малко от ден" : d + (d === 1 ? " ден" : " дни")}</span>`;
   }
+  // последно действие: запис в дневника, смяна на статус, изпратен имейл или добавяне на контакта
+  function lastAction(id) {
+    const c = contacts[id];
+    return [lastTalk(id), c.statusAt, c.emailSent, c.created].filter(Boolean).sort().pop() || "";
+  }
+  function whenText(iso) {
+    if (!iso) return {short: "—", long: "няма действие"};
+    const d = Math.floor((Date.parse(today()) - Date.parse(iso.slice(0, 10))) / 864e5);
+    const day = fmtDay(iso.slice(0, 10));
+    return {short: d <= 0 ? "днес" : d === 1 ? "вчера" : day.slice(0, 5), long: d <= 0 ? "днес" : d === 1 ? "вчера" : `${day} (преди ${d} дни)`, days: d};
+  }
   function nextDue(id) { const d = entriesFor(id).map((k) => logs[k]).filter((e) => !e.done && e.due).map((e) => e.due).sort(); return d[0] || ""; }
   function lastTalk(id) { const e = entriesFor(id)[0]; return e ? logs[e].at : ""; }
 
@@ -281,7 +295,9 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   function rowHtml(id) {
     const c = contacts[id], st = statusOf(c), due = nextDue(id), last = lastTalk(id);
+    const w = whenText(lastAction(id));
     return `<button class="row${st === "Чака да изпратим имейл" ? " mail-due" : ""}" type="button" data-open="${esc(id)}" aria-current="${id === current}">
+      <span class="when" title="Последно действие: ${esc(w.long)}"><small>последно</small>${esc(w.short)}</span>
       <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
       <span class="nm">${esc(c.name)}</span>
       <span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>
@@ -323,7 +339,8 @@ footer { color: var(--muted); font-size: 12.5px; }
       <div class="phead">
         <button class="star" type="button" data-star="${esc(current)}" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран" style="font-size:24px">★</button>
         <div><h2>${esc(c.name)}</h2>
-          <div class="meta">${c.kind ? `<span>${esc(c.kind)}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.person ? `<span>Лице: ${esc(c.person)}</span>` : ""}</div></div>
+          <div class="meta">${c.kind ? `<span>${esc(c.kind)}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.person ? `<span>Лице: ${esc(c.person)}</span>` : ""}
+            <span>Последно действие: <b>${esc(whenText(lastAction(current)).long)}</b></span></div></div>
       </div>
       ${mailDays(c) != null && mailDays(c) >= FOLLOW_DAYS ? `<div class="confirm">Имейлът е изпратен на ${esc(fmtDay(c.emailSent))} – ${mailDays(c)} дни без отговор. Потърси ги пак и запиши разговора.</div>` : ""}
       <div class="lines">${phones}${emails}${site}${c.address ? `<div class="meta">${esc(c.address)}</div>` : ""}</div>
@@ -499,7 +516,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   });
   document.addEventListener("change", (ev) => {
     if (ev.target.id === "p-status" && contacts[current]) {
-      const patch = {status: ev.target.value};
+      const patch = {status: ev.target.value, statusAt: new Date().toISOString()};
       // датата на имейла се записва сама при маркиране; може да се поправи ръчно в профила
       if (ev.target.value === "Изпратен имейл" && statusOf(contacts[current]) !== "Изпратен имейл") patch.emailSent = today();
       saveContact(current, patch);
