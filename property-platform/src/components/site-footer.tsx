@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { SUPPORT_EMAIL } from "@/lib/listing-labels";
+import { SEO_CITIES } from "@/lib/seo-cities";
 
 export function SiteFooter() {
   return (
@@ -27,6 +28,20 @@ export function SiteFooter() {
           © {new Date().getFullYear()} Имоти без посредници
         </p>
       </div>
+
+      {/* Линкове към градските страници от всяка страница — така Google
+          ги открива и разбира, че са важни. */}
+      <nav className="mx-auto max-w-6xl px-4 pb-6 text-center text-xs text-slate-400 sm:text-left">
+        Имоти по градове:{" "}
+        {SEO_CITIES.map((city, index) => (
+          <span key={city.slug}>
+            {index > 0 && " · "}
+            <Link href={`/imoti/${city.slug}`} className="hover:text-slate-900">
+              {city.name}
+            </Link>
+          </span>
+        ))}
+      </nav>
     </footer>
   );
 }
