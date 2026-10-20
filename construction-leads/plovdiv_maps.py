@@ -31,6 +31,8 @@ CONTACT = re.compile(r"(?i)contact|kontakt|контакт|about|за-нас|za-n
 
 def is_arch(x: dict) -> bool:
     cat, title = x.get("categoryName"), x.get("title") or ""
+    if re.search(r"(?i)музей|museum|галерия|училище|община", title):
+        return False
     cats = set(x.get("categories") or []) | {cat}
     return bool(cats & ARCH_CATS) or bool(re.search(r"(?i)\bарх|archi|проектант", title))
 
