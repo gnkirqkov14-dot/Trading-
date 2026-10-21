@@ -121,6 +121,7 @@ export async function previewImotListing(url: string): Promise<ImportPreview> {
 
 export type ImportInput = {
   sourceUrl: string;
+  dealType?: "sale" | "rent";
   propertyType: PropertyType;
   developerName: string;
   developerPhone: string;
@@ -258,7 +259,7 @@ export async function importImotListing(input: ImportInput) {
   const { error: listingError } = await supabase.from("listings").insert({
     id: listingId,
     user_id: admin.id,
-    type: "sale",
+    type: input.dealType ?? "sale",
     property_type: input.propertyType,
     city_id: input.cityId,
     neighborhood_id: input.neighborhoodId,
@@ -461,6 +462,7 @@ export async function importImotAutomatically(
 
   const result = await importImotListing({
     sourceUrl: data.sourceUrl,
+    dealType: data.dealType,
     propertyType: data.propertyType,
     developerName: data.company,
     // Всички телефони, не само първият: строителите дават по два-три
