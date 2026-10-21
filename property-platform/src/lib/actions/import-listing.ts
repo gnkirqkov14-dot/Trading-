@@ -142,6 +142,7 @@ export type ImportInput = {
   rooms: number | null;
   floor: number | null;
   photos: string[];
+  features?: ImotListing["features"];
 };
 
 export async function importImotListing(input: ImportInput) {
@@ -290,6 +291,10 @@ export async function importImotListing(input: ImportInput) {
     year_built: input.yearBuilt,
     source_url: input.sourceUrl,
     source_checked_at: new Date().toISOString(),
+    is_furnished: input.features?.furnished ?? false,
+    has_elevator: input.features?.elevator ?? false,
+    has_parking: input.features?.parking ?? false,
+    has_terrace: input.features?.terrace ?? false,
   });
 
   if (listingError) {
@@ -520,6 +525,7 @@ export async function importImotAutomatically(
     rooms: data.rooms,
     floor: data.floor,
     photos: data.photos,
+    features: data.features,
   });
 
   return { imported: result, company: data.company };
