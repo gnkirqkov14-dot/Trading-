@@ -148,7 +148,12 @@ export async function importImotListing(input: ImportInput) {
   const admin = await requireAdmin();
   const supabase = await createClient();
 
-  if (!input.developerName.trim() || !input.developerPhone.trim()) {
+  // Без фирма се допуска само наем от собственик; телефонът е задължителен винаги.
+  const bezFirma = !input.developerName.trim() && input.dealType === "rent";
+  if (
+    (!input.developerName.trim() && !bezFirma) ||
+    !input.developerPhone.trim()
+  ) {
     throw new Error("Фирмата и телефонът ѝ са задължителни.");
   }
   if (!input.permissionNote.trim()) {
@@ -158,21 +163,23 @@ export async function importImotListing(input: ImportInput) {
   }
 
   // Фирмата се завежда веднъж; следващите ѝ обяви я намират по име.
-  const { data: developer, error: developerError } = await supabase
-    .from("developers")
-    .upsert(
-      {
-        name: input.developerName.trim(),
-        phone: input.developerPhone.trim(),
-        permission_at: new Date().toISOString(),
-        permission_note: input.permissionNote.trim(),
-      },
-      { onConflict: "name" },
-    )
-    .select("id")
-    .single();
+  const { data: developer, error: developerError } = bezFirma
+    ? { data: null, error: null }
+    : await supabase
+        .from("developers")
+        .upsert(
+          {
+            name: input.developerName.trim(),
+            phone: input.developerPhone.trim(),
+            permission_at: new Date().toISOString(),
+            permission_note: input.permissionNote.trim(),
+          },
+          { onConflict: "name" },
+        )
+        .select("id")
+        .single();
 
-  if (developerError || !developer) {
+  if (!bezFirma && (developerError || !developer)) {
     throw new Error(`Грешка при записа на фирмата: ${developerError?.message}`);
   }
 
@@ -192,7 +199,10 @@ export async function importImotListing(input: ImportInput) {
   const MAKS_SNIMKI = 10;
   const iztochnici =
     input.photos.length > MAKS_SNIMKI
-      ? [...input.photos.slice(0, MAKS_SNIMKI - 1), input.photos[input.photos.length - 1]]
+      ? [
+          ...input.photos.slice(0, MAKS_SNIMKI - 1),
+          input.photos[input.photos.length - 1],
+        ]
       : input.photos;
   const svaleni: (string | null)[] = new Array(iztochnici.length).fill(null);
 
@@ -231,9 +241,10 @@ export async function importImotListing(input: ImportInput) {
           const { error: uploadError } = await supabase.storage
             .from("listing-photos")
             .upload(path, bytes, {
-              contentType: bytes === original
-                ? response.headers.get("content-type") ?? "image/jpeg"
-                : "image/jpeg",
+              contentType:
+                bytes === original
+                  ? (response.headers.get("content-type") ?? "image/jpeg")
+                  : "image/jpeg",
               upsert: true,
             });
           if (uploadError) return;
@@ -272,7 +283,7 @@ export async function importImotListing(input: ImportInput) {
     address: input.address.trim(),
     // Телефонът е НА ФИРМАТА, не на профила, който я качва.
     phone: input.developerPhone.trim(),
-    developer_id: developer.id,
+    developer_id: developer?.id ?? null,
     project_name: input.projectName?.trim() || null,
     construction_stage: input.stage,
     completion_year: input.completionYear,
@@ -285,9 +296,15 @@ export async function importImotListing(input: ImportInput) {
     throw new Error(`Грешка при записа на обявата: ${listingError.message}`);
   }
 
-  const { error: photosError } = await supabase.from("listing_photos").insert(
-    photoUrls.map((url, position) => ({ listing_id: listingId, url, position })),
-  );
+  const { error: photosError } = await supabase
+    .from("listing_photos")
+    .insert(
+      photoUrls.map((url, position) => ({
+        listing_id: listingId,
+        url,
+        position,
+      })),
+    );
   if (photosError) {
     throw new Error(`Грешка при записа на снимките: ${photosError.message}`);
   }
@@ -348,8 +365,17 @@ export async function importImotAutomatically(
   // Предпазителят: каквото и да е дошло в списъка, агенция не влиза.
   // Цялата платформа обещава „без посредници“ — една агенционна обява
   // струва повече доверие, отколкото десет обяви носят.
-  if (data.sellerKind === "agency" || data.sellerKind === "private") {
-    return { skipped: `не е строител (${data.sellerKind === "agency" ? "агенция" : "частно лице"})` as const };
+  // Под наем собственикът сам е „без посредник“ — затова при наемите
+  // частното лице се пуска. При продажбите остават само строители.
+  const sobstvenik = data.sellerKind === "private" && data.dealType === "rent";
+  if (
+    data.sellerKind === "agency" ||
+    (data.sellerKind === "private" && !sobstvenik)
+  ) {
+    return {
+      skipped:
+        `не е строител (${data.sellerKind === "agency" ? "агенция" : "частно лице"})` as const,
+    };
   }
   if (data.sellerKind === "unknown") {
     return { skipped: "не се разбра кой подава обявата" as const };
@@ -360,7 +386,7 @@ export async function importImotAutomatically(
   if (!data.priceEur || !data.areaSqm) {
     return { skipped: "няма цена или квадратура" as const };
   }
-  if (!data.company || data.phones.length === 0) {
+  if ((!data.company && !sobstvenik) || data.phones.length === 0) {
     return { skipped: "няма фирма или телефон" as const };
   }
   if (data.photos.length === 0) {
@@ -389,13 +415,20 @@ export async function importImotAutomatically(
   // строители за собствените си апартаменти (РИК БИЛДИНГ).
   // „За ремонт“ и стар Акт 16 значат препродажба, не ново строителство.
   if (
-    /консултинг|тотален\s+ремонт|кредитн\S*\s+посредник|за\s+ремонт|след\s+(?:цялостен\s+)?ремонт|панелн\S*\s+(?:жилищн\S*\s+)?(?:сграда|блок)/i.test(tekst) ||
+    /консултинг|тотален\s+ремонт|кредитн\S*\s+посредник|за\s+ремонт|след\s+(?:цялостен\s+)?ремонт|панелн\S*\s+(?:жилищн\S*\s+)?(?:сграда|блок)/i.test(
+      tekst,
+    ) ||
     /акт\s*16\)?\s*(?:от\s*)?(?:19|200|201)\d/i.test(tekst)
   ) {
-    return { skipped: "текстът на обявата звучи на агенция или препродажба" as const };
+    return {
+      skipped: "текстът на обявата звучи на агенция или препродажба" as const,
+    };
   }
   // Фирми, махнати след преглед. Сравнява се без регистър и кавички.
-  const firma = (data.company ?? "").toUpperCase().replace(/["„“'.]/g, "").trim();
+  const firma = (data.company ?? "")
+    .toUpperCase()
+    .replace(/["„“'.]/g, "")
+    .trim();
   if (IZKLYUCHENI_FIRMI.some((ime) => firma.includes(ime))) {
     return { skipped: "фирмата е изключена от платформата" as const };
   }
@@ -464,7 +497,8 @@ export async function importImotAutomatically(
     sourceUrl: data.sourceUrl,
     dealType: data.dealType,
     propertyType: data.propertyType,
-    developerName: data.company,
+    // Собственикът няма фирма — обявата влиза без строител, само с телефона.
+    developerName: sobstvenik ? "" : (data.company ?? ""),
     // Всички телефони, не само първият: строителите дават по два-три
     // и ги пишат в края на описанието. Купувачът трябва да ги вижда в
     // „Контакти“, а не да ги търси в текста.
@@ -476,8 +510,7 @@ export async function importImotAutomatically(
     // „въведен 2026 г.“ е факт, „ще бъде въведен 2027 г.“ е обещание.
     completionYear: data.commissioned ? null : data.commissionYear,
     yearBuilt: data.commissioned ? data.commissionYear : null,
-    title:
-      data.title?.split("::")[0]?.trim() || `Имот в ${data.city}`,
+    title: data.title?.split("::")[0]?.trim() || `Имот в ${data.city}`,
     description: data.description,
     address: sastaviAdres(data),
     cityId,
