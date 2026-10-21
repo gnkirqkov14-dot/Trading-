@@ -87,6 +87,8 @@ function digits(value: string | null) {
 export type ImotListing = {
   sourceUrl: string;
   title: string | null;
+  /** „naem“ в адреса значи наем — цената тогава е на месец. */
+  dealType: "sale" | "rent";
   priceEur: number | null;
   areaSqm: number | null;
   rooms: number | null;
@@ -445,6 +447,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
   return {
     sourceUrl: url,
     title,
+    dealType: /-naem-/i.test(url) ? "rent" : "sale",
     // Цената и квадратурата се четат ОТ ЗАГЛАВИЕТО, не от страницата.
     //
     // „…, Център - 73 кв.м / При запитване, ГЕРТ ГРУП“ — когато фирмата
