@@ -337,7 +337,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
       ? "investor"
       : /Агенция:/i.test(text)
         ? "agency"
-        : /Частно лице:|\/\s*Частно лице\s*\//i.test(text)
+        : /Частно лице\s*[:/,]|\/\s*Частно лице/i.test(text)
           ? "private"
           : "unknown";
 
