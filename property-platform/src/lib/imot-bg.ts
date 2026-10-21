@@ -128,6 +128,13 @@ export type ImotListing = {
    * Маркерът е в самата обява и не лъже.
    */
   sellerKind: "builder" | "investor" | "agency" | "private" | "unknown";
+  /** От списъка „Особености“ на imot.bg. */
+  features: {
+    furnished: boolean;
+    elevator: boolean;
+    parking: boolean;
+    terrace: boolean;
+  };
 };
 
 /** „…-prodava-tristaen-apartament-grad-plovdiv-…“ → apartment. */
@@ -341,6 +348,22 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
           ? "private"
           : "unknown";
 
+  // „Особености“ е списък от отделни етикети: Обзаведен, Асансьор, Климатик…
+  // Без него всеки внесен имот излизаше „Необзаведен“, „без асансьор“.
+  const osobenosti =
+    html
+      .match(/Особености([\s\S]{0,1500}?)За контакт/)?.[1]
+      ?.replace(/<[^>]+>/g, "|")
+      .split("|")
+      .map((x) => x.trim())
+      .filter(Boolean) ?? [];
+  const features = {
+    furnished: osobenosti.some((x) => /^(Обзаведен|Частично обзаведен)/.test(x)),
+    elevator: osobenosti.includes("Асансьор"),
+    parking: osobenosti.some((x) => /^(Паркинг|Гараж|Паркомясто)/.test(x)),
+    terrace: osobenosti.some((x) => /Тераса|Балкон/.test(x)),
+  };
+
   const constructionLine = grab(/Строителство:?\s*([^<\n]{0,90})/i);
   const floorLine = grab(/Етаж:?\s*([^<\n]{0,90})/i);
   // Редът е от вида „5-ти от 6, Тухла, Ще бъде въведен в експлоатация 2026 г.“
@@ -484,6 +507,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
     commissioned,
     propertyType: propertyTypeFromUrl(url),
     sellerKind,
+    features,
   };
 }
 
