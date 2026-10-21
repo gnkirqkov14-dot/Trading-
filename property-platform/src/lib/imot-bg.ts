@@ -195,7 +195,8 @@ export function bezKontakti(opis: string | null) {
     )
     // Етикетът остава без номера си, подканата с двоеточие — също.
     .map((red) =>
-      prazenEtiket.test(red) || /(?:свържете|обадете)[^\n]{0,60}:\s*$/i.test(red)
+      prazenEtiket.test(red) ||
+      /(?:свържете|обадете)[^\n]{0,60}:\s*$/i.test(red)
         ? ""
         : red,
     )
@@ -336,7 +337,7 @@ export async function fetchImotListing(url: string): Promise<ImotListing> {
       ? "investor"
       : /Агенция:/i.test(text)
         ? "agency"
-        : /Частно лице:/i.test(text)
+        : /Частно лице:|\/\s*Частно лице\s*\//i.test(text)
           ? "private"
           : "unknown";
 
