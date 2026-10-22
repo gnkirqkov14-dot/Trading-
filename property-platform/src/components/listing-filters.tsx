@@ -38,6 +38,7 @@ export function ListingFilters({
 
   const selectedCity = searchParams.get("city") ?? "";
   const onlyBuilders = searchParams.get("builder") === "1";
+  const onlyNew = searchParams.get("newBuild") === "1";
 
   function updateParams(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -142,7 +143,20 @@ export function ListingFilters({
               : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
           }`}
         >
-          Само от строителя
+          От инвеститор
+        </button>
+
+        <button
+          type="button"
+          onClick={() => updateParams({ newBuild: onlyNew ? "" : "1" })}
+          aria-pressed={onlyNew}
+          className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+            onlyNew
+              ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+              : "border-slate-300 bg-white text-slate-600 hover:border-slate-400"
+          }`}
+        >
+          Ново строителство
         </button>
 
         <select

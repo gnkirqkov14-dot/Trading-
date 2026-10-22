@@ -31,6 +31,7 @@ type SearchParams = {
   floor?: string;
   stage?: string;
   builder?: string;
+  newBuild?: string;
   parking?: string;
   elevator?: string;
   terrace?: string;
@@ -86,8 +87,14 @@ export default async function ListingsPage({
         // Сегментът „от строителя“ стъпва на фирмата зад обявата, не на
         // етапа: етап може да липсва, ако обявата не го казва, а тогава
         // филтърът по етап би скрил точно нея.
+        // Само продажби: наемът от собственик също е „без посредник“, но
+        // не е от инвеститор и няма място в този раздел.
         if (params.builder === "1") {
-          query = query.not("developer_id", "is", null);
+          query = query.not("developer_id", "is", null).eq("type", "sale");
+        }
+        // Ново строителство — имот, за който е известен етап на строежа.
+        if (params.newBuild === "1") {
+          query = query.not("construction_stage", "is", null);
         }
         if (params.stage) {
           query = query.eq(
@@ -129,11 +136,12 @@ export default async function ListingsPage({
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            {onlyBuilders ? "Ново строителство" : "Обяви"}
+            {onlyBuilders ? "От инвеститор" : "Обяви"}
           </h1>
           {onlyBuilders && (
             <p className="mt-1 text-sm text-slate-500">
-              Директно от строителя — без комисиона и без посредник.
+              Директно от строителя или инвеститора — без комисиона и без
+              посредник.
             </p>
           )}
         </div>
