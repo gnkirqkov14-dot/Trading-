@@ -28,7 +28,7 @@ export async function SiteHeader() {
     { href: "/listings?type=rent", label: "Наеми" },
     // Обявите на строителите са собствен сегмент: друг купувач, друг
     // въпрос („кога е готово“ вместо „кога мога да го видя“).
-    { href: "/listings?builder=1", label: "Ново строителство" },
+    { href: "/listings?builder=1", label: "От инвеститор" },
     { href: "/listings", label: "Всички обяви" },
     { href: "/about", label: "За нас" },
   ];
