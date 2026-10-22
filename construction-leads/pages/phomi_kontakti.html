@@ -308,10 +308,10 @@ footer { color: var(--muted); font-size: 12.5px; }
   function shown() {
     return Object.keys(contacts).filter(matches).sort(byOrder);
   }
-  // своята поредност (местене с ⠿) е най-отпред; без нея – избраните (★), после по име
+  // избраните (★) най-отпред, после поредността (местене с ⠿), после по име
   function byOrder(a, b) {
     const A = contacts[a], B = contacts[b];
-    return (A.order ?? 1e9) - (B.order ?? 1e9) || (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.name || "").localeCompare(B.name || "", "bg");
+    return (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.order ?? 1e9) - (B.order ?? 1e9) || (A.name || "").localeCompare(B.name || "", "bg");
   }
 
   // ---------- изглед ----------
