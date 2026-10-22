@@ -71,7 +71,13 @@ textarea { resize: vertical; }
 .list { display: grid; gap: 6px; }
 .row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface);
   border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; cursor: pointer; text-align: left; color: var(--ink);
-  font: inherit; width: 100%; }
+  font: inherit; width: 100%; position: relative; }
+.row .rowdel { position: absolute; right: 6px; bottom: 4px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px;
+  color: var(--muted); font-size: 17px; line-height: 1; }
+.row .rowdel:hover { color: #fff; background: #c2410c; }
+.row .rowdel-ask { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end;
+  font-size: 13px; padding-top: 4px; border-top: 1px dashed var(--line); }
+.mini.danger { background: #c2410c; border-color: #c2410c; color: #fff; }
 .row:hover { border-color: var(--accent); }
 .row[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
 .row .nm { font-weight: 600; overflow-wrap: anywhere; }
@@ -343,6 +349,9 @@ footer { color: var(--muted); font-size: 12.5px; }
       <span class="sub">${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
         ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}${mailTag(c)}
         ${due ? `<span class="${due <= today() ? "due" : ""}">следва до ${esc(fmtDay(due))}</span>` : last ? `<span>последно ${esc(fmtAt(last).slice(0, 10))}</span>` : ""}</span>
+      ${readOnly ? "" : confirmDel === "r:" + id
+        ? `<span class="rowdel-ask">Да изтрия ли „${esc(c.name)}“? <span class="mini danger" role="button" data-rowdelyes="${esc(id)}">Да, изтрий</span> <span class="mini" role="button" data-rowdelno="1">Не</span></span>`
+        : `<span class="rowdel" role="button" data-rowdel="${esc(id)}" title="Изтрий контакта" aria-label="Изтрий контакта">×</span>`}
     </button>`;
   }
 
@@ -673,10 +682,11 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
   function deleteContact(id) {
     const ks = entriesFor(id);
-    confirmDel = null; narrowShow = false;
-    if (mode === "local") { delete contacts[id]; ks.forEach((k) => delete logs[k]); persistLocal(); current = ""; render(); return; }
+    const wasOpen = current === id;
+    confirmDel = null; if (wasOpen) narrowShow = false;
+    if (mode === "local") { delete contacts[id]; ks.forEach((k) => delete logs[k]); persistLocal(); if (wasOpen) current = ""; render(); return; }
     if (!db || readOnly) return;
-    current = "";
+    if (wasOpen) current = "";
     Promise.all([db.doc("contacts/" + id).delete(), ...ks.map((k) => db.doc("log/" + k).delete())])
       .then(() => note("Контактът е изтрит.")).catch((e) => fail(e));
   }
@@ -744,8 +754,11 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
 
   document.addEventListener("click", (ev) => {
-    const t = ev.target.closest("[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    const t = ev.target.closest("[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
     if (!t) return;
+    if (t.dataset.rowdel) { ev.stopPropagation(); confirmDel = "r:" + t.dataset.rowdel; renderList(); return; }
+    if (t.dataset.rowdelno) { ev.stopPropagation(); confirmDel = null; renderList(); return; }
+    if (t.dataset.rowdelyes) { ev.stopPropagation(); deleteContact(t.dataset.rowdelyes); return; }
     if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
     if (t.dataset.open && Date.now() - dragEndAt < 400) return;  // току-що преместен ред – не го отваряме
