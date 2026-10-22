@@ -188,15 +188,22 @@ export function bezKontakti(opis: string | null) {
   // imot.bg крие имейлите като „[email protected]“, а сайта на фирмата дава
   // като поддомейн на imot.bg. Редът с тях е само контакт — маха се целият.
   const skrit = /email\s*protected|[a-z0-9-]+\.imot\.bg/i;
+  // Сайтът на фирмата също е контакт извън платформата. Кратък ред с него
+  // („🌐 www.olympia.bg“, „Линк към апартамента: https://…“) се маха цял,
+  // в дълъг ред се маха само адресът.
+  const sayt =
+    /(?:Линк към[^:\n]{0,30}:\s*)?(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]{3,}\.(?:bg|com|eu|net)\b\S*/gi;
 
   const redove = opis
     .split("\n")
     .filter((red) => !(skrit.test(red) && red.length < 200))
+    .filter((red) => !(new RegExp(sayt.source, "i").test(red) && red.length < 120))
     .map((red) =>
       red
         .replace(sochi, "")
         .replace(nomer, "")
         .replace(imeyl, "")
+        .replace(sayt, "")
         .replace(/\s{2,}/g, " ")
         .trim(),
     )
