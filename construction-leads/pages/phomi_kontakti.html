@@ -372,8 +372,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <span class="nm">${readOnly ? "" : `<span class="grip" data-grip="${esc(id)}" title="Хвани и премести нагоре или надолу" aria-label="Премести">⠿</span>`}${i === undefined ? "" : `<span class="no">${i + 1}.</span> `}${esc(c.name)}</span>
       <span class="chipwrap"><span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
       <span class="sub">${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
-        ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}${mailTag(c)}
-        ${due ? `<span class="${due <= today() ? "due" : ""}">следва до ${esc(fmtDay(due))}</span>` : last ? `<span>последно ${esc(fmtAt(last).slice(0, 10))}</span>` : ""}</span>
+        ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}</span>
       ${readOnly ? "" : confirmDel === "r:" + id
         ? `<span class="rowdel-ask">Да изтрия ли „${esc(c.name)}“? <span class="mini danger" role="button" data-rowdelyes="${esc(id)}">Да, изтрий</span> <span class="mini" role="button" data-rowdelno="1">Не</span></span>`
         : `<span class="rowdel" role="button" data-rowdel="${esc(id)}" title="Изтрий контакта" aria-label="Изтрий контакта">×</span>`}
