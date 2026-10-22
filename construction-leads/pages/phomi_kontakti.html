@@ -9,7 +9,7 @@
   --bg: #eef1f1; --surface: #ffffff; --surface-2: #f5f8f8; --ink: #1a2224; --muted: #5a676b; --line: #d5dcdd;
   --accent: #0e6a70; --accent-ink: #ffffff; --accent-soft: #dcefef;
   --warn: #c2410c; --ok: #3c7a36; --gold: #a86a12;
-  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
+  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-later: #ece4fb; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
   --mail: #ff7a00; --st-mail: #ff7a00; --mail-ink: #ffffff; --mail-soft: #fff0e0;
   --meet: #1f9d3a; --meet-ink: #ffffff; --meet-soft: #dcf5e1;
   --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -20,7 +20,7 @@
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
   --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
-  --st-none: #232c2e; --st-try: #3a3220; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
   --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; } }
@@ -28,7 +28,7 @@
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
   --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
-  --st-none: #232c2e; --st-try: #3a3220; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
   --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; }
@@ -226,10 +226,10 @@ footer { color: var(--muted); font-size: 12.5px; }
 <script>
 (function () {
   "use strict";
-  const STATUSES = ["Не е звъняно", "Звъннато – няма отговор", "Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл",
+  const STATUSES = ["Не е звъняно", "Звъннато – няма отговор", "Да звънна пак", "Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл",
                     "Уговорена среща", "Проведена среща",
                     "Изпратена оферта", "Не се интересува", "Грешен номер"];
-  const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Разговор – интерес": "--st-int",
+  const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Да звънна пак": "--st-later", "Разговор – интерес": "--st-int",
                  "Чака да изпратим имейл": "--st-mail", "Изпратен имейл": "--st-offer",
                  "Уговорена среща": "--st-meet", "Проведена среща": "--st-meet", "Изпратена оферта": "--st-offer",
                  "Не се интересува": "--st-no", "Грешен номер": "--st-no"};
