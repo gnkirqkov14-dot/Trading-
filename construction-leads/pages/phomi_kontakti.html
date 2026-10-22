@@ -92,6 +92,15 @@ body.reordering { user-select: none; cursor: grabbing; }
 .row .sub .ph { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
 .star { font-size: 18px; line-height: 1; color: var(--line); background: none; border: 0; cursor: pointer; padding: 2px; }
 .star[aria-pressed="true"] { color: var(--gold); }
+.chipwrap { display: inline-flex; align-items: center; gap: 6px; justify-self: end; }
+.thought { position: relative; cursor: help; font-size: 15px; line-height: 1; }
+.thought .bubble { display: none; position: absolute; right: -6px; top: calc(100% + 8px); z-index: 20; width: min(320px, 80vw);
+  background: var(--surface); color: var(--ink); border: 1px solid var(--accent); border-radius: 12px; padding: 9px 11px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.18); font: 400 13px/1.45 var(--font-body); white-space: pre-wrap; text-align: left; cursor: default; }
+.thought .bubble b { display: block; font-weight: 700; color: var(--accent); margin-bottom: 3px; font-size: 12px; }
+.thought .bubble::before { content: ""; position: absolute; right: 10px; top: -7px; width: 12px; height: 12px; background: var(--surface);
+  border-left: 1px solid var(--accent); border-top: 1px solid var(--accent); transform: rotate(45deg); }
+.thought:hover .bubble, .thought:focus .bubble { display: block; }
 .chip { font-size: 11.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
 .due { color: var(--warn); font-weight: 600; }
 .late { color: var(--gold); font-weight: 600; }
@@ -338,6 +347,22 @@ footer { color: var(--muted); font-size: 12.5px; }
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
   }
 
+  // последната написана бележка – от разговорите или от полето „Бележка“ (без автоматичните записи за имейла)
+  function lastNote(id) {
+    const c = contacts[id];
+    const k = entriesFor(id).find((x) => { const e = logs[x]; return (e.said || e.next) && !/^Изпратен представителен имейл/.test(e.said || ""); });
+    const e = k ? logs[k] : null;
+    const fromLog = e ? {at: e.at || "", text: [e.said, e.next ? "Следваща стъпка: " + e.next : ""].filter(Boolean).join("\n"), what: e.kind || "Разговор"} : null;
+    const fromNote = c.note ? {at: c.noteAt || c.created || "", text: c.note, what: "Бележка"} : null;
+    if (!fromLog) return fromNote;
+    if (!fromNote) return fromLog;
+    return fromNote.at > fromLog.at ? fromNote : fromLog;
+  }
+  function thoughtHtml(id) {
+    const n = lastNote(id);
+    if (!n) return "";
+    return `<span class="thought" tabindex="0" aria-label="Последна бележка">💭<span class="bubble" role="tooltip"><b>${esc(n.what)}${n.at ? " · " + esc(fmtAt(n.at).slice(0, 10)) : ""}</b>${esc(n.text)}</span></span>`;
+  }
   function rowHtml(id, i) {
     const c = contacts[id], st = statusOf(c), due = nextDue(id), last = lastTalk(id);
     const w = whenText(lastAction(id));
@@ -345,7 +370,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <span class="when" title="Последно действие: ${esc(w.long)}"><small>последно</small>${esc(w.short)}</span>
       <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
       <span class="nm">${readOnly ? "" : `<span class="grip" data-grip="${esc(id)}" title="Хвани и премести нагоре или надолу" aria-label="Премести">⠿</span>`}${i === undefined ? "" : `<span class="no">${i + 1}.</span> `}${esc(c.name)}</span>
-      <span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>
+      <span class="chipwrap"><span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
       <span class="sub">${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
         ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}${mailTag(c)}
         ${due ? `<span class="${due <= today() ? "due" : ""}">следва до ${esc(fmtDay(due))}</span>` : last ? `<span>последно ${esc(fmtAt(last).slice(0, 10))}</span>` : ""}</span>
