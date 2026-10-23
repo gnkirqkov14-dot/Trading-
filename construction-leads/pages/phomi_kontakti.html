@@ -160,6 +160,16 @@ footer { color: var(--muted); font-size: 12.5px; }
   .profile { position: static; max-height: none; }
   .back { display: inline-block; }
 }
+/* телефон: името на цял ред, статусът под него */
+@media (max-width: 600px) {
+  .row { grid-template-columns: auto auto minmax(0, 1fr); padding: 9px 10px; gap: 4px 8px; }
+  .row .when { grid-row: 1 / 4; min-width: 44px; padding-right: 8px; }
+  .row .nm { grid-column: 3; overflow-wrap: break-word; }
+  .row .chipwrap { grid-column: 3; grid-row: 2; justify-self: start; }
+  .row .chip { white-space: normal; }
+  .row .sub { grid-column: 3; grid-row: 3; padding-right: 22px; }
+  .row .rowdel-ask { grid-row: 4; }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
