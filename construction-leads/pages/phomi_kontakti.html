@@ -1,0 +1,897 @@
+<title>PHOMI контакти</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: списък с контакти вляво, профил на избрания контакт вдясно (на телефон – профилът е отделен изглед) */
+:root {
+  --bg: #eef1f1; --surface: #ffffff; --surface-2: #f5f8f8; --ink: #1a2224; --muted: #5a676b; --line: #d5dcdd;
+  --accent: #0e6a70; --accent-ink: #ffffff; --accent-soft: #dcefef;
+  --warn: #c2410c; --ok: #3c7a36; --gold: #a86a12;
+  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-later: #ece4fb; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
+  --mail: #ff7a00; --st-mail: #ff7a00; --mail-ink: #ffffff; --mail-soft: #fff0e0;
+  --meet: #1f9d3a; --meet-ink: #ffffff; --meet-soft: #dcf5e1;
+  --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
+  --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
+  --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
+  --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
+  --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
+  --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
+  --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 48px; display: grid; gap: 12px; }
+header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; justify-content: space-between; }
+header h1 { font: 600 clamp(20px, 4vw, 26px)/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.save-note.warn { color: var(--warn); }
+.btn { font: 600 14px var(--font-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--warn); }
+.btn:disabled { opacity: .5; cursor: default; }
+.mini { font: 500 12px var(--font-body); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+  border-radius: 6px; padding: 2px 8px; cursor: pointer; text-decoration: none; }
+.mini:hover { border-color: var(--accent); }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 14px;
+  font: 600 14px var(--font-body); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tab .n { font-weight: 500; opacity: .8; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.tab .n.over { background: var(--warn); color: var(--surface); border-radius: 999px; padding: 0 6px; opacity: 1; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; }
+.toolbar label, .form label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); min-width: 0; }
+input, select, textarea { font: 14px var(--font-body); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 7px; padding: 7px 9px; min-width: 0; width: 100%; }
+textarea { resize: vertical; }
+.toolbar .grow { flex: 1 1 220px; }
+.check { display: flex !important; align-items: center; gap: 6px !important; font-size: 14px !important; color: var(--ink) !important;
+  padding-bottom: 7px; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.count { color: var(--muted); font-size: 13px; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 14px; align-items: start; }
+.list { display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; cursor: pointer; text-align: left; color: var(--ink);
+  font: inherit; width: 100%; position: relative; }
+.row .rowdel { position: absolute; right: 6px; bottom: 4px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px;
+  color: var(--muted); font-size: 17px; line-height: 1; }
+.row .rowdel:hover { color: #fff; background: #c2410c; }
+.row .rowdel-ask { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end;
+  font-size: 13px; padding-top: 4px; border-top: 1px dashed var(--line); }
+.mini.danger { background: #c2410c; border-color: #c2410c; color: #fff; }
+.row:hover { border-color: var(--accent); }
+.row[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
+.row .nm { font-weight: 600; overflow-wrap: anywhere; }
+.row .grip { display: inline-block; cursor: grab; touch-action: none; user-select: none; color: var(--muted); padding: 0 6px 0 0; font-size: 16px; }
+.row.dragging { opacity: .85; border-color: var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.18); cursor: grabbing; }
+body.reordering { user-select: none; cursor: grabbing; }
+.row .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.row .dot.g { background: #22a34a; }
+.row .dot.r { background: #dc2626; }
+.row .dot.o { background: #f59e0b; }
+.row .dot.k { background: #111; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.row .dot.y { background: #facc15; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.row .no { color: var(--muted, #6b7678); font-weight: 700; font-variant-numeric: tabular-nums; }
+.row .when { grid-row: 1 / 3; display: grid; justify-items: center; min-width: 54px; padding-right: 10px; border-right: 1px solid var(--line);
+  font: 600 13px var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.row .when small { font: 500 10px var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.row .sub { grid-column: 3 / 5; color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.row .sub .ph { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+.star { font-size: 18px; line-height: 1; color: var(--line); background: none; border: 0; cursor: pointer; padding: 2px; }
+.star[aria-pressed="true"] { color: var(--gold); }
+.chipwrap { display: inline-flex; align-items: center; gap: 6px; justify-self: end; }
+.thought { position: relative; cursor: help; font-size: 15px; line-height: 1; }
+.thought .bubble { display: none; position: absolute; right: -6px; top: calc(100% + 8px); z-index: 20; width: min(320px, 80vw);
+  background: var(--surface); color: var(--ink); border: 1px solid var(--accent); border-radius: 12px; padding: 9px 11px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.18); font: 400 13px/1.45 var(--font-body); white-space: pre-wrap; text-align: left; cursor: default; }
+.thought .bubble b { display: block; font-weight: 700; color: var(--accent); margin-bottom: 3px; font-size: 12px; }
+.thought .bubble::before { content: ""; position: absolute; right: 10px; top: -7px; width: 12px; height: 12px; background: var(--surface);
+  border-left: 1px solid var(--accent); border-top: 1px solid var(--accent); transform: rotate(45deg); }
+.thought:hover .bubble, .thought:focus .bubble { display: block; }
+.chip { font-size: 11.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
+.due { color: var(--warn); font-weight: 600; }
+.late { color: var(--gold); font-weight: 600; }
+.mailbox { border: 2px solid var(--accent); border-radius: 10px; padding: 12px; display: grid; gap: 10px; background: var(--surface); }
+.mailbox iframe { width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
+.mailbox .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* „Чака да изпратим имейл“ – ярко оранжево, за да напомня */
+.row.mail-due { background: var(--mail-soft); border-color: var(--mail); border-left: 6px solid var(--mail); }
+.chip[style*="--st-mail"] { color: var(--mail-ink); font-weight: 700; border-color: var(--mail); }
+/* „Уговорена среща“ – целият ред зелен */
+.row.meet-due { background: var(--meet-soft); border-color: var(--meet); border-left: 6px solid var(--meet); }
+.row.meet-due .chip { background: var(--meet) !important; color: var(--meet-ink); font-weight: 700; border-color: var(--meet); }
+.profile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px;
+  position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 24px); overflow: auto; min-width: 0; }
+.profile h2 { margin: 0; font: 600 19px/1.25 var(--font-display); overflow-wrap: anywhere; text-wrap: balance; }
+.phead { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; }
+.meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.back { display: none; }
+.lines { display: grid; gap: 5px; }
+.line { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
+.val { font-family: var(--font-mono); font-size: 14px; user-select: all; overflow-wrap: anywhere; min-width: 0; }
+.note { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.status-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; border-top: 1px dashed var(--line); padding-top: 10px; }
+.status-row label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); flex: 1 1 200px; }
+section h3 { margin: 0 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.entry { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 8px 10px; display: grid; gap: 3px;
+  background: var(--surface-2); min-width: 0; }
+.entry.over { border-left-color: var(--warn); } .entry.done { opacity: .6; }
+.entry .em { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.entry .said { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry .nx { font-weight: 600; } .entry.over .nx { color: var(--warn); }
+.log { display: grid; gap: 6px; }
+.form { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }
+.form label { flex: 1 1 200px; }
+.form label.wide { flex-basis: 100%; }
+.form label.short { flex: 0 1 170px; }
+.form .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.msg { font-size: 12.5px; color: var(--muted); min-height: 1em; }
+.msg.err { color: var(--warn); }
+.empty { color: var(--muted); text-align: center; padding: 30px 12px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
+.confirm { background: var(--st-try); border-radius: 8px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); width: min(640px, calc(100% - 32px));
+  padding: 16px; }
+dialog::backdrop { background: rgba(0, 0, 0, .35); }
+dialog h2 { margin: 0 0 10px; font: 600 18px var(--font-display); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+footer { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 860px) {
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .main.showing .list-col { display: none; }
+  .main:not(.showing) .profile { display: none; }
+  .profile { position: static; max-height: none; }
+  .back { display: inline-block; }
+}
+/* телефон: името на цял ред, статусът под него */
+@media (max-width: 600px) {
+  .row { grid-template-columns: auto auto minmax(0, 1fr); padding: 9px 10px; gap: 4px 8px; }
+  .row .when { grid-row: 1 / 4; min-width: 44px; padding-right: 8px; }
+  .row .nm { grid-column: 3; overflow-wrap: break-word; }
+  .row .chipwrap { grid-column: 3; grid-row: 2; justify-self: start; }
+  .row .chip { white-space: normal; }
+  .row .sub { grid-column: 3; grid-row: 3; padding-right: 22px; }
+  .row .rowdel-ask { grid-row: 4; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>PHOMI контакти</h1>
+      <p class="save-note" id="saveNote">Контактите се зареждат…</p>
+    </div>
+    <button class="btn primary" id="addBtn" type="button">+ Нов контакт</button>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="all" aria-selected="true">Контакти<span class="n" id="nAll">0</span></button>
+    <button class="tab" role="tab" data-tab="inq" aria-selected="false">Запитвания<span class="n" id="nInq">0</span></button>
+    <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
+    <button class="tab" role="tab" data-tab="rem" aria-selected="false">Напомняния<span class="n" id="nRem">0</span></button>
+  </nav>
+
+  <div class="toolbar" role="search">
+    <label class="grow" for="q">Търсене (фирма, лице, телефон, бележка)
+      <input type="search" id="q" placeholder="напр. Студио, Каменица, 088…" autocomplete="off"></label>
+    <label for="city">Град
+      <select id="city"><option value="">Всички</option></select></label>
+    <label for="kind">Вид
+      <select id="kind"><option value="">Всички</option></select></label>
+    <label for="stf">Статус
+      <select id="stf"><option value="">Всички</option></select></label>
+  </div>
+
+  <div class="bar">
+    <span class="count" id="count"></span>
+    <span class="line">
+      <button class="mini" id="copyPhones" type="button">Копирай телефоните на показаните</button>
+      <button class="mini" id="copyMails" type="button">Копирай имейлите на показаните</button>
+      <span class="msg" id="bulkMsg"></span>
+    </span>
+  </div>
+
+  <div class="main" id="main">
+    <div class="list-col"><div class="list" id="list"></div></div>
+    <aside class="profile" id="profile" aria-live="polite"></aside>
+  </div>
+
+  <footer>Всичко, което пишеш тук, се записва автоматично и се вижда на всичките ти устройства.</footer>
+</div>
+
+<dialog id="contactDlg">
+  <form id="contactForm" class="form" method="dialog">
+    <h2 id="dlgTitle" style="flex-basis:100%">Нов контакт</h2>
+    <label class="wide" for="f-name">Фирма / бюро *<input id="f-name" required autocomplete="off"></label>
+    <label for="f-kind">Вид<select id="f-kind"></select></label>
+    <label for="f-city">Град<input id="f-city" list="cityList" autocomplete="off" placeholder="Пловдив"></label>
+    <label for="f-person">Лице за контакт<input id="f-person" autocomplete="off"></label>
+    <label for="f-phones">Телефон(и) – със запетая<input id="f-phones" autocomplete="off" placeholder="+359 88 123 4567"></label>
+    <label for="f-emails">Имейл(и) – със запетая<input id="f-emails" autocomplete="off"></label>
+    <label for="f-site">Сайт<input id="f-site" autocomplete="off" placeholder="https://"></label>
+    <label class="wide" for="f-address">Адрес<input id="f-address" autocomplete="off"></label>
+    <label class="wide" for="f-note">Бележка (обект, откъде е контактът)<textarea id="f-note" rows="2"></textarea></label>
+    <div class="actions" style="flex-basis:100%">
+      <button class="btn primary" id="saveContact" type="submit">Запази</button>
+      <button class="btn" id="cancelContact" type="button">Откажи</button>
+      <span class="msg" id="formMsg"></span>
+    </div>
+  </form>
+</dialog>
+<datalist id="cityList"></datalist>
+
+<script>
+(function () {
+  "use strict";
+  const STATUSES = ["Не е звъняно", "Звъннато – няма отговор", "Да звънна пак", "Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл",
+                    "Уговорена среща", "Проведена среща",
+                    "Изпратена оферта", "Не се интересува", "Грешен номер"];
+  const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Да звънна пак": "--st-later", "Разговор – интерес": "--st-int",
+                 "Чака да изпратим имейл": "--st-mail", "Изпратен имейл": "--st-offer",
+                 "Уговорена среща": "--st-meet", "Проведена среща": "--st-meet", "Изпратена оферта": "--st-offer",
+                 "Не се интересува": "--st-no", "Грешен номер": "--st-no"};
+  const KINDS = ["Архитект", "Клиент", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
+  // Раздел „Запитвания“: контакти с group "inq" (запитвания от сайта/имейл), отделно от архитектите
+  const isInq = (c) => c.group === "inq";
+  const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед", "Проучване"];
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+
+  // На телефона: нов имейл направо в приложението Gmail (iPhone – googlegmail://, Android – intent към Gmail)
+  const UA = navigator.userAgent || "";
+  const IOS = /iPhone|iPad|iPod/i.test(UA), ANDROID = /Android/i.test(UA);
+  function gmailApp(addr) {
+    if (IOS) return "googlegmail:///co?to=" + encodeURIComponent(addr);
+    if (ANDROID) return "intent:" + encodeURIComponent(addr).replace(/%40/g, "@") + "#Intent;scheme=mailto;package=com.google.android.gm;end";
+    return "";
+  }
+  function appBtn(addr) {
+    const u = gmailApp(addr);
+    return u ? `<a class="mini" href="${esc(u)}" target="_blank" rel="noopener">Gmail приложение</a>` : "";
+  }
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* без запомняне */ } } };
+  const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const fmtDay = (iso) => iso ? iso.slice(8, 10) + "." + iso.slice(5, 7) + "." + iso.slice(0, 4) : "";
+  const fmtAt = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("bg-BG", {day: "2-digit", month: "2-digit", year: "numeric"}) +
+    " " + d.toLocaleTimeString("bg-BG", {hour: "2-digit", minute: "2-digit"}); };
+  const split = (v) => String(v || "").split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+
+  const contacts = {}, logs = {};
+  let db = null, mode = "loading", readOnly = false, loaded = false;
+  let tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null, mailOpen = null, mailBusy = false, mailDraft = null;
+  let mcp = null, mailerUrl = "";
+  const MAILER_KEY = "JPyiDWlI4wi4Foj71WRMDxci";  // същият ключ е в email/phomi_mailer.gs
+
+  $("#stf").innerHTML += STATUSES.map((s) => `<option>${esc(s)}</option>`).join("");
+  $("#kind").innerHTML += KINDS.map((s) => `<option>${esc(s)}</option>`).join("");
+  $("#f-kind").innerHTML = KINDS.map((s) => `<option>${esc(s)}</option>`).join("");
+
+  // ---------- изчисления ----------
+  const statusOf = (c) => c.status || "Не е звъняно";
+  function entriesFor(id) { return Object.keys(logs).filter((k) => logs[k].contact === id).sort((a, b) => (logs[b].at || "").localeCompare(logs[a].at || "")); }
+  function openSteps() { return Object.keys(logs).filter((k) => !logs[k].done && (logs[k].next || logs[k].due) && contacts[logs[k].contact])
+    .sort((a, b) => (logs[a].due || "9999").localeCompare(logs[b].due || "9999")); }
+  // имейл без отговор: дни от изпращането, докато статусът още е „Изпратен имейл“
+  const FOLLOW_DAYS = 7;
+  function mailDays(c) {
+    if (statusOf(c) !== "Изпратен имейл" || !c.emailSent) return null;
+    return Math.floor((Date.parse(today()) - Date.parse(c.emailSent)) / 864e5);
+  }
+  function followUps() { return Object.keys(contacts).filter((i) => (mailDays(contacts[i]) ?? -1) >= FOLLOW_DAYS)
+    .sort((a, b) => contacts[a].emailSent.localeCompare(contacts[b].emailSent)); }
+  function mailTag(c) {
+    const d = mailDays(c);
+    if (d == null) return "";
+    if (d >= FOLLOW_DAYS) return `<span class="${d >= 14 ? "due" : "late"}">без отговор ${d} дни – потърси пак</span>`;
+    return `<span>имейл преди ${d === 0 ? "по-малко от ден" : d + (d === 1 ? " ден" : " дни")}</span>`;
+  }
+  // последно действие: запис в дневника, смяна на статус, изпратен имейл или промяна в бележката
+  function lastAction(id) {
+    const c = contacts[id];
+    // добавянето на контакта не се брои – само нещата, които си направил с него
+    // статус, сменен без записан час (от по-стара версия на страницата) – взима се часът на последната промяна
+    const statusTime = c.statusAt || (statusOf(c) !== "Не е звъняно" ? c.updated : "");
+    return [lastTalk(id), statusTime, c.emailSent, c.noteAt].filter(Boolean).sort().pop() || "";
+  }
+  function whenText(iso) {
+    if (!iso) return {short: "—", long: "няма действие"};
+    const d = Math.floor((Date.parse(today()) - Date.parse(iso.slice(0, 10))) / 864e5);
+    const day = fmtDay(iso.slice(0, 10));
+    return {short: d <= 0 ? "днес" : d === 1 ? "вчера" : day.slice(0, 5), long: d <= 0 ? "днес" : d === 1 ? "вчера" : `${day} (преди ${d} дни)`, days: d};
+  }
+  function nextDue(id) { const d = entriesFor(id).map((k) => logs[k]).filter((e) => !e.done && e.due).map((e) => e.due).sort(); return d[0] || ""; }
+  function lastTalk(id) { const e = entriesFor(id)[0]; return e ? logs[e].at : ""; }
+
+  function matches(id) {
+    const c = contacts[id], q = $("#q").value.trim().toLowerCase();
+    if (tab === "pick" && !c.pick) return false;
+    if (tab === "inq" && !isInq(c)) return false;
+    if (tab === "all" && isInq(c)) return false;
+    if ($("#city").value && c.city !== $("#city").value) return false;
+    if ($("#kind").value && c.kind !== $("#kind").value) return false;
+    if ($("#stf").value && statusOf(c) !== $("#stf").value) return false;
+    if (!q) return true;
+    const hay = [c.name, c.person, c.city, c.kind, c.address, c.note, c.website, (c.phones || []).join(" "),
+                 (c.phones || []).join(" ").replace(/\s/g, ""), (c.emails || []).join(" "),
+                 entriesFor(id).map((k) => [logs[k].who, logs[k].said, logs[k].next].join(" ")).join(" ")].join(" ").toLowerCase();
+    return q.split(/\s+/).every((w) => hay.includes(w));
+  }
+  function shown() {
+    return Object.keys(contacts).filter(matches).sort(byOrder);
+  }
+  // избраните (★) най-отпред, после поредността (местене с ⠿), после по име
+  function byOrder(a, b) {
+    const A = contacts[a], B = contacts[b];
+    return (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.order ?? 1e9) - (B.order ?? 1e9) || (A.name || "").localeCompare(B.name || "", "bg");
+  }
+
+  // ---------- изглед ----------
+  function renderFilters() {
+    const cities = [...new Set(Object.values(contacts).map((c) => c.city).filter(Boolean))].sort();
+    const cur = $("#city").value;
+    $("#city").innerHTML = '<option value="">Всички</option>' + cities.map((c) => `<option${c === cur ? " selected" : ""}>${esc(c)}</option>`).join("");
+    $("#cityList").innerHTML = cities.map((c) => `<option value="${esc(c)}">`).join("");
+  }
+  function renderTabs() {
+    const ids = Object.keys(contacts), rem = openSteps(), fu = followUps().length;
+    const over = rem.filter((k) => logs[k].due && logs[k].due <= today()).length + fu;
+    $("#nAll").textContent = ids.filter((i) => !isInq(contacts[i])).length;
+    $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
+    $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
+    $("#nRem").textContent = over ? over + " за днес" : rem.length;
+    $("#nRem").classList.toggle("over", !!over);
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
+  }
+
+  // последната написана бележка – от разговорите или от полето „Бележка“ (без автоматичните записи за имейла)
+  function lastNote(id) {
+    const c = contacts[id];
+    const k = entriesFor(id).find((x) => { const e = logs[x]; return (e.said || e.next) && !/^Изпратен представителен имейл/.test(e.said || ""); });
+    const e = k ? logs[k] : null;
+    const fromLog = e ? {at: e.at || "", text: [e.said, e.next ? "Следваща стъпка: " + e.next : ""].filter(Boolean).join("\n"), what: e.kind || "Разговор"} : null;
+    const fromNote = c.note ? {at: c.noteAt || c.created || "", text: c.note, what: "Бележка"} : null;
+    if (!fromLog) return fromNote;
+    if (!fromNote) return fromLog;
+    return fromNote.at > fromLog.at ? fromNote : fromLog;
+  }
+  function thoughtHtml(id) {
+    const n = lastNote(id);
+    if (!n) return "";
+    return `<span class="thought" tabindex="0" aria-label="Последна бележка">💭<span class="bubble" role="tooltip"><b>${esc(n.what)}${n.at ? " · " + esc(fmtAt(n.at).slice(0, 10)) : ""}</b>${esc(n.text)}</span></span>`;
+  }
+  // зелена точка – положително действие; червена – още нищо или отказ; оранжева – да се звънне пак
+  const DOT_GREEN = ["Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл", "Уговорена среща", "Проведена среща", "Изпратена оферта"];
+  const dotOf = (st) => (DOT_GREEN.includes(st) ? "g" : st === "Да звънна пак" ? "o" : st === "Звъннато – няма отговор" ? "y" : st === "Не се интересува" ? "k" : "r");
+  function rowHtml(id, i) {
+    const c = contacts[id], st = statusOf(c), due = nextDue(id), last = lastTalk(id);
+    const w = whenText(lastAction(id));
+    return `<button class="row${st === "Чака да изпратим имейл" ? " mail-due" : st === "Уговорена среща" ? " meet-due" : ""}" type="button" data-open="${esc(id)}" aria-current="${id === current}">
+      <span class="when" title="Последно действие: ${esc(w.long)}"><small>последно</small>${esc(w.short)}</span>
+      <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
+      <span class="nm">${readOnly ? "" : `<span class="grip" data-grip="${esc(id)}" title="Хвани и премести нагоре или надолу" aria-label="Премести">⠿</span>`}${i === undefined ? "" : `<span class="no">${i + 1}.</span> `}<span class="dot ${dotOf(st)}" title="${esc(st)}"></span>${esc(c.name)}</span>
+      <span class="chipwrap"><span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
+      <span class="sub">${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
+        ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}</span>
+      ${readOnly ? "" : confirmDel === "r:" + id
+        ? `<span class="rowdel-ask">Да изтрия ли „${esc(c.name)}“? <span class="mini danger" role="button" data-rowdelyes="${esc(id)}">Да, изтрий</span> <span class="mini" role="button" data-rowdelno="1">Не</span></span>`
+        : `<span class="rowdel" role="button" data-rowdel="${esc(id)}" title="Изтрий контакта" aria-label="Изтрий контакта">×</span>`}
+    </button>`;
+  }
+
+  function entryHtml(k, withName) {
+    const e = logs[k], c = contacts[e.contact] || {}, over = !e.done && e.due && e.due <= today();
+    return `<div class="entry${over ? " over" : ""}${e.done ? " done" : ""}">
+      ${withName ? `<div class="line"><button class="mini" type="button" data-open="${esc(e.contact)}">${esc(c.name || "—")}</button>
+        ${(c.phones || [])[0] ? `<span class="val">${esc(c.phones[0])}</span>` : ""}</div>` : ""}
+      <div class="em"><b>${esc(fmtAt(e.at))}</b>${e.kind ? `<span>${esc(e.kind)}</span>` : ""}${e.who ? `<span>с: ${esc(e.who)}</span>` : ""}</div>
+      ${e.said ? `<div class="said">${esc(e.said)}</div>` : ""}
+      ${e.next || e.due ? `<div class="nx">Следва: ${esc(e.next || "обаждане")}${e.due ? " · до " + esc(fmtDay(e.due)) : ""}${e.done ? " · ✓ готово" : ""}</div>` : ""}
+      ${readOnly ? "" : `<div class="em">${(e.next || e.due) && !e.done ? `<button class="mini" type="button" data-done="${esc(k)}">Готово</button>` : ""}
+        ${confirmDel === "log:" + k ? `<span class="confirm">Да изтрия ли записа? <button class="mini" type="button" data-dellog="${esc(k)}">Да, изтрий</button>
+          <button class="mini" type="button" data-cancel="1">Не</button></span>` : `<button class="mini" type="button" data-askdellog="${esc(k)}">Изтрий</button>`}</div>`}
+    </div>`;
+  }
+
+  function profileHtml() {
+    const c = contacts[current];
+    if (!c) {
+      const n = Object.keys(contacts).length;
+      return `<p class="empty">${!loaded ? "Контактите се зареждат…" : n ? "Избери контакт от списъка, за да видиш профила му и да запишеш разговор."
+        : "Още няма контакти. Натисни „+ Нов контакт“, за да добавиш първия."}</p>`;
+    }
+    const st = statusOf(c), ents = entriesFor(current);
+    const phones = (c.phones || []).map((p) => `<div class="line"><span class="val">${esc(p)}</span>
+      <a class="mini" href="tel:${esc(p.replace(/\s/g, ""))}" target="_blank" rel="noopener">Обади се</a><button class="mini" type="button" data-copy="${esc(p)}">Копирай</button></div>`).join("");
+    const emails = (c.emails || []).map((m) => `<div class="line"><span class="val">${esc(m)}</span>
+      ${appBtn(m)}<a class="mini" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m)}" target="_blank" rel="noopener">${IOS || ANDROID ? "Gmail в браузър" : "Gmail"}</a><button class="mini" type="button" data-copy="${esc(m)}">Копирай</button></div>`).join("");
+    const site = c.website ? `<div class="line"><a href="${esc(c.website)}" target="_blank" rel="noopener">${esc(c.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></div>` : "";
+    return `
+      <button class="btn back" type="button" data-back="1">← Към списъка</button>
+      <div class="phead">
+        <button class="star" type="button" data-star="${esc(current)}" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран" style="font-size:24px">★</button>
+        <div><h2>${esc(c.name)}</h2>
+          <div class="meta">${c.kind ? `<span>${esc(c.kind)}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.person ? `<span>Лице: ${esc(c.person)}</span>` : ""}
+            <span>Последно действие: <b>${esc(whenText(lastAction(current)).long)}</b></span></div></div>
+      </div>
+      ${mailDays(c) != null && mailDays(c) >= FOLLOW_DAYS ? `<div class="confirm">Имейлът е изпратен на ${esc(fmtDay(c.emailSent))} – ${mailDays(c)} дни без отговор. Потърси ги пак и запиши разговора.</div>` : ""}
+      <div class="lines">${phones}${emails}${site}${c.address ? `<div class="meta">${esc(c.address)}</div>` : ""}</div>
+      ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
+      <div class="status-row">
+        <label for="p-status">Статус<select id="p-status" ${readOnly ? "disabled" : ""}>${STATUSES.map((s) => `<option${s === st ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+        ${st === "Изпратен имейл" ? `<label for="p-mail" style="flex:0 1 180px">Имейлът е изпратен на<input type="date" id="p-mail" value="${esc(c.emailSent || "")}" ${readOnly ? "disabled" : ""}></label>` : ""}
+        ${readOnly ? "" : `<button class="btn" type="button" data-edit="1">Редактирай</button>`}
+        ${readOnly || !(c.emails || []).length ? "" : `<button class="btn primary" type="button" data-mailtpl="1">✉ Представителен имейл</button>`}
+        ${readOnly ? "" : confirmDel === "c:" + current ? `<span class="confirm">Да изтрия ли контакта и дневника му?
+          <button class="mini" type="button" data-delcontact="1">Да, изтрий</button><button class="mini" type="button" data-cancel="1">Не</button></span>`
+          : `<button class="btn danger" type="button" data-askdel="1">Изтрий</button>`}
+      </div>
+      ${mailOpen === current ? mailPanel(c) : ""}
+      ${readOnly ? "" : `<section>
+        <h3>Запиши разговор</h3>
+        <div class="form" id="logForm">
+          <label class="short" for="l-kind">Вид<select id="l-kind">${LOG_KINDS.map((k) => `<option>${k}</option>`).join("")}</select></label>
+          <label for="l-who">С кого говорих<input id="l-who" autocomplete="off" value="${esc(c.person ? split(c.person)[0] : "")}"></label>
+          <label class="wide" for="l-said">Какво се разбрахме<textarea id="l-said" rows="3" placeholder="напр. проектират 2 жилищни сгради в Тракия, фасадата се решава през януари, искат мостри"></textarea></label>
+          <label for="l-next">Следваща стъпка<input id="l-next" autocomplete="off" placeholder="напр. среща в офиса, мостри, оферта"></label>
+          <label class="short" for="l-due">До кога<input type="date" id="l-due"></label>
+          <div class="actions"><button class="btn primary" type="button" data-addlog="1">Запази разговора</button><span class="msg" id="logMsg"></span></div>
+        </div>
+      </section>`}
+      <section>
+        <h3>Дневник${ents.length ? ` (${ents.length})` : ""}</h3>
+        <div class="log">${ents.length ? ents.map((k) => entryHtml(k, false)).join("") : `<p class="meta">Още няма записани разговори.</p>`}</div>
+      </section>`;
+  }
+
+  function renderList() {
+    if (tab === "rem") {
+      const keys = openSteps().filter((k) => { const q = $("#q").value.trim().toLowerCase(); const e = logs[k];
+        return !q || [contacts[e.contact].name, e.who, e.said, e.next].join(" ").toLowerCase().includes(q); });
+      const fu = followUps();
+      $("#count").textContent = `${keys.length} отворени следващи стъпки` + (fu.length ? ` · ${fu.length} имейла без отговор` : "");
+      const fuHtml = fu.map((i) => { const c = contacts[i];
+        return `<div class="entry over"><div class="line"><button class="mini" type="button" data-open="${esc(i)}">${esc(c.name)}</button>
+          ${(c.phones || [])[0] ? `<span class="val">${esc(c.phones[0])}</span>` : ""}</div>
+          <div class="nx">Имейл на ${esc(fmtDay(c.emailSent))} – ${mailDays(c)} дни без отговор. Потърси пак.</div></div>`; }).join("");
+      $("#list").innerHTML = keys.length || fu.length ? fuHtml + keys.map((k) => entryHtml(k, true)).join("")
+        : `<p class="empty">Няма отворени стъпки. Запиши разговор със „Следваща стъпка“ и дата – ще се появи тук.</p>`;
+      return;
+    }
+    const ids = shown();
+    const total = Object.keys(contacts).filter((i) => tab === "inq" ? isInq(contacts[i]) : tab === "all" ? !isInq(contacts[i]) : true).length;
+    $("#count").textContent = `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
+    $("#list").innerHTML = ids.length ? ids.map(rowHtml).join("") :
+      `<p class="empty">${!loaded ? "Контактите се зареждат…" : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
+  }
+  function renderProfile() {
+    // не пипаме формите (разговор, имейл), докато се пише в тях
+    const a = document.activeElement;
+    if (a && a.matches && a.matches("input,textarea,select") && (a.closest("#logForm") || a.closest("#mailbox")) && contacts[current]) return;
+    captureDraft();
+    $("#profile").innerHTML = profileHtml();
+    if (mailOpen === current) refreshPreview();
+  }
+  function render() { renderTabs(); renderList(); renderProfile(); $("#main").classList.toggle("showing", !!contacts[current] && narrowShow); }
+  let narrowShow = false;
+
+  // ---------- запис ----------
+  function note(text, err) { const el = $("#saveNote"); el.textContent = text; el.classList.toggle("warn", !!err); }
+  function fail(e, where) {
+    const t = e && e.code === "invalid_argument" ? "Нямате право да записвате тук." : e && e.code === "quota_exceeded" ? "Базата е пълна – не е записано."
+      : "Не е записано – опитайте пак след малко.";
+    if (where) { where.textContent = t; where.classList.add("err"); } else note(t, true);
+    if (e && e.code === "invalid_argument") { readOnly = true; render(); }
+  }
+  function persistLocal() { store.set("phomi-c-contacts", JSON.stringify(contacts)); store.set("phomi-c-log", JSON.stringify(logs)); }
+  const pending = {};
+  function saveContact(id, patch) {
+    contacts[id] = Object.assign({}, contacts[id], patch, {updated: new Date().toISOString()});
+    render();
+    if (mode === "local") { persistLocal(); return Promise.resolve(); }
+    if (!db || readOnly) return Promise.resolve();
+    const body = contacts[id];
+    pending[id] = (pending[id] || Promise.resolve()).then(() => db.doc("contacts/" + id).set(body)).catch((e) => fail(e));
+    return pending[id];
+  }
+
+  function openDialog(id) {
+    editing = id || null;
+    const c = id ? contacts[id] : tab === "inq" ? {kind: "Клиент", city: ""} : {kind: "Архитект", city: $("#city").value || "Пловдив"};
+    $("#dlgTitle").textContent = id ? "Редактирай контакт" : "Нов контакт";
+    $("#f-name").value = c.name || ""; $("#f-kind").value = c.kind || "Друго"; $("#f-city").value = c.city || "";
+    $("#f-person").value = c.person || ""; $("#f-phones").value = (c.phones || []).join(", ");
+    $("#f-emails").value = (c.emails || []).join(", "); $("#f-site").value = c.website || "";
+    $("#f-address").value = c.address || ""; $("#f-note").value = c.note || "";
+    $("#formMsg").textContent = "";
+    try { $("#contactDlg").showModal(); } catch (e) { $("#contactDlg").setAttribute("open", ""); }
+    $("#f-name").focus();
+  }
+  $("#contactForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const name = $("#f-name").value.trim();
+    if (!name) { $("#formMsg").textContent = "Напиши името на фирмата."; $("#formMsg").classList.add("err"); return; }
+    let site = $("#f-site").value.trim();
+    if (site && !/^https?:\/\//.test(site)) site = "https://" + site;
+    const patch = {name, kind: $("#f-kind").value, city: $("#f-city").value.trim(), person: $("#f-person").value.trim(),
+                   phones: split($("#f-phones").value), emails: split($("#f-emails").value), website: site,
+                   address: $("#f-address").value.trim(), note: $("#f-note").value.trim()};
+    const id = editing || "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    if (!editing) Object.assign(patch, {status: "Не е звъняно", pick: false, created: new Date().toISOString(), source: "добавен ръчно"},
+      tab === "inq" ? {group: "inq"} : {});
+    // промяна в бележката се брои за последно действие
+    else if ((contacts[editing].note || "") !== patch.note) patch.noteAt = new Date().toISOString();
+    current = id; store.set("phomi-c-current", id); narrowShow = true;
+    $("#contactDlg").close();
+    saveContact(id, patch).then(() => note(editing ? "Контактът е обновен." : "Контактът е добавен."));
+    renderFilters();
+  });
+  $("#cancelContact").addEventListener("click", () => $("#contactDlg").close());
+
+
+  // ---------- представителен имейл (шаблон PHOMI, изпраща се през Gmail на зрителя) ----------
+  const MAIL_TPL = "<div style=\"margin:0;padding:0;background-color:#f2f4f4\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#f2f4f4\" style=\"background-color:#f2f4f4\">\n<tr><td align=\"center\" style=\"padding:24px 12px\">\n<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#ffffff\" style=\"width:100%;max-width:600px;background-color:#ffffff;border-radius:6px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1d2526\">\n<tr><td style=\"padding:26px 32px 14px 32px\">\n<div style=\"font-size:26px;line-height:28px;font-weight:800;letter-spacing:4px;color:#111111\">PHOMI<\/div>\n<div style=\"font-size:11px;line-height:16px;letter-spacing:3px;color:#007F8B;font-weight:700\">БЪЛГАРИЯ<\/div>\n<\/td><\/tr>\n<tr><td style=\"padding:0 32px 18px 32px\">\n<div style=\"font-size:22px;line-height:28px;font-weight:700;color:#111111\">PHOMI за вашите проекти<\/div>\n<\/td><\/tr>\n<tr><td style=\"padding:26px 32px 4px 32px;font-size:15px;line-height:23px\">\n<p style=\"margin:0 0 14px 0;font-size:17px;font-weight:700;color:#007F8B\">{{GREETING}}<\/p>\n<p style=\"margin:0 0 14px 0\">{{OPENER}}<\/p>\n<p style=\"margin:0 0 14px 0\"><b>Визия на камък, дърво или бетон.<\/b> Тънка и лека минерална облицовка с дебелина около 3–4 мм и тегло около 4 кг/м².<\/p>\n<p style=\"margin:0 0 14px 0\">PHOMI е натурален и екологичен материал от кварцов пясък и глина. PHOMI eCovering дава свобода при оформянето на фасади и интериори: разнообразни текстури и формати, ниско тегло и решения за прави и извити повърхности.<\/p>\n<p style=\"margin:0 0 18px 0\"><b>Монтажът е лесен:<\/b> облицовката се залепва с циментово лепило към подготвената основа. Материалът е UV защитен, удароустойчив и мразоустойчив, с клас по реакция на огън A1 или A2 според модела. Предлага се с 10-годишна гаранция и експлоатационен живот над 50 години според проведените тестове.<\/p>\n<\/td><\/tr>\n<tr><td style=\"padding:0 32px 6px 32px\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n<tr>\n<td width=\"50%\" style=\"padding:0 6px 10px 0\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td bgcolor=\"#007F8B\" style=\"background-color:#007F8B;border-radius:4px\"><a href=\"https://www.phomi.bg/nov-katalozi-2026\" style=\"display:block;background-color:#007F8B;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:12px 8px;border-radius:4px\">Каталози 2026<\/a><\/td><\/tr><\/table><\/td>\n<td width=\"50%\" style=\"padding:0 0 10px 6px\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td bgcolor=\"#007F8B\" style=\"background-color:#007F8B;border-radius:4px\"><a href=\"https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6aba35ed3ddd713780d6df3b_PHOMI-Cenorazpis-EUR-2026.pdf\" style=\"display:block;background-color:#007F8B;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:12px 8px;border-radius:4px\">Ценоразпис<\/a><\/td><\/tr><\/table><\/td>\n<\/tr>\n<tr>\n<td width=\"50%\" style=\"padding:0 6px 10px 0\"><a href=\"https://drive.google.com/drive/folders/1oeSXggnm4eGaXYEbMHVYJiINEwak878v\" style=\"display:block;background-color:#ffffff;color:#007F8B;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:11px 8px;border-radius:4px;border:1px solid #007F8B\">Сертификати и документи<\/a><\/td>\n<td width=\"50%\" style=\"padding:0 0 10px 6px\"><a href=\"https://www.phomi.bg/nov-proekti\" style=\"display:block;background-color:#ffffff;color:#007F8B;text-decoration:none;font-size:14px;font-weight:700;text-align:center;padding:11px 8px;border-radius:4px;border:1px solid #007F8B\">Реализирани проекти<\/a><\/td>\n<\/tr>\n<\/table>\n<p style=\"margin:2px 0 0 0;font-size:12px;line-height:18px;color:#6b7678\">Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.<\/p>\n<\/td><\/tr>\n<tr><td style=\"padding:20px 32px 6px 32px;font-size:15px;line-height:23px\">\n<p style=\"margin:0 0 8px 0;font-weight:700\">Имате ли проект, за който търсите подобна визия?<\/p>\n<p style=\"margin:0 0 18px 0\">Изпратете ми снимка или чертеж, за да обсъдим подходящите модели. Можете да видите текстурите и мострите на живо в <a href=\"https://www.phomi.bg/nov-kontakti\" style=\"color:#007F8B;font-weight:700\">шоурумите ни в София и Пловдив<\/a>.<\/p>\n<\/td><\/tr>\n<tr><td style=\"padding:6px 32px 28px 32px;font-size:14px;line-height:21px;border-top:1px solid #e3e8e8\">\n<p style=\"margin:16px 0 0 0\">Поздрави,<br><b>{{SENDER_NAME}}<\/b><br>PHOMI България<br>\n<span style=\"color:#007F8B;font-weight:700\">{{SENDER_EMAIL}} · {{SENDER_PHONE}}<\/span><br>\n<a href=\"https://www.phomi.bg/\" style=\"color:#007F8B\">phomi.bg<\/a><\/p>\n<\/td><\/tr>\n<\/table>\n<\/td><\/tr>\n<\/table>\n<\/div>";
+  const MAIL_SUBJECT = "PHOMI – материали за вашия проект";
+  const OPENERS = {
+    interest: "Благодаря за интереса към PHOMI. Изпращам ви кратко представяне и полезните материали на едно място.",
+    call: "Както се разбрахме по телефона, изпращам ви кратко представяне на PHOMI и полезните материали на едно място.",
+  };
+  const sender = () => { try { return JSON.parse(store.get("phomi-sender") || "{}"); } catch (e) { return {}; } };
+  function firstName(c) {
+    const p = (c.person || "").split(/[,;]/)[0].replace(/^(арх|инж|проф|доц)\.\s*/i, "").trim();
+    if (!p) return "";
+    const parts = p.split(/\s+/);
+    return parts.length >= 3 ? parts[0] : parts[0];  // само първото име
+  }
+  function fillMail(v) {
+    const e = (x) => esc(x);
+    return MAIL_TPL.replace("{{GREETING}}", e(v.greeting)).replace("{{OPENER}}", e(v.opener))
+      .replace("{{SENDER_NAME}}", e(v.name || "PHOMI България")).replace("{{SENDER_EMAIL}}", e(v.email || "info@phomi.bg"))
+      .replace("{{SENDER_PHONE}}", e(v.phone || "+359 884 30 30 70"));
+  }
+  function mailText(v) {
+    return [v.greeting, "", v.opener, "",
+      "Визия на камък, дърво или бетон. Тънка и лека минерална облицовка с дебелина около 3–4 мм и тегло около 4 кг/м².", "",
+      "Каталози 2026: https://www.phomi.bg/nov-katalozi-2026",
+      "Ценоразпис: https://cdn.prod.website-files.com/6971ee37d077eeeff8238dd7/6aba35ed3ddd713780d6df3b_PHOMI-Cenorazpis-EUR-2026.pdf",
+      "Сертификати и документи: https://drive.google.com/drive/folders/1oeSXggnm4eGaXYEbMHVYJiINEwak878v",
+      "Реализирани проекти: https://www.phomi.bg/nov-proekti", "",
+      "Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.", "",
+      "Поздрави,", v.name || "PHOMI България", "PHOMI България", (v.email || "info@phomi.bg") + " · " + (v.phone || "+359 884 30 30 70"), "phomi.bg"].join("\n");
+  }
+  function mailValues() {
+    const val = (id) => ($(id) ? $(id).value.trim() : "");
+    return {to: val("#m-to"), greeting: val("#m-greet") || "Здравейте,", opener: OPENERS[val("#m-open")] || OPENERS.interest,
+            name: val("#m-name"), phone: val("#m-phone"), email: "info@phomi.bg"};
+  }
+  // Версия през Google Apps Script (email/phomi_mailer.gs): твоят дизайн и чисти линкове
+  const MAIL_LOGO = "data:image/png;base64,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";
+  const MAIL_HERO = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAwICQsJCAwLCgsODQwOEh4UEhEREiUbHBYeLCcuLisnKyoxN0Y7MTRCNCorPVM+QkhKTk9OLztWXFVMW0ZNTkv/2wBDAQ0ODhIQEiQUFCRLMisyS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0v/wAARCAEMAoADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAAAgEDBAUGAAf/xABHEAABBAECAwUFBQYEBAUEAwABAAIDEQQSIQUxQRMiUWFxBjKBkbEUQqHB0SMzUmJyghUWkuFDRJPwJFNjc4MlNKKyNVTC/8QAGAEBAQEBAQAAAAAAAAAAAAAAAQACAwT/xAAiEQEBAQADAQACAwEBAQAAAAAAARECEiExA0ETUWEiMnH/2gAMAwEAAhEDEQA/AHeqIHZNgol6dcTgciaQmUYKUeDk40jqo4KcBQkgEItQ6JkORB1oKUybanC6T7De7dlAaVIifpIQYsGh1gp3QT1pQ2zW6+XoprRqo2UEbdhujFLtJ8D8l1EdKRqFQSPoMceQANnwXBBkuDcaZ3gxx/BBjKezGFm43FGl3EjPjlh1MeCHGxYO/Oj1Wv5qg4MLz921pjNX8FfhE+KupdySpCkOKEhKuUiLqSrlIiREktKIlC5KpORUhS2hOpcVw3XFRrl1JQN0QaoYABJNKzHhfNJ7kbS4+fl8eSd0qn4/PQZjM8nv/wD8j52fgi04qJHPke9761vJc8+Z/wC/wQVpHUlEByA5DYLuzB3N/NcnWfAaaoh5vwKUNeeo+VI2xAcrB8ilcDvTvmAVI2A5n3fk5EX2KLXelWus1vR/BIASdwL8ipE0Rc9LWnx06SnY8iWMVHlTNHlKSPxtAHkkCnfBKWtPvAfEKSQ3iee07ZJcP542n8gn2cay21qbjv8A7XN/MqvDWjZtedFd2V72fmnaMW8HHgSRkYxY0ffifrr4UD8rVxE9ksbZI3BzHAFrhyIWPDdBNGza0/CQ0cOx9IoFt16kkrUus2YllCipcQFoB5IrK4Anoia2j3ii1YSiUlUjfpHIlBSpdVdzSjYIeSIbqTi4nqnGuLWkuPohtreaLtGVu21mtQADpDunBGGbkoHuYW7NAQtcXbblZ9Mw1NGJD5KJPijoFZtj1b3SZnobDdalGKw4vd2Ca+z78lYucANyAmJpmNGx38k6sNMgaKsgIchzIhtu5NayXEndM5BLnXWyc9H6A6YnclcZrbSYcSgJW8Gnw5pG6TQDy3TTQSeakNBa20VGyyua4NC57iVzUFxYPBAWX0T7WFxUmHEL0W4ZFeIieiNuMXHkrhmAOpCksxo4+iOxxVY2MWm63Us7DvC1Jka0cgoUmpziOiySh4tC5pO6WLHL3i9gnZv2Y0N3UmRtECmrSgr0vOdtLabBRgq1HAUQcmrRNUjwcnAfBRwU4CpH2mkYcQmWuRByElRSgHdN52TOXNa2VzIdNjQ6i473Z5+CBh3Q5VENPqFnn8a4/TBJO+px8y8k/VE2edhuOeZvpK79UA8ETW1zXD11w+ziGczllSO/qDXfUI5OJ5r4nMc6Jwc3SSY6P4FR7XHdO1ZDmFmSYsxkMbHkt0+8W1+BVi3jzB7+LKP6XtP1pVWm0Lr6qlsGReDjmIfeEzPWO/padbxbBd/zLG+Tg5v1CzrmBwvqFzLB5lPerrGnZmY8nuZETvSQfqnm94bb+m6yUkYeO8AfUWgEbW8mhp/l2+ie46NhuOey5ZZk88Y7k87fCpXfmjZxHOHLJef6mtP5J7jq06SlQM4vmNA1GF/rHX0KebxuYGnY0Z/peR9QVdoutXISqqHHGA0/FkB/le0/onRxjF5OEzfWO/pae0GVYBcobeK4LjX2ljT4OBb9Qn48mCT3J4nejwU7Bh4IgN0gB6Bddc1IQ5oghG6zntNhOyclj25mRAWRUGxjYGzugtKXBrXOc6mtBJPgBzWUnnfkyPmOzpHWB4eHyFLQ58Zk4fK1pO7Be25HUfFZ5g1Eu+H6/is1qBLQOSEnZQeLcWZgyCNrDJLV1dAeqqH8ezHG2iFo8NN/Urna20YJ80pBPVZyPj2Y33mQvH9JH0KeZ7QyA/tMYH+mSvqFal8xn8R5IxpVIz2hx/vwTNPlTv0TzeO4Dju+Rn9UZ/K1altYA5JO08OqhRcU4e80MmKz/Ea+qlxTRO3ZLG4fyvBTqLpDvA+oS9jY229NkZ5WGn5INRUjbo62BqvHdanA2wccVX7Nv0WXebBrmtZA2oYx4MA/Bb4scji691y5IdrcuXJVJw3XGgNl3RIhAdsubaIhKApEukiNzK57eSHyUnAUb5oxLoHdaLPVCGmrI2XOAom+SiISOft4oXMZRLjdKOZj/wAL5pyAvIOvdZsalVmWyR8hdR03sFH2G7lbZeTC2MgAEqoedRJWuN8FC6fSe6AhdkEsI8Vz2XyTZiK14yaduk02U8IinosUvKrVhhgDeieALwpLMMB1O5DmibE3UKGyz2axE+zk8krMVx6FW8cTSB3U82MDoEacVsOE4jkp0MXZNrqpAb4JxjAeaxa1IjEmtkmgk2SVM7JpXGIDn+COyxFLei7sW+CecKPJJpJTqNGMVQCbMAvkpfdaEDnbWNgj2l58WpAFI0pOzXq158MhEjLCu0lKwIRgpNO6WlAQKIFAEQUjoKJpTQRtUjoO66bdjfVI1N5uTHjQCSV1DVQoWSUcvh4/SHYow9tclVO41BdtilPy/VFHxrDPvmRv9lrza7YtL1DbmuIrmoLOLYLjTZgP6gR+Sfiz8V52yYT/AHgK1H+q4ssc0gma/wBxzT6OBRAvNbEfBOoIC4ijaM1ZXEWpEI2Qht34pxtHZIRvspA0ndJVFOFCQKUiEUu0ohvzRVuQpBq0hbunAEum1I05tjw2TT42vIJAJrqFIrmgDEI3EwNJ090+RI+idOTkx+5kztHh2hI/FcG7rnDbknUfj4rmsAPblw/nY0/kgnz58jeXsydNbMI/NNloqq+SbI2VtGRZycckdjPZ2DQ5zdIc2Q7fAhV7s6Nkcj5GFrI2E8wfh8U00Ueah50QmiczfffbojtWpIz2TK+aZ8sp7z3ElNgBLm4EjXbuca5bqIGyMO5PzWCmJCohkkaedohLJ4BCSElWmu1d1aPml7fxBV6Tgal7MeAQCZvmPUIhMzo4K1HWOkjPckez+lxCebxDMi5ZUoHm6/qo3bM6kfNCA+V47pN+60C7TtFWmJxjL7VokqZriBRaA74EL1PTp28Nlj/ZXA4fghuVm5ERzObWOsCH5jd3n0Wrjy8aT93kQu9JAV14/HLl9PLguHe5b+m67lzWgVcktL0UnJF1rrUirrrkuSBScuD6XJAwXfVRdI81uShEevn1RltpQ4DYoRqmg6RsVGzXFgAJNHoFKNF5I5+KYnhMlo04qnEkrg2+qmnDPgE27H71J7HEbszz5oA0lymPgkDNuSaOPKG2BsrYupsuDTSOKfS4EeKZcwjmha0hOSj4tZZWl2rU1ttR4u/vPYR06FVNOJ3tS8cxs7zwTXILFjWrfsyB0Q6SVXy5cmR3IwQ3wCnYEJiaXPdZd0R8P060VzRteeVWleLFgJTIGmg1LLtZH3aSF9pe01DcAICNSCUUTytNTymJpdpKdAoUPmmHwmQ0S4hWHUMSzSv7pIv5BSWOfppw1eiIRCPpSPW0DYKv+KX+2ROOR0+SHsT4K0EQHMJeyBNLs4qgxEdEnZWrr7IOiakxaOyUqewKExm1a9gfBA6DyVqVvZpdKmOhIPJDo8k6kYBE1PmK0nZp0YAJJ8VuXA+B5oPFA+B6FPNYExntccchmW3EceT3eKLZg+MTO7sXvjeRbXFprlaYc1jXPaXEFjQ7nzTnHH5Hbh+ZHH2kg/fw0Y5SPvAja/H6Kpc4kageQoryWeu3apwnbsBIQT58k7GMh7dUZLmnqRsVX48kPaNdM0vYw6iz+I9B6K3wOKOZLJLnSuLCKZFGwbnoAOgRh48qYDcjrGPWkTJ8uM9ztG/0uIWkx42ZUDZWxuYHdHtoosiCHGhdPI39nG0udQs0nG6oG8V4jENpp/8AXf1TjfaHiLT3nk/1MBU0cQ4TK0VMB6sKXTw1/u5EPxNfVOVkzH7UZLfeZEf7CPoU+Pak/ex4z6PIQnh2M/3Zonf0vBXDgjX+6L9FbT4kx+08J9/GeP6Xgp6P2hwn+82Zn9oP0KrncADRe/yTMnBPBytq8XrON4BIInr+pjh+SfZxHEkPdy4d/F9fVZR3CJm+7v6ITw3KHirtRjbRyxOHcljd/S8FHTudGvRYR3D5+oHyQD7XCaaXt/pJCeyxvtQo+KC+SxTMziEQJbPOAOf7Qmk6zjnEGkAzvJqxbWnb5I7RNkOS53K1km+0uaPe7Mg9TF+ikM9pZQ2jDC4+RcE6saRp72/VI8AO3PVUDPaQf8TEP9sn6hPf5jxHAB8U7PE0HfmlYtiyzaYnYWqLFx/ArvSvb/VGU9/ivDpAKyo/R1j6hBR8iDtG7BVs2Ftdbq7GRiPaQzIhd6SBC6Nkg7paQfAgoTNuwiRfKk27GrZaR2IRdt2TDsMc6Qmf+zuQuiN7BXxxeiA4oB5KSi7J3gu7E+Cuziar2pcMKuiQp48IyOHRXnC8UQHXRL+Vk2ihxaKnQx0OS1IKlNcTXhXiiaBVEA+oQsGwTunqEgLWhh7rQPTZOtyMhm8eRM30kP6pKtqEtJqlFIHEs5hFZLyPBwafqE8OM5oG7onesdfQqHWy4hOjE9nHsj72PCfRzh+qcb7Qf+ZiOH9EoP1AVSRR5LizfkjVkXjOP4xoOinbf8oP0KebxrAPOYs/rjcPyWbIoghI4WFaOrVs4hhv93LgPq8D6qTFJG8Wx7X/ANLgViidiNymxG3npAPonVjeOd4NpICOqxLJZI92SyMr+F5H5p1vEs9g7mZLf8xDvqEacbNoGqzyR1HfL8FkGccz2t70rH/1RD8qUrE9oMh+RHHLDG8PcG3GS0iz4GwrIvWldE1wsA7JiTDEjrbbQnhKQKSh73dQAjqdR2wNjfThY8ULomkEDYKTQPM2V2lvh81nGtQWcPbI7c7JBw7TJysKwLiBtt8EoLjyBVlWq+XhoduwUob8R0TgHNu1eEnqUOhrjZpM0ap3tkA0xs0D8U9hRyNlaZCaHmrPTH1QODfu80g6XsA52myzWbLhSAD0C5zgBubV8Aj2bOQ1FJrLhsAEGplWd/JdYJ3IARpwpIB8Vxca5j0CYmnZG8NG/iUbJ2v91uyaYV1lNOcGmkT7lPvAgeB5IA2Mc3DbzVKLPVeGEck61gPMLg2uaQkNPW12cRtaQbHJGWA9LTLZdHvNKeZIxzgQeqkq4pwcucSPd2Zmc1p1EaaNfLZTuws+88fG1SRSh2pwrvPe75uKn4eYWVG/cV3T+SgkvxSeTz8WhMPxJPFp/t/3U1szXGiaKcJbVqWqnsZKvSz5ld2ThzYD6OVsGNICQwNKjqo0Ec43D4gqDxV2YyJv2PEGQD77CaNeRWhkhamnY/gpPK8zhryx4jdKx9kvx5GEUfIiwfwKqnRyt1CWGUHx0ndeq54w+HMMsuIyQymtmCyfiqTN7DKiaMfEbiODrJBJsVyI6LneMalefCN1CrDi6gHbfVXHB+IRcMk1Qwx5WUDtNp1Nb/SDtfnXor+CBrS9uTrkYQAOzoEb+assXg2ISJMd+qj3mSN0ub+YKzeLUQeB8SyeJNe7Iazu8i00fQhSeOEN4Nm+cRCtY8LHY8yCIdodi693ep6qPxrHidwzIBB0uABF891SHsweJ7LzZ2NHkRyxta+6BB23ropQ9jM4ttmRD6F7h+S2HB8MwYUbI2t0gbDVys31CniGXQ49ndeDgrls+Ljlvrzx/spxiP3Cx39Mw/NNu4Jx+E92CU/0lp+hXpTsWVv/AAX/AAF/Qpt0Tm84pAP6D+i59q6dY84r2hxv+Hlt/td+SB3F+MwfvXyiv47H1C9Fc7TzJb67Kv4pGMiTCB0yNbOC4Egiq8FqXf0zZjGR+0/EmjcRv/taU+Pa3KDalxYz/aR9Cta/heG8d/CgPrEFDzeCcOOJM9mFE2RjCWloIN9ErFD/AJsaf3mIPQOIT7PaPDnYW/ZpGOrZzXA18wrCD2a4fJjxOcyVr3NBdUnX0UDifBOHYAI+2SRSSNOnWLHxICrINquyOJft2zMYLewslbya8cr8j+YUMZT9QJdu1hZflv8AqUEsL2Suia5kgDS7U14IrxtR9WoEWQbCz1YXhyYosSCBkVvHeme7mSeQHwSz4zmgP0uYTvR5hVONM2Mlxe8ODqZpFbeKlv4nLB3nP7SN2xD9yrPWpTrXOHvbpwEdE1HlQz7tIaT0JXEEG+qq2dNHmF2yj9sRsUQktCOlrT0XANHLZAHJt+TEz3pWj4pSU2R7fdle30cQnG5uW3llSj+61Wfb2H92x8noED8zIDC4QNa0dXO3Tg1djiWYB+/1erQjbxXKHMRO/tVJBnBxDZe47oehUsO8VFas41M33seN39xCcHHGn38Uj0f/ALKo1JdQRqXkfHMajqilHpR/NSYuNYBPefI3+qM/ks0CEpc3yT2qxrY+KYLjtlMH9QI/JSGZuM/ZuRCfSQLEFxra0Ic8navkrsMegsIfs1zT6OBS0QaIPyWDiincNTQCPROtfnRmmhw9HEK7LG4LdkgBrZY5vEOJR7CSUf8AyH813+PcTjO8jv7mtP5J7LGxrZKRYWPZ7TZwd3mxuH80dfQp5vtVOD3oIiPIuCtWNMV2na1n2+1UZPfxiP6ZP1Ckx+0mI5veZK35H806FsWUhLVBbx/Adzke3+qM/kjHFMF57uVED5kj6q1JHMpNJSNy8d3u5ER9HhEXgi2kEeRUglpC6PJZhzx5Ev7uJwcfy/GkehxG4PyVR7Sy9nwmTxc9rfxv8lKtjh8bi/wmfi07nCJ8zmxNrnWwA9d1NfxeOHIxMV0T3ZeQNRiaL7MVuXeC81Oc/BweCwN0yaI3ZXY70Xuf3QfgB8LVnwfiT8eN2W+eN3E83vy5M27MaLxrq4868KTrGvS9YHuhG3vjdqx+D7RZOaRj8Iw3zFpBfLkO3rxPQE86PyWqjdIWN1bOoagPFTWpDWkGq2XPFfeATOt3iUetoHukqxO0g+JSl2kDYITIegpDrd6IxaR7rPO02Sa50jPmmpNQHdFlWEEj9AsC/ioUuQ8n3q9E5NHJVyOoeCaayIe86ko/iuLgbJPqlmyGxmuZUN05ZYZsFGc8uNlak1nUlznPOpxHxQmY8rsKMXFJZWsCS/JfyB0jwCZMhJslBaZyszHw2a8qZkQPLUdz6DmUZIfavK8l2lGuWmEXLcyCLXNK2Nt1Z6lVpz8ZpBDpT5iMj6qTx6uwhH3tZo+Gyo3NsUVi8q1JpMeZjIWMOqw0A90ndPfaIztqIryKjtaQfRFp3sI7VdIs8bNicNMszA4ciTVhSm5ERG00Z/vCoySTvaUV1H4J7VdGjZOb2c13oQU+JTV6D8FldLSb0NP9oRBo6AD02V2HRqDLf3fmhcL3BryWcYXtG0sjfSRw/NPMyJw2hkzf6ynsuqw4kBFjPyQB2sbKYeemzuR5+ay0srpZHPe4uc42STzKuZJZ5onxSTPex4og1+iiO4bCfvELNumcVXI6gr2EABjqGrQG31rwUQ8Jjd7sjlLLHivdPzCFlOh6icadXDZPMtH4p4at9h/qTHEcabKxDFGGglwNlyYsT+GtrGYP5R9FPoNY70VfizCKMNcx2wA7oB/NSnZkRYQRIDfWM+KOR4+J1C0Q8lGbnY//AJlerSPyRjMxT/zEfxdS8+V32HiqfisTJeI4Mb2hzSSSCOf/AHSt2zQv92WM+jwqzOAdxzADdwGOO3xWuO6zyGOG4lbQ6f6XEfmmsrhsAx5S10ophP7wkclZgbjZMZgrEyD/AOm76JlosUsGFrx4nCaQFzAeQPT0UXLxpQXASNcAORiBJVvitrHhH8jfoq7iM4Y55j3eN6K6axjLswvtGdNE4QRuHvW0Ac/IIcjgMbcimwQOa51B9kN9fGlMxXiTiWQ8CtQuvipmQ7dq2yjjgvDjjsa/D7KfUD2gl1iQV0P5KJxDgWGYqBk7jdtx+itmaDjMLm2dZIJ6bdEGRRif6FZTMy+z0cZ1R5Erb5bBSMfhMgZX2jUK6tVtkMoC+Sdx2jQPRPli9lUMnCpej4z8woX+F55G0jP7TX1WskYFEZHTQjIdZd/CcvtWB8T3tN33wU4MF8NH7O5o/pWk099vkn2s7hPLY/RNi1jsJu839adyWXC74fVHhx0ZABtant4fJPjSzNAEUe7nE7cxt6rnb/03niknaBG5vht+KSKd8DG0dbf4SeXon8yPTLIP5j9VFkb+zaPClplOZktkHdNO6tPMIw5zuqgQD/xQr+EqzZHR5LNalK1u12SnGNCHIjfHjl7HUVAwcWfOeWvncywSK3VJqtxYufG335GtHqlxJ4J5+yiJcQLOyYHs45xszk+FtVjwTgpxc8EPYdTHePknqOy+wMZn2UbciQpYwAdwE5hQObE8V97xT0j8uNh+zQteNJ1B4r033Rh7KXjM7OGY8c7oDK1z9BANHkTf4KpPHOHP9/GlaRzog/omOOs4i+Ik65IJJNTmjcseAd6oVYVCI8jtaMcgPQlpTjF5etM3inCXEhweza7c0fS04J+Eyjadg/qaQoWLwbEzmVFJk7bPkDW6dXx3pMzezsMWfjY/2glkzmtLtAsWaTkanKrQY3DpeWTD/qr6rv8ACcV96J4z6PCJ/sBo/dcReP6ov0KjyexGe393xGM/1BwWfGvR/wCB2e4+/QoX8EmGwc4KFN7L8ZxgXCeF4H8L/wBQq7BnzJcowmeQUN9LiE4NXbuEZTT3ZCmzgZjT734LXtiDmMJ6tH0SvxNIa4toOFg+KMLGTOzcJnaSTOay6sOIUDiGfkZMfYSSufGCHguNm6/3Wk9rGj/DgymBupp1au+Ddcuo3WRbpIAc69uZS58qdycqafIbITsGNjbXINAqlb8D4dlcczGQscWxt70j3e7EwHm78h+ipmEyOjDWAuAADSLHkrKXizsfBPDMN4jxzvkTNO87uvw6AeA80xlvf8wwYBbwb2Zxftk7D3pAD2bT94k9fnXmpGJkRtyWSca9oIZZ2utuLA8FrT51z5dFiOH4U0mM2LKnm4dw2XdxjiLzKR/FX57eS3/BvZLgUeLHJHD9sa6nNkmJPyAoD5JLRNc1wDmkEHkQglmDG2GuJ9EsMMUEYjhjbGxvJrRQCPSFW0ojcy/ejI9Ehy3kHS0J6Vhohoq/BQ3QOonfxRreQDsiRzt3fAITlyN2DlFysyHH4ac97j2NAg1u6zQpPRRulhZK5jmawHUeYta2M450rpPeJK5rbXFlLtwlZgJIwORTTmUky83Fwx/4rIZEavST3j8Oazuf7UuexzcCJzLsCWUb+ob+quynG8vi/NA0SAT0JVdmccwcTbte2f8Aww975nkFjs3iD55HTZspc4V3nfQf7ILYR+zcDt90hZ7Os/FP2tsz2kzJtTcfRjNvp3n168vkqiRz5HF8ji55u3PNkqHlmQSN0y6GVby4UKT7DLPYxonynfvHZvzWbtbnXi9kXUuCJdXkU3HydcDPJzvxAVQQVZ8ddeawfwxj6lV7ws1qBFFFpNbLohzKd2DQhoyBY3O6UjbmlrfZONGrmpG210CPTaINAO6K7HJQBorruiACTkURJ8gpFHnQXE7dCkO6Vo62ouFDrSXcHnYXN3dRREBoIPzUgOqxWyONwIq7Qtbd3vXiibQePBScG05K+i66RFqTSCOagEEtPdC46q3KM1QXEKJpzA43QPwStibe7G/JG3bYhEBe4UgFlGxY9CQlokFrnPLSKI1miPmicNlwGykTT3Q2N720KG/JNSYMcv7zVZ5m+akAaSuLrViVsfAcWOZ0rHSNc4Ue9aKXg8T6PbSCvIKw3Oy4Ct7tQxXDhQ7NsYlNNvchNTcHkkiexkze8K3CtzZrbdcwU4hSxR5XBslzRUkd+qSDhmS1oBa0kCtnK9eN6KS9LtlLFLJw/IB/dX6FV5wM1uxx3/ALVP71EJW902rVjKMw8jX34pGgdS1PSRu0UGkU3qPJaZxPPekGm+n4K1YwPAsJk+U6GR+mzZA5kBabiULIeEZEbGBrBGaAUvLw2SPD49MM/JsrWAkfDqoXEcF7eGzyS5uTKWsJAJDW7eQCM9075jCZgJzZuddofqoz2WFP4g1zMnILKcXSHukbjfoVGa9jg4Huu/hKgHEZeW30KvW440WeQFkqsxI2symF2wAP0U8ymQho2YOQ/VFMuGcrVLA9rPdaCfVWfs3gRwvDnd+Qg7nkNugTeFgS5kbxC27bRJNALQ8P4TJAWuMrL8BfgmfGftQstp+0n+kfUrsNunMiJ6tcPwVpLwovl19qAdNVXmgbwuRk0Tw9pDL+NikqxJheGWOVm04ZaGxKZMb29Ad+hQmKUmgwnztIVPGY5pQHCQlrT3i+q35AADf1KgQ4gcKdK6vJquM7EypYXMjhc4kg7eqjRYWVH70DwfROjKl4WKYdLnGJ4LdnCPS4JciJhlxX6W7PHTweE/GHNY0OBBDReyiZxdpjoHZ+/wDqBUWodFGCbaE0+JhNAO5eKdJ1k6SDumZZocd1zSBux26nkueOm0zk4rXQuG+4WCh4XBBxE0XhxDvvL0IZcM7aY4nUNtli8ihxhlcjf0XSfHO31ooGF0MZ1baBzHkuki7JgIldIXEkhxNN8gmmT6Yoa93SufMNxfNGGVnOOcMmlgfK0dnuDbpy75tO3yWcdw/I1kNfFR8ytrxUufhTCzTWXsetjmq2COLowbHmU5GNUI4ZlRA6QxxO1B/NWfAfZ/Oynl8cZZLGQ4Et1Cr6eadmkIyXsaPDkOWy0fsUM45T34zmuhAp7XO2/wBkZIvWp4JwjF4fC95nORJNu90ja+FK2DmVs5teqBtguJ25XaYnyo2RvLQZCByappLseI+ajcSbkPwpG4ga6YjZriRqHUA9D4HxWZyuMtljdDO2XDcSND+zsf7ouEe1LIMz/DuJ9mxp/cZLD3Hjz8FLXezXtK+fiL+GZzy+QgmCRzdLnkc2uHQ7H4gqrxPaBzPZ3i8BkH2lrnCBt2dLufyv8VG9uoW8N47Dn4h0nIAma5nSRp3I9dj81kXZLm5na1Wp1kHqNV0sVa3vEZ25/HeE+z7CXRYbWHIDa0lwaLs+QtbKeRjNLSLc891g5nx28B49F557EZMBz+J8a4g9rA2+847l7rNN8TX1QcS9pZXmZ4eIpsgUXk7xsG4jYPxJ6k+ivrfGWtVx72hwuFNMbT2+UfdhZ+Z6BZXO9ps/LBbEW4sdbiLdx/uP5KjD5pL7GEtadzJKdIP5oHNhF/aJX5Dv4Gd1ivXTePH76WSdvaGi6WQ8w3vOPqUrYcnnM6PGYf4zqd8kkU81aMeJsTB0YK/FOM4dPKbeTv5pxm/kt+BacLHlbI1r8qUcjKdr9AkmOE+9eCxp8WOIVpi8Ha2iRakZXDmUQGfglhm4mQMALY+0eORfvSf/APETU0Gm+AUyHCa15vxTsufgYJLZJbkbzYxtkfokfXpwKIEFYjivtuYpwzBZC9gcCXmzqHh0Wm4ZxvA4lEX4+TGSxodI0mtO19fBLKg9qs3Lw+IuIxR2TwBHI4mnUPLr5KkPHMqrLIa/pP6rYR+0HCOKZM/Di4SsA3MgGh/jXp4rIcU4fCc1zODukyYywvLQLLQOdH7319VmtywLPaCcWRHC75j806z2hlGzsaM+jyqFzQd2c0TJLNHmue1vF/8A5gvnifKT/ZOR+0EY97Gk+DwqDUiDldqsaA8fx3H9xM0fApwcdw+ZbP8A6R+qzhcEmpXarGnHHMAj3pG+sZTjeL4DveyK9WO/RZXUPJKK8ldl1a1vFeH3tkx/EEfkjHEMI8suE/3UsguG6O56tgMzH1amZEJr/wBQKU6WJwFSxm/B4WGo+A+SBzfIfJX8i6N3yI0i7RaSN6J+CwVUdkoe9vJ7x6OKe8HVv9XdFg7+SGqKwv2qccsiUekh/VON4lmsHdzJx/8AIU94Orane66JW0VixxfPHLLl+JB/JG3jfEG8sgn1a0/knvD1rYDZx2Rs6hY8e0Gf1fGfWMJ1ntJnN+7Af/jP6q7wda1tdUnIrLN9qcsHeCB3+ofmiHtVN97EiPo8hPaLGo95I0brNj2sr3sMfCX/AGRj2ti64Tx6SA/krtBjRE70luln2+1WKTvjTj4tKdb7T4R2Mc7f7QfzVsOLsuSAU6/Hmqge0XDz96YesX+6eZx7hzm7zuB843K0YsX7bLqsbjdQhxnhzxX2tgPmCPyRt4ngnllwn+9GrExnI7JHDqmWZ2ITtlQm+vaBONngdsJoiD/OP1TqFWyIbLmuYQQHNP8AcF1GuSkruKu0Y733Wmj+IVXxJ7xgZLWudp7M7WrPjjT9im7pdbTt4qHlT4buGZFSNEhgPdN86WpffRZ4xuY0uy5PN5+qYyImmIlw5KfmNAmcRzD3X81FeQ6I735fFAN4bHCcN1HTRoHorvCwTK4Ofszx6lNYPD+82Sbbwb+quW8qRTImYLGx0xgpoGwCtYm0VWYQOsFWrTQtUaK4jr1XA9LCQnUEAJFk9Egr2b38UpFHyStcHCiuLbHkoO077LiCKK5pvmiHIpTthvZXO7zSDyXVYXBSNCNo+635BI+FhN6QU6R1SDwKEabGwbAab8DSiScPxnS63wtLxyd1U480jgOaliM3EYG6dw0ct0Bwoid3PBHKlMG4QlvVSxBl4a2aJ8Ze4Me0tNc6Ub/AY4925EnxaFb3VBc7wBSsiox+FSYuazJiyRsRrY5mzwOis8BuPw/OOVjQvj1NIcxrwQUQbztJtSFiwk4oxzreyU/6T+a4cRgN6hI3+y1XHdIRQpQxOyuI48kJidjvnaRu1zaB+axudgRZU80UWLkYwe3VG9/eY1wGwJvltV+a0WnbquNVvzUseeGd5Y+LKBL2kEF3vNI2q/CuiGGMzHW2F8tbHfSwepUj2ga6Li+TYG79TT5FVhedJaDQJvnssieLWo9AEs7WVv2eO2vxSQuDdsTGDD/G4anH4lBwuFmXxh0Uddk2M6b5mq3K0j4YsHFfO9hLY26jpG60e1qmjwZ8g6pXE+pVhBwhjDZbajYvGjlcRx8eLHbHFI/SSTbj+QWmbEANwnEpsr7Nw2DtJ9Qa46WgNsk+CY4XxePP4g3HZAWMLXHU51u2HgNk97Xxg8Mif1ZMPxBCovZp2jjmKT94ub82lOJuGsaNgAsf7Z9pHxGJ7HubqhHuuI5ErbUsn7cR1LhvI5tcPxH6qqSuHjtMWB7ty5jSfksvx6Ps+MZQ524HfzAK1XBO/wAKxXfyAfLZZ32nbXFnuH32Md+FfkiJDEb6rUHBHj5M+LI4wv7MuaWlwO9HooxeW0ATaUSah32PdvsssHcZ7oJQ+SOOXe6e40fkn5OIZjshkzXljozbTH3dJ8QovbRBwa5haTtv0Tb3HTbWu0A87tWpe8V43HxCaKc4QhlLKmfGNpXfxV0KYOmVthVUUjw/S1ziT0rdPQTuZYa7U7w8PVFjc5JrZCw075p4O2Udj2yjvUD1C4vMXm1YdZdSbSXtaBrw4WEuqlFxchLyFxIQHdQKHG+Z+aUhwNhx+aQMNX0pKCeqKih7v4z80pkffvFIGklK5tLLXpDLID7yPW+tz+CQM1A+ISgtPJzfmmDSanE8x8lwc/yRgXy3S6SU4gdoR0SGY37qLszfIo+x2shCAHkj3fxSmTV91FoockjmoIDIB0KAyAnkUTmLtASA6h5/JdY8/kl0i0l+CcAtTR1Rdo3xTRBvdK5thRPNcDyIR2o7W7LgHXsTSElavBKHBRXP08yk7QeKkmF45bUktngPkoof5rjJpF3spJRe0CzSRszjuDQ8lDa/tDZOyk9g98ezxGTydptMlVsWOJlZBa6PtnOiqnNJsJvNfWNNv9w/RVOLC+d84ORI0NfR07aj4p2bAhZBI+3ucGk2518gusmOVuuzpP2k3jqKgROHbQn+cfVPcRj1ZMz2OLXX8CouPqM0IcAe+OXqkNXC7UApkYvZVzJWwsLpHBoCYyOKOeCyK2NPM9T+iza6RdP4pBhv0uDpHAbtZ09Sgd7TSco8WMD+d5P0pZvtAu7XzWO1ONAPaTJB/cwV4d79UX+ZJjzxoj6OIWdM2677RtvSNpyNKz2kcBTsQfCX/ZPM9po9teNIB5PB/JZZuQ08gUQnZ1DldqsjVf5lxCbMU4+DT+adZ7RYB3JmHrH+hWPM8f8AN8kJlbXX5JnOi8Y2zfaLhp5zuHrG79Eo47w0/wDNsHq1w/JYUyA9VweD1Wu1HWN83i/Dnf8AOw/FyIcQwy625cBB/wDUCwIIPVd3T1aruur0IZED/dnid6SN/VGHsdsHNPoQvPNLP5V2lvQBH8i6PQ2i+h+SUgg8j8l580EHZzh6Ep0TStG00o/+Qq/kh6Vu3N3sA7+SDZuxKw5y8gVWTN/1D+qQ8Qyxyypx/wDIU94OlbSSYfdIA9d0jHW3YrGM4lmt93Kl+JtOt4vxBnLKdXgWtP5K7xdWwISGgN1khx3iDd+3afWNqQ+0mZdudE4/+3/untBlbF9abCa5mvFZdntPlBvfiiI/pP6o3+0soAeYIgB4uIT2gsxVe1BLONZDXEkO0uA9WhU7hy6Kx43mfb+IOkdEYZGtDHNd4hV7qa2+dbIZzVn7Ku08bgB++Hi/7T+i2PFow/hWYwgfuXH5C1ivZ2X/AOsYRaN+1o34EELeZMYlxpW9XROH4LfH4GA4W/RxXEd4TM+q9G8l5jA/RPDJ/C9p/EL1Ghqd5EpSk9rGA8FmPVr2O/H/AHWT4G7TxnCP/rNH5La8fxn5XDJoIo3SSSAaA3oQRzKz+D7L5jZmPkkjhdG4OA942DY8lVNjQ5FZj24AOLiOHMSPb+AWi1vDu93jW7vFFNHG6MB8bHjWCQWgq0s/7L/tOERgX3C4fj/uqz2mw5sviUYxYXynsQCWNscz1WjzMvFwC8sYBob3mxtAuztXxS4ObDksDmgtDuV/RETzzWfvNafVc8Ru71uaR0B2Tbt6G4PkjwwZcqGEjUJJGsNeBO6ywbcGOOrtRz8Cnq/ZCpAd6O1EBJkCISvDYg1mohhPhfim3zsc73D8Cr1Djl7OmNd3h16lJL2gfyNnfYIY+ye40w0FJdOG2LAafEIvlRmLtdLnNa7bmpEGUSS2VrhtdkdPNMvmJGhoZXkE3qkANBxaT4fRRlxZOa5vej5eCNrg4efUKBHPIxw1e71B6qVYeA5ppyzjrOWnqQlAJSDT9j9VxdfLdTSxjhoDbomzAbVt2Ok0QkdDzoIqRcPCM0cjmi9As+QTEsQLqHPyVnBwszwykzdmRRbz3QDELXbrnJ79bt8VjoyxrjXQrLxQvkPd+q2+VBWNM4/dY4/gqn2agY7GkL2NcTJtYvoF34OXJTDCyK2d8nJ+HhvEZQTEHvA56XE0tcMOEneFnyUvGiZjNIY0NDjZpFtUkrEnhfF2/cnHxKQ4fFm8xP8ANegBwrmlD/5vxWe1a6x56YuKN/8AO+JQl3Ex/wCb+C9F1it3JrIcBjzVz0O+hV2q6vOxmZtWJXf6QkOdmXvIf9IWq4Mxg4Vi21pOjfYeJUwxwnnHGf7AtbP6GMUzLzHOoOHju1SG5Uhq3b3uC0K34o10Mgkhjx3MFjQGiz42Ofy5KglkB7zBVHlzRusXYltzHWQ7S4k0OlKQzLY+TQGnSdg5VRIIvcbqVhythuV0QcTs1zz3W/DqUWKcqsy3So8mTHFJ2UjqNWFPJjma10btXQkNoWqDjEYOY1p56BaZNbtWLXMkOzgUhbZVAdUbqY4ild4Ac8uBJPdvcpvHFLoJg5ocR4FRI5JC0W8nbqrSeLuusfdP0VXFWw1Bw0jeq6KnxU9DNJ9qiaXd07kV5q37Rx5EqkiF50IHh+auKpF8UMcPLhNlEH7/AOZUnLlcMWW63YenkoOI8jJygP4/zKeynF2PL/Qfom3/AKEnhnMkcJ5Krf8AQKKJzGQWtBc117+qey6M7vj/APqFDaLLj5larKRNxCWVzC6i4/h6I2PeQojWd6O+pCsRCb2GyK1DY1E80YaeqMt0Auq6CgHiMj3FscIsGuazlptxPDfFcW+Ci5H+IRAOeI2NLg0UQdymwzKd3nZA2N0EZ/q1Ywsu/ROiM+CexoD2tc7BVhjYLppeza23HkFnl5Gp7VO+Mh3IoS08yCpXGoDHizgGnNA8uqzdznlKf9a1xmzRyuXFzoHNIa6KqZ9qv968D+pOgzkd2d2quRWsjHZPDd0uhQWs4kTbCZPkiLeKjfsz8gs3P7al/wATNK6lW/as43Tbo0e71Qvz8tg7zWj1anpV2i0NoTqPIn5rsMyTx2+rvwUsYztBIG3VYvn1qeoNu56nfNL2o/iTr4T3h5Kta3vAOdv67rWC1YNyAD3TZ8k7UjmEgUEGRgzcOlbHOxomLQ7s2vBc0HcXXKxupMUeU+AS9i/siPePLmuXOWfGoiOjJsl2ymcH4f8A4pmsw4XsbI5pdqfekAei7iWQ2XBxYC1odFZDmtAPPqRzSYeQcfIiyI3dk5g5jmmcoxahyTuGprIwdyGmunikwsTNnzIDhNMmWD3DzIPiOgrc2j2Jt52H4qbw7KMWSyKCRkE050ds7lE083eqZzuyRiofGOHNwcyTHlnGRlsZqlcxwLdR302eZ/FVL9bbGnbzWz4nDh/4VJh8Ox2yPxB2k2R95xvl5nmfKlkHiSTYtO/PaqXZa1fstwfH4jj4+c1zmSYlNLGnYvBJ1E8+VbLSuaXNcBQsUCs37JZ2Lwluc15kl73c7MXqbVWT/wB0pD/aGQ7RwtjHi86j+i3GaXH9lcGEgy9pMR0LqHyCt5crGw4hreGi2sDRubJoUFl8niuVkW10ryPBrtA/D9VX5Dy2IuNd17XDqditJ6IW0COqZsAkc3FPB4dZ8UBZZB5FFmmUDY9QIdz8uiWduiMnny2CdBDG7lC49qXbE7eCcDM8REXbTiaTsy5ndddkEGxsouHkQaIoY3ufL2mtx00DfNXHFMBs7wdPeAI5KLhcPjgGwCyWSGGNj2jh/aP1T+Ditjy45GyuPZ2+i0C6BKlOxwRTXEUOqSHHeO17zf3Zbzrc0EDrVcISdIDzQ5gt5/im34EZcKk0100/7qbJhSA8x6WkMEo51XqFTGfUduOGXqk1f2n9UH2MSWRI0H+kqV9nmce6PxCcjx5m6tTGk7feATkOVEGDIXCpWV/SU6cWQihK2uVbqUyOQAgtr+5N6w11OBHkdiixGGYbwbc+I14X+iX7PMKLdBI57lOyEaiBzvolBOlXWIwWSvaGyMZ8Hf7JYYpO1jaACC4D376p3WDz5J7DAGZCG728b/FWQ9q0c1F/Xn4Loy29+foldT2oAK6LONzkkAgAgX8kIcHEijY8lzXWF1U7UFnqe1RuLtrhmTp5mM16qq9nYnRYn7QFpLyfwCtuLPvhswPgB+Kr+FxB4a0l1b9V04zxi31cMa03uiLmg0SEEeI2ju+v6ygbiNdI/U+TSOVPKzY1KR0mxII5rmynx/FRshgjY3S+Tc17xTY5e8+/6kZGu1ThIUGU8/ZZq59m76KKX6R7zvmuL3GJ51uOxVkW1G4b3OH47TdhgUiQl0ZDCQ4jauaCJj5ImHtCAR0RkPjr9oLINE8lWRbVFlunmc0uZ32/e5Kuka6B2tzefMLST5MjeZb8ORXY0JzBI6SXs62bTNVn5ikTByjLlolpre6dz6lScM4+oCZkksl0GhwY2vUq8/wsMkYZZnOZzLQOe3j6qUzhuHbXdkCwj3a2K1WZCui/ZQnsDA2r0Hos7xhgHEiP/TC00wLIo4o+6xgpo8AqXiELBnmSUggsbQI3KuMVrPyi5CB4LQYERBcaPu+CHQ1sp0taBR5BXOKLLvRbsEqDkQvdG4tY73T9FV4/D5SAXBo7o5laaQfsX2CdiqphcK0gcuqpxivJXs4e6PJY50wG/QeasYxTqdI52/gEy8udJRq024OEo/auq/uhF4xTlU3EwY25WSdLu8b3PmpWRixNx3A9WEE9eSiwub2rwe0f5ByuI+GQzYjpywCmkgbk8kWemW4z2TwlmRL2jTLyBNHbkEjeGxGN3eeOfUKeA1zd+dDcegTQa/SS0gjwK1ZBtRRw2I9lT38x4eKs/sDAPfdt5BMRu09nbSBY3+KtZN0WKVXZGA10btLjy8FTQ8LDZZD2x97+HzWneLjdXgqkX2so8yrjFaTieHHLE0RyOB1NJLm9VGbw6muJmbsL90q4yoT9hDyKGtm5Cb+yjspC51kA7D0WOPGY3b6lQwBj9ZrTdWArHGwRmzsEcwjDXAucDuKSa2NwJO60uux+CjxTaQSBRKzy/wAPG/2azMcwl2oa6vbnfluqHjMkMkPZ9kGva6y3SAfIg9QrfMyZ2tfuS0tPPmPQqj4nKciBj2ua15AOlwsha4zxnlfUDtWtjDGE3XeBrxQNLnyDSS57nDYdU9HgmUtGvW93u6ATZ8k7jYD2TFrg820EjR0VZ+2frTcC+wxkCd8c0z7HZsbqZF5F3X1U/Odhdg8sgjsEe63zWWh7KCdjW6gdRunX0VnLlsOIWMYb6kleTlxuvVwsz1G4fFC5mWDCwn7S4AkbgGtlW8cxGxx6mtAolT+HPbHNlhztjKHCumyPjkXbwkM5X1XfjL2c+VnUvBIRLjGm77H8Fd42HO9krY2MMWgl5cLI8K81D9nItGOQSHWxp2V5E7SwgXR2Tzni42M5kYxINDe1kcaFxkJHNpK9DnDSTXO+dLGMwsmPKftTHOcWjqRZ3W/evjnb6kxmSWUiVrtTnbEDUSVZ53GIsnC7N99rEQGPDQ22janDqosOTkcOnE8QDnVew1fgmeJ5MXEHfamN0Tusy9NR8aWPB2NZGQ3RENLRQokDc+ZUYTFpFqM+fvVZIPNOMAIWbxGnZcgudt1RyvjaWnm8ir8FFeQN/Dqjx2CVwdzra+i1JjOp0U2QGBokOkWaBrnzQuOptUXvI3QGRx7sbbHUnZC9kjgNRseS16SYZLZn9+hVKWJy5wIcaO9DZQN8dweSST0BooW5T6AYAOexNn/v4LvAsge9dV5Icg68aYVp7vU1uoseLxPJ2ihnLfJukfknhwHMLo2yNaHSO0garNqTUu9ouHwwMLsrU7Q22xsLiDQseCgT+28DNocdz/N7wPwF/VY7LibFO8Pk1U6iADsfBNamNGzXHzKLTGlyfbDOn2ibHFf8Ee/zNqufxbiU0mp+TM49LkcPooGG0vmAF7gqVkuMDWgDc9SpJmBNn5kwj+0ytPO+1cdvmr32mmycbh7ZMaR8ZLwHOYa2r9VSezLnycQJ02NJs+C0PtEzXwWb+Utd/wDkEHVKyZrutJ3tGiJxJG7gPqVeHguAOeOPmU83g2C6IM7AaburPNDW1me01bEtr1S0wuI7RoI5A9Vo/wDAsDrjgDxsoH+z+A528JNCh3jy+asi2qBoLTRNfFEH1sCFfs9neHt7wiIP9Z/VH/geDpsNePR5Vh1nXONePqmw1oHe7133TuFo5PZ/BIH7NxB398/qgb7O4BNdm8f3lQZ2ZjJnGSQd41ZBpAYgGjQfgtO72cwQ09yT/WUH+X8Gq0SAeUh/VQs1ltZBqrpP8MJdxGFpG13+BWii9nsLfSZBX89p6PgWLC9s0Zk1N8TYUz1AwUR4FKaIsKW3EZz1lE3BHMP587Q1iva7vEDonGv5WpgwG3epCcMatOo7KxKjjh08Of8AzOaPxTXB9tPofqrnL4RHmY3ZvlcG6g7u89k3j8IbjuGiR5rxpMvgsOMPcJTDpdpK8SrB2CWNA1ij1pNHhY3Bl97fks2aYqMt1wxH+Y/RQw8WBavpeDCRrWicjTdHSo7vZ+nnVkSgeQCMrXipe/uopHgY0u/3CrB/s+ySNzDmSbnqwJWezjBEYjkuoivdTlWoOG4DHis13QhyHgzR0Rydf4K2ZwAMDW9u6gKstTc3s417iRluaRfJoWet3TvjP5DWmy2QUN9KkcJeBikki9ZU8+y7dJH2uT/QEuN7OdgHNblOcCdVlgCZxwcvUeWWyPQp5jxpAN7UnncBkB1MyWk1yc1KOH5AbY7N1+Dq+q2wjy7uHoqXiOIZssuDwDobQIWibgZD9uzANcy4IP8AA8iV5c6WNvTkSqfVZ4pZcdzSCC07bq0xmuYTY6Ka32e1G35JryYpsfCYmn9491j0TapFO/3H/wBJVc0AMYTtbVrhw7FA3YXX4lFHw/EaAGY0QA8W2rVjESlolNEH0QjHnlk1MhkeL+60lb/7PDHuyNg9GhPMA07Kt1SMXgYWQ3JkeYJQKNd0q6h7RuNIwtcLadq8lbtFDwTjDba8FacYyLDnLaMMg2H3T4BCzGnDCDDKP7CtmRZDgUlmzW6FjGHGm0M/YybEfcPirIRP3trvktHpJG5SNY31UsZvQ7Q4aTuD0VNI2SOaQiN+7v4Ct8GjoAPgke0jwTLisYzJmlmwzCIJPeBBO3I2uaMgxOFRs1CrcSVsavoAhdENN1uhYy4kcJ5Gndpa2v8ASFxeWrTCMEcmn4JueKN7afG0j0ViZTLOphq7AKpZnB2OC4VIPJbSfhcEhIYXMP4Kly/ZubsyInNkobE7FWM1Q8PfWU3ettlc9nuS3lR2TOP7NcRbI1/ZMAaN7kCt2cGzHUKjG38aLCzLpXRzCQcy6wUQzJb0906tqpWj/ZXiD9jLDz5auX4Lmeyuc1zSXx8v4uvyV1h2oMWRJjvkfpaZHc6OynTufJhl0xGvnsj/AMt59m3x3W9O/wBlIm4LmHHdGwMNDYl6ckqul9n32wb/APD/ADVtI8Nad+SruF8JzMRoEjWXpI7rr6qecPJcD3R80YEDPyjELaBZ8VST5UzS9wDid9+QpaPKxnRsL5AxoHVzgs3m5cbp36DrJJ2aLRgqPHnSE94PHwpNzTROlJGouvf/AL6pzt3xyh7sZxjI+8KtMmQyyOfpa2zdAUsYjbIon24gBx2Fpp7HNk94G/FTmxR32jgQ1os94fMeI8lFn0mT5EUbTviIIi4aXb+idDixoaB3bRQO0xOIGokfIJuV4ddi+RO6IrCPnDjtZI8ApMFPB1WFFinMbtmCinu0lcabJDf8JOla0YKTHiLy4gE8wTutPw+GJkDCyNrb8AAs1HHO92l8feP8worUYUUjMZgcwh3+y6SqJTaBtJs2WN5umyNOw80Jsfmjj5LRY7inCZ5suY48bn3M7wqgdt/MKLl8JycfE7aRjWscdI725K3WkE14pviOD/iHDGYrndm5smvUNx6IxMlwXHBY6wNTT+SDi2M905awE0B8NloIODx4kb2Mlke5wHeoCqUgcJgewPkL3nYWXFZu/oqD2bY7E4pplIbrjNb7HcLUcXZr4Vlt69kSB6bqO7AxmtZ2UbQ4deqnNhBxtLm0SCDfmmbnoTHAHluladOyFruYQ6uvJDZwu7tJWd6vJDYuikaQDYUjjeu+6UWRsaKbaaPqnTVmlAIeSNLkDHUT6pS2zqSEV8d1E5dirQmxskjO5FIiKO6kVlB1VzRGm+gQcqKVu4IJslSLpB5I2CjX1Qg036pCRzBUjnTfxQSN7wIXF+w9UrgXNsKTmWNkTTqNHokbtXiicC02N0IrjsRaBhOoX4I9ncgmztulDocr3SF1g9UQNtsJqiHWpB2BFJ0DcFA7miBNKQtWo77IT5LqtKGVzKkHQUWgFIdjuk5lSc4ta4gc6UYDx5KQ5tkkEXSj8jvupHYyGnZPNAHRR4z3yE8Cd7QTm3K0oO3JA2uqMUOtqRNifBGKrYIbXNNqBaHI9UTKbQCE1aKr6pTn/VCNviuIvSVzhqCk4jf1XAUuaSGjxCQ2TsFIWyQnw2XfVcLI3UnchslLepC6jW30Qlzr3KkLkgu3kdEW9WdgmySSCPFQDbmmkMgO18k9IyxY5ph5Jby5KQXNF7dVxHIJboX4IQdz5rQdEQwkdE7sHAhRo3d4g+KkggtWWiHZyInZAQSbKcaRSgbbvZ8Uj2hEG6XeSV1EbFKcPdpDq0lMSZkbHdm+TQSOZ6Jp+aAZIn7ZEVEt6PaeTh4hC0xncNZkuMuXISwDus1UCfPyWXzsgxkxYdRxg/cbRPqeZ+Ks87Mlnhcx83ZxtOk0bJHp12VBO0Ok0Q2Iyb1E2VztBmQPed3bnnvupmFiREl0krGjkA6zum2wFjdLWnS77xG5CfZF9omEERLQ41ZO7ihGZYG+83U4c27VfwUKWPU8gCjzVtlQ/Y2vdyDKAaearW5AEzCSDtve4PmrjKRYsQ1dk9+mwSAeV+CcjZksc90YBDR3mkWD8FE7QOALidZdZrp4ADp1WgwoHMhxc46nRv7ku91z3K1ZvxVFx5eH5DWtyYmwPuu0bf4hOT8HNdtils0YAFO5+uymcY4dAxomH7OMnvOG4BNUa8FTMGThZIdC86TuCPdcAr/6FhgTl8xxZNUT27dnNTmk+TtiPxWqx2FkbQbG3Iqoi+zcWhBkbonA6iiCpvDWmOP3yWjYtdzaf0W+Kwcg/bPHnaFhp1E7HZDlSNbkFu42G67oCtI8AAee/h1RknRVdE3yN+Ccbbt7tINiImrRuaAyuiM8uiQ6VI2xoaSaQHKiLiwSDV5lHLPFE0F7gNlS8QxMXMt+PltZLzAe4i1m3+lWjFBy5woLH/5nzP44f+mEjvabOcR+1hrr+zCNbbMVpvqhBrdY7/MuaOUsf/TC4+0uaRXbMr/2gjU2h5Ig7U2xzWJ/zFm//wBhv/TH6Lv8yZ45ZLR6Rj9Fam1BPklJDh5g9Fif8xZ52OV8mD9En+Yc4DbKN+cY/RWptC7QU4bsE8lhhx/N3vJf/pH6Ljx/NcK+1y/IK0t1QPgUgOm6WF/x3NH/ADc/zQ/45lj/AJnI/wBStTfNcHCuaQCtr5LAHjmYDbcnI+L1Ji4pmvYHHImo8h2hReWKTW3dQPwtGw7V0WK/xLKF/tpr/wDcKX/Espw/fzf9QrP8n+NdK2bxva6Nxbd2sU/Pywf/ALmb/qFMS8QzGkFuVPv0MhTOY6vQgASCglFbUfksAc/NI3y5/wDqO/VN/bMp3PJmP/yH9U9hj0GHU6xRoeSUgjofkvPPtGQec8p/vKAyzHnLIfVxV2WPRdJI5b+i7dtgrzomV333H+4pKcObjfqrscej6g0c/wAUOpo31t/1BedEu8ULrA5q7LHo3aRHnLH8XhIciCqM8X+tq859Ue/O0Xksb1+TjteSMiLl/GE22aJ/KVhvweFhnX47KTw/GExO10R0R3XVs43AOFEO8wbUgbu3Kh8PjZFAGaQ0DpSlg1y6rSPChv0Re9WkUm27I9RA2KQL3fBcKTTXWPNGTSgOg/n0XAAVztDGe+jcetJQXNdVNO6Tpud07zcm3t3UgtG/eSuO/d2QOPxJSF4abJUjtBvMoC6026Vjt3OaB5uCE5EI/wCNEB/WFI+HevzRHT0AUU5mM0bzw35yN/VD9uxT/wA1B/1B+qkmCigkBru/goo4lhtFfbMcEf8AqBO42XDka+wlZKGncsddKR2M8wU3MKFJxwJNjqhyBUdjmpI5FjflSQeA5UglyYY6Y+aNjiLpzgCuMsenuyMdt0cEhTcQ40/AnMf2UP32PaVf4KN/meau7ixNvxcSk9o23ofW+r8lRdR6rFaXo9qso7Nx4B/q/VF/mXKG4hh+R/VUYaA4FOBtlG1YuT7S5ZFdnD/pP6pB7RZnRkP+g/qqsMA5pdIrZW05EzK4rPksqVkOk/yfjzVdLnzhjKf+6cTG7q2+Y9PJdKXfdcNuihS1ZO7N+qPrlaedka3Fzqt/NM5E3ZBwFEmwmxsLJHlSCQNfu6/FGejU5mW+aKMSUQ3YACvn4/FSMbNfDKJYXASB3vaAq1jw7T4Un2SNDb/BF+tSuzMifIfIJKIfWwHgmdLI3sqtx06JZ3BzSTy8EzQDLuyQNlufCcfEC6ORgAF2L3ulPbxqfsRAyV3ZDk0MAA/BVsbzpAILQTtslBZyAqk/Famv4hkyxGKSZzoyKqgkblSCERF5LQbA8FXucWP8QpEbgSCeVIrOpMeZPqBbM9unbYqQ3OzxZGZKAedFVpeA5wHUbJ2OU6Lq1i2wav4uIMyBUhIeAPecTq9CpmPOSO97oG29rLteS6/BWGLn9wMfpsmg7wW5yMrSsIdzTgIGwFKrxJ3W0Fxc3+KqFfVWTHteLabC6ynBMBduUkr+zY52lzq6AJb3ATOZPLBCXxML39ABaQzvFs3GyyGytnheL3aLHyVLkjT3oZmzx17zdiPIhX+Rk8WIc6WOOMVemSVrT8rVDlPa6T9pFG1w/gK50GAEQCh/aH/y/JF9pf4t+Sca1LpdSifaZPEfJL9ok/iHyR1OpYCWlFjkmlOlhs+ic0ZfMivkrKtPAJUwxuQ/k4X4JuSSaOTs3OOryTi1MA3REKKxuQ7/AMz5LuzyzyZMfRBSCElIGYeU9ocXFt9HOoojgT9ZR/qKeo0tKxx2/sI/RUz8aQP0GTvVexNK+xWkRMbW4aFjnMa40TW8rQlpBpPtad7CJzA4A1RC4usM1tumZQNtlL0Xuq/i078VsbmBpJJG4WuM9ZpwM23S6KG6q/8AE8no1n+ld9vyzvTf9C69ax2i0DUXZ7KqGZm8xf8A01zs3PaCS5zR1PZhGLstgyhuhIHRVpk4i4Cy/wCQSE8Q/if8KRk/s6syzZCWDqqws4g47vf8XBHB9pZmQxzSuIcbrVacWprmUjaAAnOzo77pAza1itQ0RYVr7PssTeg+pVW8EGleezLNTZgB4fmiFewjUzx2UPN4t9jlMbsZ79P3g8AH8FaRR6I6rkqXjMeuR+3VdN8Y/Zh3tQQCW4e4H3pP9lF/zhO4d3EhaT4vJUOeANbJQ+6fostI0NlDQTWyptVyNa72wzhs2LHH9pP5qPJ7V8VcTUkTR5RhUjW1yS1QSnrTCKDgidytBGba3xKId9h8lpkbHW0IntPNJCNqPipboajDzy8Vm3DJrMe1tjgOSRsbYdv6wvPg9zubnH4r0X2rAdwLMHk2v9YXnbG95VqkI8GuZTYJHI9KUmVndTIZ3A6+vJZllNmBAHgFwo7bLuRpIDRWgl4Ldn7dQt17LsEeLI0CtVH6rF8IbqlePEhbXgN9k8dQAifTfi6DHFuxqk1PtF52rLEY2WF7i4DSFXZYB1VyG4Txu0WeMT7WAu4hDvVwjYf1FQ8DHa54LxY8CFZe0rdWbAa5xn/9igw4xVIv0z4d9rw+PhkUkZomRu9eRWawXvl99121a72v0H2fxqcC8vBcPCtt1kOGC3D0KfsH7TS0kUNj4oxwbiFf/es/H9E4wWDsrRr3PNDmuX5Od4/HThwnL6zeXjZeK5jXZRfrcW929qQxwzkW6aSufvK04uyjASDtKfoobnuIGkbUtceVvHXPlJL4jua9gHfcfGzaYmkBG4JT7g8tOogHy8Ej3NrYH1WnKovZ0NWrT5FGCHAtHJK+PUAXEAlA0dnueQ52hFogBjedqdFgv0Rl1DWSNwdqFqLiyhrw7QHFu48LUt7c122QXNcBbW3ubNUnGkUP1hwDbKZkbRDXOIJ2NdAnw7si5jgQWOIIrqmg+OSQucavx6KiIX1Wm7Ndb2r6oNNb2D5BSCY9ntvUCbaRyPSio5JLiKoeC1VRarqwUQGhux1N+iFulo6geBREDTbD03pZZw3IC2Rp5BORO20pIyHFocBd8inNIHuiiVm2HHGTfSPipDJhtyFdAohcG7NFnqU7jxkm3bBMHxdYGc4M0SW5vIG9wrVr3RHYurrXVZ1pAGynNzpWtaNW3XYLclalaJszHGmutQeJzZoIjxI7v7wFqIzObGbMpJO3u8vwQZOdJLGXtyzG0D7gN2taECTguZLLqy52xNAu+ZryCi5GHjNLmh4DQa7SV+/yCjT5D5JHDtJHj+Y1Z8VElcDuST4lZBqNgLeSeYwaeQ+SCPaP4KRVJrSMTV7D5J+BzwABVjyUd3VSYQQQb5KR7W8Dn+CEuceZXXdikQbtyUAxv0OtRXnXlk+JUzSoke+SSlJTR3TSAuc2zqO3mnmjZMzimlcnVIjynNjaA3VtzJSnKeXHuivommN7jfRGO60+a6RypjW4vvrVLSRx09vpSzgoyNHi4D8VrTC1sZkMg1g7R1ud1jl63xB2V8hyTnYlvSk6O64EDdPZr5ZJnsMTYmsptDrtzXKz12lmIJjBugqP2jaAMceLiVpIY+6QfFUPtMAMjEb6k/NdeMc+XxFhYTQ1FSWxtbYkPd/7pdBGHOFAf92k4lbIfAkgfVa5fHPj9RXSyEe+6/VMzSSOhcHEkeZUqKNukWL23tDmtiONqhHM7+q5S+462eB1OcBYPzSkPAsRG/juggyHNmAkd3N7tToZY52nTdjnasZ7K10rwTdjyRYI7TieP8foUk4FurxKPhA/+pQ/3fQrcgXbo79Qk0sDKJ798lNEVmwOaHIxQxrCQNQcTYO/IbLFdIrJI+tq89maYJDV8vqVWSssWFaez0eoStBI2H1Komknycd1MgJc7SC7aqtU2dT5ZR1B/JXs0EDWNdHq16QHFxu6VJkD/wAROOfeWuOZ4OW6pcxlQTH+R30WLl/fD4LeZrB9nyNv+G76FYOUftx6ha4s8kxgsFc7wXM2tGW7Wg/p6pAQGNtHHVEXsU1FvGKRMfVjwK2ycNCqROz5nRGMu7rX03u9KQNIJrzUszn7N2ZGw5LHL61Iz3tKdXA8z+gH/wDILz8CivQ/aOncDza/8v8AMLz0ilcvVCvf3UJLSwaW7jzRxR9vNHGXaQ5wBPgOv4K6m4TjS4zhjzaJgCWscdnD/v4LMyG+s2/Z/JIUUoIdThThsbQjkts6suBi3yeVLa8EB1TN/lH1WL4HtJMPIfVbTgrqkefFg+qor8XEGJLOS9pbTWEU4kWo8uto0urZSW5OhvdKjznUHeapu+qyYzntEz/xMBuwWGh4bqNiGqU32hrtscj+Fw/EKLitAItV+mfEj2lx2N9nzM0kulczWD92jQr5rK8Hb+1aPHUFrfaB2r2clb/CGn/8gsnwfadh/mKsH7WjWFriFdY+MWvBcRpc3bcc1WO52ibHkB8czIXmgOnNef8APPI7fi+muPsDWNI5Ccfmq4NptkEeSs/aENZETY99rt/WlVazI8nk29gtfj/8sfkn/RtzgAXEbVajF7pjyoJ+Yl1gDZNnSItIbW/NbcCRtiDTbrd0G6amJcLYLCdjj1gNBqzzKczMXRKRHu2gQeYKp761iHiO/aU4Cjty6qzxMw4uU2R0fagDYF1UFVdoWuDjv+Ss2u0sinaLa6rrrf8AutVYYDe0yshxZTZHFwadiLN0o3ZaJHsO2myfTyUziIdDlgk6oy22m7scwoPvyhxNeotMCSQxp0F2/LYV022UcNtxq1IBayMkQBrqDg7VZaPpuo8pLDvW7dQrwTVThYDsSd0y06XkDly3K5r+5Z9EjroN8N1nENzSQXDmCnI5TsJBdqK2XS/lseicLjbdIPyReKPO1BxLQKPxSiWRrrdpAT2h7mDWNLq5FNOrUQ4UibPqsSGSF7bDgnzq0Nva1DibXI0FKMvdALiKW4DmuN17EV5/7KFkzW7SDQBUnRd1RsckwzC7Wbv2Gcz5p9SGLkJ1WIxz8SkjgfkzCOJtnoByHmncp7Q4sj2Y3a63KlMBw8Nzmvc2WXYgO6eahisaLYB40FIfyPomYx7vqnn7Md6JrSKRaktYb8kwPeHqpkZ7hVU5jOac0+SKMBOUoGtHkq1hqQnzVsR3T6Kpj3d6lX6MSopLAsJJnNLaTjI2gIJ2ANFdSsOn6SQ0UOiRzfkiKF3JbciYkYdmwDxlb9Vr9FmwNisnw0auI44PLWtjF+7CzXTiLHAY4Eiy0qTmznJdqduapMV3vglj3O659fddN8xGLPA9VnPaPfiOKCPu/mtRQ/FZb2lcRxeKujBXzXTj9cuSRitp2w6BM8aFQt/r/JPYTi6yfJRuLnUWsPLXf4LXL4xDHD3GaXsXmxpO9KPI55AZbQwkbAUpcLBF+0Zeo7WfNDO1rdGljRTvBcJf+nazY52Lpjc8OJJ8Qi4dC4iQmh6lG3Kke54NBoBFNFDkfBDhn9m/4LPa4s9R5WAm7tO8Hb/9XiFfdcfwSsN8wOae4WAOMNI/gd9F1439Cxo4600eaaksvIJ2pEOaHJ7osc0Wa1qI9oDtla8BAaJfQfmqqQ2Va8ENB3nX5pkC7L9hz3VXluDcqXnu5WDNxXmoGc0drIf5itYFfxKxjZHnE76FYGb9+PVq3vFCfsE//tO+iwgZrkDiTzCYKlM6pw+58EJbp5XulabFFYaj1DFfqjG/RERT7AUfHJbYHKgpN0SF0jBuedmPC+d4cWxjUdIsqCeO4rn4tF3Z5XuP6A3VHwN181E9ptWLGM7He+OeMhtg7OHgRyKzXFP2OSY4u5GQyZrByY5zQTXgFms2tNxPiEWZg8Vx4g64GaXOOwJ1AUPkfksXI0tcRz9ET8qVsTow7uyP1v8A5j5/j80BJcCCTytZ0ymnvMZBBogrR8GmflmOKOFr9LtZsbV1B8v0Cype4vq6HgrXCkfHpaxxbrBsg0fmtSNWj49j9m5ry0sfeh7D90hVAVhl/uXA7gEc1WTGuWyQt+B/vZv6R9VreHTxY7HSTSNjbVW41vaxvs4SZpr/AIfzWrxmtfA5j2tc0t3DhYKDfhvP4/JhzOjkY00Q+NzLLZI+tHx/RRsz2mlilzI49DqcBAa9Nz8PqqnPYIZZsZpJiiIfGCb03zA8v0VXvub5I1ztaGbihzuwjaC50Y0l5O7jtZ9LU+Kg2zz8lTcQIwcPEigY1uqISudXec53Oz9FP4bI6THDnHcpjXFO4s7XwSf/ANvr6hZbhN9oz+tanif/APCz/wDtFZXhJ/at8pAtH9rx7joGk0bCbDMh4m1NkezVtQPLwTjh+0b6qtzGgyymvvlcfyzY6cLlSeM0eG6CypI2tsuuxuFXdq0OIqhfRK9oGHkVsNIUStyfJH45kxc76kl1yADYIXNp5tK405ldUQ5nzC1XLEvBwhlsvkGkByscyCOQgx1QFCvBN8IOgEN2DufwQAXM6ydqrda4zxrFRnYDmxum97fvADp4ruDStMj8eW6e0mPycrWQB4cH7jfY+qpM2FmPkTNjsBjqHitQLDiR7VsbmxOaA3vEs2tU8z3MJtrKBsEMAV7jZk2To7V2rVHv8Ov4KlzGDv8Akr5Uda7WadoYLHSvlz2UxxZkcOhx3Oa14vUABqAHJQYt2C+dXfwS4Z7TPAfv+zKQDLiZjxtDHOdZ3BUcOLmnp4KZxFoGQANhpGyjujB0c927qoHBA55onUPI/mpeNBLPMGQNtwF+CHFd+x5Kz4IAMzV10nf4hGaa7Lwp248Mz2AF3M6xRHPZRZMR3Ytmc2mPNAnqrX2heW4UDRVCc0PC2hVUb3dhoJtpN0VWfoIdOZJTT3eikxgOa6/RPbPx3EtFtBI8t1Fc4jkieXBUiIgeI9OqlSxPELi6Nzdt9tggxgx7bfFGaH8Ks4oGODCb7w3FrVMZ2DEd2wJaTTQ47cvBJml0soZdVzV99jjGVkEahpLQN/IqFk47BNYu0LH/2Q==";
+  const MAIL_QUEUE = "[PHOMI-MAIL]";
+  function scriptHtml(v) {
+    const teal = "#007F8B", e = (x) => esc(x);
+    const link = (t) => `<span style="color:${teal};font-weight:700;text-decoration:underline">${t}</span>`;
+    const p = (t) => `<p style="margin:0 0 14px 0;font-weight:700">${t}</p>`;
+    return `<div style="background:#f2f4f4;padding:20px 10px;font-family:Arial,Helvetica,sans-serif;color:#1d2526">
+      <div style="max-width:600px;margin:0 auto;background:#fff">
+      <div style="text-align:center;padding:24px 24px 6px"><img src="${MAIL_LOGO}" alt="PHOMI" style="width:180px;height:auto"></div>
+      <div style="text-align:center;font-size:21px;font-weight:700;padding:4px 24px 16px">PHOMI за вашите проекти</div>
+      <img src="${MAIL_HERO}" alt="Фасада с PHOMI" style="display:block;width:100%;height:auto">
+      <div style="padding:22px 28px 4px;font-size:15px;line-height:23px">
+      <p style="margin:0 0 14px 0;font-weight:700;color:${teal}">${e(v.greeting)}</p>${p(e(v.opener))}
+      ${p("Визия на камък, дърво или бетон. Тънка и лека минерална облицовка с дебелина около 3–4 мм и тегло около 4 кг/м².")}
+      ${p("PHOMI е изцяло натурален и екологичен материал, изработен от кварцов пясък и глина. PHOMI eCovering дава свобода при оформянето на фасади и интериори: разнообразни текстури и формати, ниско тегло и решения за прави и извити повърхности.")}
+      ${p("Монтажът е изключително лесен: облицовката се залепва с циментово лепило към подготвената фасада. Материалът е UV защитен, удароустойчив и мразоустойчив, с клас на реакция на огън A1 или A2 според модела. Предлага се с 10-годишна гаранция и експлоатационен живот над 50 години според проведените тестове.")}</div>
+      <div style="text-align:center;font-size:15px;line-height:26px;padding:0 24px">${link("Каталог eCovering 2026")} | ${link("Ценоразпис")}<br>${link("Сертификати и технически документи")} | ${link("Реализирани проекти")}</div>
+      <div style="text-align:center;font-size:12px;font-weight:700;color:#4b5658;padding:8px 24px">Цените са базови, в EUR/м² без ДДС. Доставка, лепило и монтаж се калкулират отделно.</div>
+      <div style="padding:16px 28px 4px;font-size:15px;line-height:23px">${p("Имате ли проект, за който търсите подобна визия?")}${p("Изпратете ми снимка или чертеж, за да обсъдим подходящите модели. Можете да видите текстурите и мострите на живо в " + link("шоурумите ни в София и Пловдив") + ".")}</div>
+      <div style="padding:14px 28px 24px;font-size:14px;line-height:21px;border-top:1px solid #e3e8e8">Поздрави,<br><b>${e(v.name || "PHOMI България")}</b><br>PHOMI България<br><span style="color:${teal};font-weight:700">info@phomi.bg · ${e(v.phone || "+359 884 30 30 70")}</span><br>${link("phomi.bg")}</div>
+      </div></div>`;
+  }
+  // често сгрешени домейни – имейлът към тях не стига
+  function badDomain(addr) {
+    const dom = String(addr || "").split("@")[1] || "";
+    const typos = {"gmial.com": "gmail.com", "gmai.com": "gmail.com", "gmal.com": "gmail.com", "gamil.com": "gmail.com", "gnail.com": "gmail.com",
+      "gmail.co": "gmail.com", "gmail.con": "gmail.com", "gmail.bg": "gmail.com", "abv.bgb": "abv.bg", "abv.gb": "abv.bg", "abv.com": "abv.bg", "yahoo.co": "yahoo.com"};
+    return typos[dom.toLowerCase()] ? "@" + dom + " вместо @" + typos[dom.toLowerCase()] : "";
+  }
+  function mailPanel(c) {
+    const s = sender(), fn = firstName(c), d = mailDraft || {};
+    return `<section class="mailbox" id="mailbox">
+      <h3>Представителен имейл</h3>
+      <div class="form">
+        <label for="m-to">До<select id="m-to">${(c.emails || []).map((m) => `<option${m === d.to ? " selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
+        <label for="m-open">Начало<select id="m-open"><option value="interest">Благодаря за интереса…</option><option value="call"${d.open === "call" ? " selected" : ""}>Както се разбрахме по телефона…</option></select></label>
+        <label class="wide" for="m-greet">Обръщение<input id="m-greet" value="${esc(d.greet ?? "Здравейте,")}" autocomplete="off"></label>
+        <label for="m-name">Подпис – име<input id="m-name" value="${esc(d.name ?? s.name ?? "")}" placeholder="напр. Станислав Каадан" autocomplete="off"></label>
+        <label for="m-phone">Подпис – телефон<input id="m-phone" value="${esc(d.phone ?? s.phone ?? "+359 884 30 30 70")}" autocomplete="off"></label>
+      </div>
+      <p class="meta">Тема: „${esc(MAIL_SUBJECT)}“ · ${mailerUrl ? "изпраща се от Gmail на info@phomi.bg с твоя дизайн – тръгва до 1 минута след натискането."
+        : "изпраща се през Gmail конектора на Claude – без снимка. За твоя дизайн свържи скрипта (виж по-долу)."}</p>
+      ${mailerUrl ? "" : `<details><summary>Свържи скрипта за твоя дизайн</summary><div class="form" style="padding-top:8px">
+        <label class="wide" for="m-url">Адрес на скрипта (https://script.google.com/macros/s/…/exec)<input id="m-url" autocomplete="off"></label>
+        <button class="btn" type="button" data-mailurl="1">Запази</button></div></details>`}
+      <iframe id="m-preview" title="Преглед на имейла" sandbox=""></iframe>
+      <div class="actions">
+        ${mailBusy === "confirm" && badDomain(d.to || (c.emails || [])[0]) ? `<p class="msg err">Внимание: адресът изглежда сгрешен (${esc(badDomain(d.to || (c.emails || [])[0]))}). Поправи го от „Редактирай“, иначе имейлът няма да стигне.</p>` : ""}
+        ${mailBusy === "confirm" ? `<span class="confirm">Да изпратя ли имейла до <b>${esc(d.to || (c.emails || [])[0])}</b>?
+            ${mailerUrl && !mcp ? `<a class="btn primary" href="${esc(viaScriptUrl(c, d))}" target="_blank" rel="noopener" data-mailscript="1">Да, изпрати</a>
+              <button class="btn" type="button" data-copy="${esc(viaScriptUrl(c, d))}">Копирай линка</button>
+              <small class="meta">Ако не се отвори браузър: „Копирай линка“ и го постави в Safari/Chrome – имейлът тръгва веднага.</small>`
+              : `<button class="btn primary" type="button" data-mailsend="1">Да, изпрати</button>`}
+            <button class="btn" type="button" data-mailcancel="1">Не</button></span>`
+          : `<button class="btn primary" type="button" data-mailask="1" ${mailBusy ? "disabled" : ""}>Изпрати</button>
+             <button class="btn" type="button" data-mailclose="1">Затвори</button>`}
+        <span class="msg" id="m-msg"></span>
+      </div>
+    </section>`;
+  }
+  function captureDraft() {
+    if (!$("#mailbox")) return;
+    mailDraft = {to: $("#m-to").value, open: $("#m-open").value, greet: $("#m-greet").value, name: $("#m-name").value, phone: $("#m-phone").value};
+  }
+  function refreshPreview() {
+    const f = $("#m-preview");
+    if (f) f.srcdoc = '<!doctype html><meta charset="utf-8"><body style="margin:0">' + (mailerUrl ? scriptHtml(mailValues()) : fillMail(mailValues())) + "</body>";
+  }
+  function mailFail(e) {
+    const code = e && e.code;
+    if (code === "server_not_connected") return "Gmail не е свързан с вашия Claude. Свържете го от claude.ai → Settings → Connectors и опитайте пак.";
+    if (code === "needs_reauth") return "Връзката с Gmail е изтекла. Свържете Gmail отново от claude.ai → Settings → Connectors.";
+    if (code === "approval_required") return "Трябва да разрешите на страницата да ползва Gmail – отворете я в claude.ai и разрешете, когато ви попита.";
+    if (code === "not_in_manifest" || code === "capability_disabled") return "Изпращането не е налично в тази версия на страницата.";
+    if (code === "blocked_by_policy") return "Изпращането е спряно от настройките на организацията.";
+    if (code === "server_unavailable" || code === "upstream_error")
+      return "Не е ясно дали имейлът тръгна – проверете папка „Изпратени“ в Gmail, преди да пробвате отново.";
+    if (code === "tool_error") return "Gmail отказа: " + (e.message || "неизвестна грешка");
+    return "Не успях да изпратя имейла" + (e && e.message ? ": " + e.message : ".");
+  }
+  function recordMailed(id, to) {
+    const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+    saveContact(id, {status: "Изпратен имейл", statusAt: now, emailSent: today()});
+    const entry = {contact: id, kind: "Имейл", who: to, said: "Изпратен представителен имейл (каталози, ценоразпис, сертификати, проекти).",
+                   next: "Да провериш за отговор", due, done: false, at: now};
+    if (mode === "local") { logs["l" + Date.now()] = entry; persistLocal(); render(); }
+    else if (db && !readOnly) db.collection("log").add(entry).catch((e) => fail(e));
+  }
+  // без връзка с Gmail (напр. в приложението на телефона): линк към скрипта, отваря се в браузъра и праща веднага
+  function viaScriptUrl(c, d) {
+    const fn = firstName(c), s = sender();
+    const q = new URLSearchParams({key: MAILER_KEY, to: d.to || (c.emails || [])[0] || "", opener: d.open || "interest",
+      greeting: d.greet ?? "Здравейте,", sname: d.name ?? s.name ?? "", sphone: d.phone ?? s.phone ?? "+359 884 30 30 70"});
+    return mailerUrl + (mailerUrl.includes("?") ? "&" : "?") + q.toString();
+  }
+  async function sendMail() {
+    captureDraft();
+    const v = mailValues(), id = current, msg = () => $("#m-msg"), opener = (mailDraft && mailDraft.open) || "interest";
+    store.set("phomi-sender", JSON.stringify({name: v.name, phone: v.phone}));
+    if (!v.to) { mailBusy = false; renderProfile(); return; }
+    if (!mcp) { mailBusy = false; renderProfile(); refreshPreview(); msg().textContent = "Изпращането не е налично тук – отворете страницата в claude.ai."; msg().classList.add("err"); return; }
+    mailBusy = "sending"; renderProfile(); refreshPreview(); msg().textContent = "Изпращане…";
+    try {
+      // със свързан скрипт: заявка до info@phomi.bg, скриптът я поема до минута и праща имейла с дизайна и снимките
+      if (mailerUrl) await mcp.callTool("Gmail", "send_message", {to: ["info@phomi.bg"], subject: MAIL_QUEUE + " " + v.to,
+        body: "Служебна заявка от „PHOMI контакти“ – не я пипайте, скриптът праща имейла до " + v.to + " и я изтрива до минута.\n\n<<<" + JSON.stringify({key: MAILER_KEY, to: v.to, greeting: v.greeting, opener, sname: v.name, sphone: v.phone}) + ">>>"});
+      else await mcp.callTool("Gmail", "send_message", {to: [v.to], subject: MAIL_SUBJECT, htmlBody: fillMail(v), body: mailText(v)});
+      mailBusy = false; mailOpen = null; mailDraft = null;
+      recordMailed(id, v.to);
+      note(mailerUrl ? "Имейлът до " + v.to + " тръгва от info@phomi.bg до 1 минута." : "Имейлът е изпратен до " + v.to + ".");
+      renderProfile();
+    } catch (e) {
+      mailBusy = false; renderProfile(); refreshPreview();
+      msg().textContent = mailFail(e); msg().classList.add("err");
+    }
+  }
+
+  function addLog() {
+    const val = (s) => ($(s) ? $(s).value.trim() : "");
+    const body = {contact: current, kind: val("#l-kind"), who: val("#l-who"), said: val("#l-said"), next: val("#l-next"),
+                  due: val("#l-due"), done: false, at: new Date().toISOString()};
+    const msg = $("#logMsg");
+    if (!body.said && !body.next && !body.due) { msg.textContent = "Напиши какво се разбрахте или следващата стъпка."; msg.classList.add("err"); return; }
+    // статусът се вдига сам, ако още е „Не е звъняно“
+    const c = contacts[current];
+    if (statusOf(c) === "Не е звъняно") saveContact(current, {status: body.kind === "Среща" ? "Проведена среща" : "Разговор – интерес"});
+    if (mode === "local") { logs["l" + Date.now()] = body; persistLocal(); document.activeElement.blur(); render(); return; }
+    if (!db || readOnly) return;
+    msg.textContent = "Запазване…"; msg.classList.remove("err");
+    db.collection("log").add(body).then(() => { document.activeElement && document.activeElement.blur(); renderProfile(); note("Разговорът е записан."); })
+      .catch((e) => fail(e, msg));
+  }
+  function changeLog(k, del) {
+    if (mode === "local") { if (del) delete logs[k]; else logs[k].done = true; persistLocal(); confirmDel = null; render(); return; }
+    if (!db || readOnly) return;
+    confirmDel = null;
+    (del ? db.doc("log/" + k).delete() : db.doc("log/" + k).update({done: true})).catch((e) => fail(e));
+  }
+  function deleteContact(id) {
+    const ks = entriesFor(id);
+    const wasOpen = current === id;
+    confirmDel = null; if (wasOpen) narrowShow = false;
+    if (mode === "local") { delete contacts[id]; ks.forEach((k) => delete logs[k]); persistLocal(); if (wasOpen) current = ""; render(); return; }
+    if (!db || readOnly) return;
+    if (wasOpen) current = "";
+    Promise.all([db.doc("contacts/" + id).delete(), ...ks.map((k) => db.doc("log/" + k).delete())])
+      .then(() => note("Контактът е изтрит.")).catch((e) => fail(e));
+  }
+
+  function copy(text, btn) {
+    const ok = () => { if (btn) { const t = btn.textContent; btn.textContent = "Копирано"; setTimeout(() => { btn.textContent = t; }, 1400); } };
+    try { navigator.clipboard.writeText(text).then(ok, () => { $("#bulkMsg").textContent = text; }); } catch (e) { $("#bulkMsg").textContent = text; }
+  }
+  function copyAll(kind) {
+    const ids = tab === "rem" ? [...new Set(openSteps().map((k) => logs[k].contact))] : shown();
+    const vals = [...new Set(ids.flatMap((i) => (kind === "mail" ? contacts[i].emails : contacts[i].phones) || []))];
+    if (!vals.length) { $("#bulkMsg").textContent = "Няма какво да се копира."; return; }
+    const text = vals.join(kind === "mail" ? ", " : "\n");
+    try { navigator.clipboard.writeText(text).then(() => { $("#bulkMsg").textContent = `Копирани ${vals.length} ${kind === "mail" ? "имейла" : "телефона"}.`; },
+      () => { $("#bulkMsg").textContent = text; }); } catch (e) { $("#bulkMsg").textContent = text; }
+  }
+
+  // ---------- събития ----------
+  // ---------- местене на редовете с мишката / пръста (хваща се за ⠿) ----------
+  let drag = null, dragEndAt = 0;
+  document.addEventListener("pointerdown", (ev) => {
+    const g = ev.target.closest && ev.target.closest("[data-grip]");
+    if (!g || readOnly) return;
+    ev.preventDefault();
+    const row = g.closest(".row");
+    drag = {id: g.dataset.grip, row, y: ev.clientY};
+    row.classList.add("dragging"); document.body.classList.add("reordering");
+  });
+  document.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    ev.preventDefault();
+    const over = document.elementFromPoint(ev.clientX, ev.clientY);
+    const target = over && over.closest && over.closest("#list .row");
+    if (target && target !== drag.row) {
+      const r = target.getBoundingClientRect();
+      target.parentNode.insertBefore(drag.row, ev.clientY < r.top + r.height / 2 ? target : target.nextSibling);
+      [...$("#list").querySelectorAll(".row .no")].forEach((n, k) => { n.textContent = k + 1 + "."; });
+    }
+    // автоматично превъртане до ръба на екрана
+    const edge = 60;
+    if (ev.clientY < edge) window.scrollBy(0, -14); else if (ev.clientY > window.innerHeight - edge) window.scrollBy(0, 14);
+  }, {passive: false});
+  const endDrag = () => {
+    if (!drag) return;
+    const moved = drag; drag = null; dragEndAt = Date.now();
+    moved.row.classList.remove("dragging"); document.body.classList.remove("reordering");
+    saveOrder([...$("#list").querySelectorAll(".row")].map((r) => r.dataset.open));
+  };
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  // новата поредност на показаните се вмъква в общата (скритите от филтъра остават на местата си)
+  function saveOrder(newShown) {
+    const all = Object.keys(contacts).sort(byOrder);
+    const set = new Set(newShown), queue = [...newShown];
+    const full = all.map((id) => (set.has(id) ? queue.shift() : id));
+    const changed = [];
+    full.forEach((id, k) => { if (contacts[id].order !== (k + 1) * 10) { contacts[id] = Object.assign({}, contacts[id], {order: (k + 1) * 10}); changed.push(id); } });
+    render();
+    if (!changed.length) return;
+    if (mode === "local") { persistLocal(); return; }
+    if (!db || readOnly) return;
+    changed.forEach((id) => { const body = contacts[id];
+      pending[id] = (pending[id] || Promise.resolve()).then(() => db.doc("contacts/" + id).set(body)).catch((e) => fail(e)); });
+    note("Поредността е запазена.");
+  }
+
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest("[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    if (!t) return;
+    if (t.dataset.rowdel) { ev.stopPropagation(); confirmDel = "r:" + t.dataset.rowdel; renderList(); return; }
+    if (t.dataset.rowdelno) { ev.stopPropagation(); confirmDel = null; renderList(); return; }
+    if (t.dataset.rowdelyes) { ev.stopPropagation(); deleteContact(t.dataset.rowdelyes); return; }
+    if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
+    if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
+    if (t.dataset.open && Date.now() - dragEndAt < 400) return;  // току-що преместен ред – не го отваряме
+    if (t.dataset.open) { current = t.dataset.open; store.set("phomi-c-current", current); confirmDel = null; narrowShow = true; render();
+      if (window.matchMedia("(max-width: 860px)").matches) window.scrollTo({top: 0}); return; }
+    if (t.dataset.back) { narrowShow = false; render(); return; }
+    if (t.dataset.copy) { copy(t.dataset.copy, t); return; }
+    if (t.dataset.edit) { openDialog(current); return; }
+    if (t.dataset.askdel) { confirmDel = "c:" + current; renderProfile(); return; }
+    if (t.dataset.delcontact) { deleteContact(current); return; }
+    if (t.dataset.cancel) { confirmDel = null; render(); return; }
+    if (t.dataset.addlog) { addLog(); return; }
+    if (t.dataset.mailtpl) { mailOpen = current; mailBusy = false; mailDraft = null; renderProfile(); $("#mailbox").scrollIntoView({block: "nearest"}); return; }
+    if (t.dataset.mailclose) { mailOpen = null; mailBusy = false; mailDraft = null; renderProfile(); return; }
+    if (t.dataset.mailask) { captureDraft(); mailBusy = "confirm"; renderProfile(); return; }
+    if (t.dataset.mailcancel) { mailBusy = false; renderProfile(); refreshPreview(); return; }
+    if (t.dataset.mailsend) { sendMail(); return; }
+    if (t.dataset.mailscript) {
+      // линкът се отваря от браузъра (не спираме клика); тук само отбелязваме изпращането
+      const d = mailDraft || {}, id = current, to = d.to || (contacts[id].emails || [])[0];
+      store.set("phomi-sender", JSON.stringify({name: d.name || "", phone: d.phone || ""}));
+      mailOpen = null; mailBusy = false; mailDraft = null;
+      setTimeout(() => { recordMailed(id, to); note("Имейлът до " + to + " се изпраща – потвърждението е в браузъра."); renderProfile(); }, 0);
+      return;
+    }
+    if (t.dataset.mailurl) {
+      const u = ($("#m-url").value || "").trim();
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec/.test(u)) { $("#m-msg").textContent = "Адресът трябва да е от вида https://script.google.com/macros/s/…/exec"; $("#m-msg").classList.add("err"); return; }
+      if (db && !readOnly) db.doc("settings/mailer").set({url: u, updated: new Date().toISOString()}).catch((e) => fail(e));
+      mailerUrl = u; renderProfile(); return;
+    }
+    if (t.dataset.done) { changeLog(t.dataset.done, false); return; }
+    if (t.dataset.askdellog) { confirmDel = "log:" + t.dataset.askdellog; render(); return; }
+    if (t.dataset.dellog) { changeLog(t.dataset.dellog, true); return; }
+    if (t.id === "addBtn") { openDialog(null); return; }
+    if (t.id === "copyPhones") { copyAll("phone"); return; }
+    if (t.id === "copyMails") { copyAll("mail"); return; }
+  });
+  document.addEventListener("input", (ev) => {
+    if (ev.target.closest && ev.target.closest("#mailbox")) { captureDraft(); refreshPreview(); }
+  });
+  document.addEventListener("change", (ev) => {
+    if (ev.target.id === "p-status" && contacts[current]) {
+      const patch = {status: ev.target.value, statusAt: new Date().toISOString()};
+      // датата на имейла се записва сама при маркиране; може да се поправи ръчно в профила
+      if (ev.target.value === "Изпратен имейл" && statusOf(contacts[current]) !== "Изпратен имейл") patch.emailSent = today();
+      saveContact(current, patch);
+    }
+    if (ev.target.id === "p-mail" && contacts[current] && ev.target.value) saveContact(current, {emailSent: ev.target.value});
+  });
+  ["#q", "#city", "#kind", "#stf"].forEach((s) => $(s).addEventListener("input", renderList));
+
+  render();
+
+  // ---------- база ----------
+  function goLocal() {
+    mode = "local"; loaded = true;
+    try { Object.assign(contacts, JSON.parse(store.get("phomi-c-contacts") || "{}")); } catch (e) { /* празно */ }
+    try { Object.assign(logs, JSON.parse(store.get("phomi-c-log") || "{}")); } catch (e) { /* празно */ }
+    note("Записва се само в този браузър (няма връзка с базата).", true);
+    renderFilters(); render();
+  }
+  if (window.claude && typeof window.claude.use === "function") {
+    Promise.resolve(window.claude.use("mcp")).then((ns) => { mcp = ns; }).catch(() => { mcp = null; });
+  }
+  const use = window.claude && typeof window.claude.use === "function" ? window.claude.use("db") : Promise.resolve(null);
+  Promise.resolve(use).then((ns) => {
+    if (!ns) { goLocal(); return; }
+    db = ns; mode = "db";
+    const lost = () => note("Връзката с базата прекъсна – презаредете страницата.", true);
+    db.collection("contacts").onSnapshot((snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") delete contacts[ch.doc.id];
+        else contacts[ch.doc.id] = Object.assign({}, ch.doc.data());
+      });
+      if (!loaded) note("Всичко се записва автоматично и се вижда на всичките ви устройства.");
+      loaded = true;
+      renderFilters(); render();
+    }, lost);
+    db.doc("settings/mailer").onSnapshot((d) => {
+      mailerUrl = (d && d.exists && d.data().url) || "";
+      if (mailOpen) renderProfile();
+    }, () => {});
+    db.collection("log").onSnapshot((snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") delete logs[ch.doc.id];
+        else logs[ch.doc.id] = Object.assign({}, ch.doc.data());
+      });
+      render();
+    }, lost);
+  }).catch(goLocal);
+})();
+</script>
