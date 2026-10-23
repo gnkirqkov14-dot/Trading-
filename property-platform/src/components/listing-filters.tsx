@@ -49,6 +49,8 @@ export function ListingFilters({
         params.delete(key);
       }
     }
+    // Нов филтър дава нов списък — започва се от първа страница.
+    params.delete("page");
     // Meta Pixel: всяка промяна на филтър е ново търсене. Праща се само
     // какво се търси — вид сделка и населено място, нищо лично.
     pixelEvent("Search", {
