@@ -37,7 +37,11 @@ type SearchParams = {
   terrace?: string;
   furnished?: string;
   sort?: string;
+  page?: string;
 };
+
+// По 24 на страница — дели се и на две, и на три колони без празни места.
+const NA_STRANICA = 24;
 
 export default async function ListingsPage({
   searchParams,
@@ -46,6 +50,7 @@ export default async function ListingsPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
+  const stranica = Math.max(1, Math.floor(Number(params.page)) || 1);
 
   const [
     { data: selectedSettlement },
@@ -71,6 +76,7 @@ export default async function ListingsPage({
           .from("listings")
           .select(
             "id, type, property_type, price, area_sqm, rooms, status, construction_stage, completion_year, title, cities(name), neighborhoods(name), listing_photos(url, position)",
+            { count: "exact" },
           );
 
         if (params.type) query = query.eq("type", params.type as ListingDealType);
@@ -124,12 +130,36 @@ export default async function ListingsPage({
             .order("created_at", { ascending: false });
         }
 
-        return query;
+        const ot = (stranica - 1) * NA_STRANICA;
+        return query.range(ot, ot + NA_STRANICA - 1);
       })(),
     ]);
 
   const listings = (listingsQuery.data ?? []) as unknown as ListingCardData[];
   const onlyBuilders = params.builder === "1";
+  const obshto = listingsQuery.count ?? listings.length;
+  const stranici = Math.max(1, Math.ceil(obshto / NA_STRANICA));
+
+  // Адрес към друга страница със същите филтри.
+  function kamStranica(n: number) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v && k !== "page") q.set(k, String(v));
+    }
+    if (n > 1) q.set("page", String(n));
+    const s = q.toString();
+    return s ? `/listings?${s}` : "/listings";
+  }
+
+  // Номерата около текущата страница, първата и последната; „…“ между тях.
+  const nomera: (number | "…")[] = [];
+  for (let n = 1; n <= stranici; n++) {
+    if (n === 1 || n === stranici || Math.abs(n - stranica) <= 2) {
+      nomera.push(n);
+    } else if (nomera[nomera.length - 1] !== "…") {
+      nomera.push("…");
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -160,6 +190,14 @@ export default async function ListingsPage({
         />
       </div>
 
+      <p className="mb-4 text-sm text-slate-600">
+        {obshto === 0
+          ? "Няма намерени обяви"
+          : `${obshto} ${obshto === 1 ? "обява" : "обяви"}${
+              stranici > 1 ? ` · страница ${stranica} от ${stranici}` : ""
+            }`}
+      </p>
+
       {listings.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
           Няма намерени обяви.
@@ -170,6 +208,50 @@ export default async function ListingsPage({
             <ListingCard key={listing.id} listing={listing} />
           ))}
         </div>
+      )}
+
+      {stranici > 1 && (
+        <nav
+          aria-label="Страници"
+          className="mt-10 flex flex-wrap items-center justify-center gap-2"
+        >
+          {stranica > 1 && (
+            <Link
+              href={kamStranica(stranica - 1)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
+            >
+              ← Назад
+            </Link>
+          )}
+          {nomera.map((n, i) =>
+            n === "…" ? (
+              <span key={`t${i}`} className="px-1 text-slate-400">
+                …
+              </span>
+            ) : (
+              <Link
+                key={n}
+                href={kamStranica(n)}
+                aria-current={n === stranica ? "page" : undefined}
+                className={
+                  n === stranica
+                    ? "rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white"
+                    : "rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
+                }
+              >
+                {n}
+              </Link>
+            ),
+          )}
+          {stranica < stranici && (
+            <Link
+              href={kamStranica(stranica + 1)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
+            >
+              Напред →
+            </Link>
+          )}
+        </nav>
       )}
     </div>
   );
