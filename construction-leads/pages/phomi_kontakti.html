@@ -621,7 +621,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <div class="form">
         <label for="m-to">До<select id="m-to">${(c.emails || []).map((m) => `<option${m === d.to ? " selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
         <label for="m-open">Начало<select id="m-open"><option value="interest">Благодаря за интереса…</option><option value="call"${d.open === "call" ? " selected" : ""}>Както се разбрахме по телефона…</option></select></label>
-        <label class="wide" for="m-greet">Обръщение<input id="m-greet" value="${esc(d.greet ?? (fn ? "Здравейте, " + fn + "," : "Здравейте,"))}" autocomplete="off"></label>
+        <label class="wide" for="m-greet">Обръщение<input id="m-greet" value="${esc(d.greet ?? "Здравейте,")}" autocomplete="off"></label>
         <label for="m-name">Подпис – име<input id="m-name" value="${esc(d.name ?? s.name ?? "")}" placeholder="напр. Станислав Каадан" autocomplete="off"></label>
         <label for="m-phone">Подпис – телефон<input id="m-phone" value="${esc(d.phone ?? s.phone ?? "+359 884 30 30 70")}" autocomplete="off"></label>
       </div>
@@ -677,7 +677,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   function viaScriptUrl(c, d) {
     const fn = firstName(c), s = sender();
     const q = new URLSearchParams({key: MAILER_KEY, to: d.to || (c.emails || [])[0] || "", opener: d.open || "interest",
-      greeting: d.greet ?? (fn ? "Здравейте, " + fn + "," : "Здравейте,"), sname: d.name ?? s.name ?? "", sphone: d.phone ?? s.phone ?? "+359 884 30 30 70"});
+      greeting: d.greet ?? "Здравейте,", sname: d.name ?? s.name ?? "", sphone: d.phone ?? s.phone ?? "+359 884 30 30 70"});
     return mailerUrl + (mailerUrl.includes("?") ? "&" : "?") + q.toString();
   }
   async function sendMail() {
