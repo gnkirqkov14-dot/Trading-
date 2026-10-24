@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AiAssistant } from "@/components/assistant/ai-assistant";
 import { MetaPixel } from "@/components/meta-pixel";
+import { Broyach } from "@/components/broyach";
 import "./globals.css";
 
 // Geist няма кирилица — досега целият български текст падаше на
@@ -82,6 +83,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             да не се налага cookie банер по GDPR. Скриптът се зарежда
             само в production; в dev компонентът не прави нищо. */}
         <Analytics />
+        {/* Нашият брояч за /admin/statistika: колко са на сайта сега,
+            колко стоят и какво гледат. Анонимен, без бисквитки. */}
+        <Broyach />
         {/* Meta (Facebook) Pixel — за рекламите във Facebook/Instagram.
             ⚠️ За разлика от Vercel Analytics отгоре, ТОЙ слага
             бисквитка и праща данни на Meta, тоест изисква съгласие по
