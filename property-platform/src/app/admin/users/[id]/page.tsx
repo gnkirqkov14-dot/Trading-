@@ -49,7 +49,7 @@ export default async function AdminUserPage({
     supabase
       .from("profiles")
       .select(
-        "id, name, email, phone, created_at, subscription_plan, subscription_expires_at, is_admin, listing_limit",
+        "id, name, phone, created_at, subscription_plan, subscription_expires_at, is_admin, listing_limit",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -70,18 +70,23 @@ export default async function AdminUserPage({
   ]);
 
   if (!profile) notFound();
+  // Имейлът е заключен за четене от таблицата — само през админ функцията.
+  const { data: emailRows } = await supabase.rpc("admin_get_profile_emails", {
+    profile_ids: [id],
+  });
+  const email = emailRows?.[0]?.email ?? null;
   const state = (stateRows ?? []).find((row) => row.user_id === id);
   const obqvi = listings ?? [];
 
   const poleta: [string, React.ReactNode][] = [
     [
       "Имейл",
-      profile.email ? (
+      email ? (
         <a
-          href={`mailto:${profile.email}`}
+          href={`mailto:${email}`}
           className="underline underline-offset-2"
         >
-          {profile.email}
+          {email}
         </a>
       ) : (
         "—"
