@@ -46,7 +46,9 @@ export default async function AdminUsersPage() {
           "id, name, phone, created_at, subscription_plan, is_admin",
         )
         .order("created_at", { ascending: false }),
-      supabase.from("listings").select("user_id"),
+      // Само пуснатите от хората: внесените от imot.bg са над 1000 и
+      // заявката спираше на хилядния ред, та бройките излизаха грешни.
+      supabase.from("listings").select("user_id").is("source_url", null),
       // Сметката по часовник е в базата: денят е софийски, а сървърът е
       // другаде — пък и четенето на времето в компонент е нечисто.
       supabase.rpc("admin_signup_stats"),
@@ -69,8 +71,8 @@ export default async function AdminUsersPage() {
     email: emailById.get(row.id) ?? null,
   }));
 
-  // Броят обяви на човек се смята тук, вместо с отделна заявка за всеки
-  // ред — потребителите са малко, а така базата се пита веднъж.
+  // Броят пуснати обяви на човек се смята тук, вместо с отделна заявка
+  // за всеки ред — така базата се пита веднъж.
   const listingCounts = new Map<string, number>();
   for (const row of listingOwners ?? []) {
     const id = (row as { user_id: string }).user_id;
