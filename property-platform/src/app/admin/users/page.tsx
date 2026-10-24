@@ -141,9 +141,12 @@ export default async function AdminUsersPage() {
               {rows.map((row) => (
                 <tr key={row.id} className="align-top">
                   <td className="px-4 py-3">
-                    {row.name?.trim() || (
-                      <span className="text-slate-400">(без име)</span>
-                    )}
+                    <Link
+                      href={`/admin/users/${row.id}`}
+                      className="font-medium text-slate-900 underline underline-offset-2"
+                    >
+                      {row.name?.trim() || "(без име)"}
+                    </Link>
                     {row.is_admin && (
                       <span className="ml-2 rounded bg-slate-900 px-1.5 py-0.5 text-xs text-white">
                         админ
