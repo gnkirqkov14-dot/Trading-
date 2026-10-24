@@ -37,16 +37,36 @@ type EditLogRow = {
   changed_at: string;
 };
 
-export default async function AdminPage() {
+// Кои обяви да се показват. Внесените от imot.bg са хиляди и затрупваха
+// малкото, които хората пускат сами — а точно тях трябва да следиш.
+const IZVORI = {
+  potrebiteli: "От потребители",
+  vneseni: "Внесени (последните 300)",
+} as const;
+type Izvor = keyof typeof IZVORI;
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ izvor?: string }>;
+}) {
   await requireAdmin();
   const supabase = await createClient();
+  const { izvor: izvorParam } = await searchParams;
+  const izvor: Izvor = izvorParam === "vneseni" ? "vneseni" : "potrebiteli";
 
-  const { data: listings } = await supabase
+  let zayavka = supabase
     .from("listings")
     .select(
       "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name, listing_limit)",
     )
     .order("created_at", { ascending: false });
+  // Внесената обява помни откъде е дошла; ръчно пуснатата няма източник.
+  zayavka =
+    izvor === "vneseni"
+      ? zayavka.not("source_url", "is", null).limit(300)
+      : zayavka.is("source_url", null);
+  const { data: listings } = await zayavka;
 
   const rows = (listings ?? []) as unknown as RawListingRow[];
 
@@ -154,6 +174,21 @@ export default async function AdminPage() {
             Контакти
           </Link>
         </div>
+      </div>
+      <div className="mb-4 flex gap-2 text-sm">
+        {(Object.keys(IZVORI) as Izvor[]).map((k) => (
+          <Link
+            key={k}
+            href={k === "potrebiteli" ? "/admin" : `/admin?izvor=${k}`}
+            className={
+              k === izvor
+                ? "rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white"
+                : "rounded-lg border border-slate-300 px-3 py-1.5 text-slate-600 hover:bg-slate-100"
+            }
+          >
+            {IZVORI[k]}
+          </Link>
+        ))}
       </div>
       <p className="mb-6 text-sm text-slate-500">
         Обяви със споделен телефон между {SUSPECTED_AGENCY_THRESHOLD}+ обяви
