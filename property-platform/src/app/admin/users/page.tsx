@@ -40,7 +40,10 @@ export default async function AdminUsersPage() {
       supabase
         .from("profiles")
         .select(
-          "id, name, email, phone, created_at, subscription_plan, is_admin",
+          // Без `email`: колоната е заключена за четене (виж миграциите) и
+          // ако се поиска тук, пада цялата заявка — списъкът излизаше
+          // празен. Имейлите идват отделно през admin_get_profile_emails.
+          "id, name, phone, created_at, subscription_plan, is_admin",
         )
         .order("created_at", { ascending: false }),
       supabase.from("listings").select("user_id"),
@@ -52,7 +55,19 @@ export default async function AdminUsersPage() {
       supabase.rpc("admin_user_states"),
     ]);
 
-  const rows = (profiles ?? []) as ProfileRow[];
+  const bezImeyl = (profiles ?? []) as Omit<ProfileRow, "email">[];
+  const { data: emailRows } = bezImeyl.length
+    ? await supabase.rpc("admin_get_profile_emails", {
+        profile_ids: bezImeyl.map((row) => row.id),
+      })
+    : { data: [] as { id: string; email: string | null }[] };
+  const emailById = new Map(
+    (emailRows ?? []).map((row) => [row.id, row.email]),
+  );
+  const rows: ProfileRow[] = bezImeyl.map((row) => ({
+    ...row,
+    email: emailById.get(row.id) ?? null,
+  }));
 
   // Броят обяви на човек се смята тук, вместо с отделна заявка за всеки
   // ред — потребителите са малко, а така базата се пита веднъж.
