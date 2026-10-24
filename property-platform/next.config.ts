@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: true, // без оптимизация от Vercel: изчерпа безплатния план
     remotePatterns: [
       {
         // Снимките на обявите. Минават през `next/image`, за да стигат до
