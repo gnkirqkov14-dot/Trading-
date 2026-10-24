@@ -376,6 +376,27 @@ export interface Database {
         /** Без отписаните и без тези без записано съгласие. */
         Returns: { id: string; phone: string; name: string | null }[];
       };
+      poseshtenie_nachalo: {
+        Args: {
+          p_posetitel: string;
+          p_sesiya: string;
+          p_pat: string;
+          p_listing: string | null;
+          p_iztochnik: string;
+          p_ustroistvo: string;
+        };
+        /** id на записа — с него браузърът праща пулса. */
+        Returns: string;
+      };
+      poseshtenie_pulse: {
+        Args: { p_id: string; p_sekundi: number };
+        Returns: undefined;
+      };
+      /** Всичко за /admin/statistika; виж миграцията за формата. */
+      admin_statistika: {
+        Args: Record<string, never>;
+        Returns: import("@/lib/types/statistika").Statistika;
+      };
       admin_user_states: {
         Args: Record<string, never>;
         /** От auth.users — докъде е стигнал всеки при регистрацията. */

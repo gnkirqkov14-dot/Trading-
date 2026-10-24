@@ -168,6 +168,12 @@ export default async function AdminPage({
             Потребители
           </Link>
           <Link
+            href="/admin/statistika"
+            className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
+          >
+            Статистика
+          </Link>
+          <Link
             href="/admin/contacts"
             className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
           >
