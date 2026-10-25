@@ -367,7 +367,7 @@ def write_email(work: Path, date: str, an: dict, topics: list[dict], must: list[
         for t in top)
     vids = "".join(
         f"<p style='margin:0 0 12px'><a href='{e(i['url'])}' style='color:#1f3fd1;font-weight:600;text-decoration:none'>▶ {e(i['title'])}</a>"
-        f"<br><span style='color:#777;font-size:13px'>{e(i.get('channel') or '')} · {fmt_views(i.get('views'))} гледания</span>"
+        f"<br><span style='color:#777;font-size:13px'>{e(i.get('channel') or '')}{(' · ' + fmt_views(i.get('views')) + ' гледания') if fmt_views(i.get('views')) else ''}</span>"
         f"<br><span style='font-size:14px'>{e(i.get('s') or '')}</span></p>" for i in must[:4])
     body = (
         "<div style='font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:auto;color:#1d1b26;line-height:1.45'>"
