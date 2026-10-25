@@ -58,6 +58,14 @@ export function Broyach() {
     if (/bot|crawl|spider|preview|lighthouse/i.test(navigator.userAgent))
       return;
 
+    // Браузър, в който някога е влизал админ, не се брои изобщо — и след
+    // изход: собственикът разглежда сайта по-често от всеки друг.
+    try {
+      if (localStorage.getItem("ip_admin") === "1") return;
+    } catch {
+      /* без localStorage — продължава */
+    }
+
     const supabase = createClient();
     const posetitel = id(localStorage, "ip_posetitel");
     const sesiya = id(sessionStorage, "ip_sesiya");
@@ -90,18 +98,36 @@ export function Broyach() {
         .then(() => {});
     };
 
-    void supabase
-      .rpc("poseshtenie_nachalo", {
+    const nachalo = async () => {
+      const { data: sesia } = await supabase.auth.getSession();
+      const uid = sesia.session?.user.id;
+      if (uid) {
+        const { data: profil } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", uid)
+          .maybeSingle();
+        if (profil?.is_admin) {
+          try {
+            localStorage.setItem("ip_admin", "1");
+          } catch {
+            /* нищо */
+          }
+          return;
+        }
+      }
+      return supabase.rpc("poseshtenie_nachalo", {
         p_posetitel: posetitel,
         p_sesiya: sesiya,
         p_pat: pathname,
         p_listing: listing && UUID.test(listing) ? listing : null,
         p_iztochnik: izt,
         p_ustroistvo: ustroistvo,
-      })
-      .then(({ data }) => {
-        zapisId = (data as string | null) ?? null;
       });
+    };
+    void nachalo().then((rez) => {
+      zapisId = (rez?.data as string | null | undefined) ?? null;
+    });
 
     const tik = setInterval(() => {
       if (document.visibilityState === "visible") pulse();

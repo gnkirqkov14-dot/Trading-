@@ -24,6 +24,8 @@ function chas(value: string) {
   });
 }
 
+const POKAZHI_OBQVI = false;
+
 const IMENA_STRANICI: Record<string, string> = {
   "/": "Начална",
   "/listings": "Всички обяви",
@@ -144,23 +146,27 @@ export default async function AdminStatistikaPage() {
             </Karta>
           </div>
 
-          <Karta zaglavie="Най-гледани обяви (7 дни)">
-            <Tablica
-              glava={["Обява", "Прегледи", "Хора", "Ср. време"]}
-              redove={st.obqvi.map((o) => [
-                <Link
-                  key="l"
-                  href={`/listings/${o.listing_id}`}
-                  className="underline underline-offset-2"
-                >
-                  {o.title}
-                </Link>,
-                o.pregledi,
-                o.posetiteli,
-                vreme(o.sredno_sek),
-              ])}
-            />
-          </Karta>
+          {/* „Най-гледани обяви“ е скрито засега по желание на собственика;
+              данните се събират и блокът се връща, като се смени на true. */}
+          {POKAZHI_OBQVI && (
+            <Karta zaglavie="Най-гледани обяви (7 дни)">
+              <Tablica
+                glava={["Обява", "Прегледи", "Хора", "Ср. време"]}
+                redove={st.obqvi.map((o) => [
+                  <Link
+                    key="l"
+                    href={`/listings/${o.listing_id}`}
+                    className="underline underline-offset-2"
+                  >
+                    {o.title}
+                  </Link>,
+                  o.pregledi,
+                  o.posetiteli,
+                  vreme(o.sredno_sek),
+                ])}
+              />
+            </Karta>
+          )}
 
           <Karta zaglavie="Най-гледани страници (7 дни)">
             <Tablica
