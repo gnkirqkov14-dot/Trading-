@@ -54,6 +54,8 @@ header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
   font: 600 14px var(--font-body); cursor: pointer; }
 .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .tab .n { font-weight: 500; opacity: .8; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.tabs.sub { margin-top: 8px; padding-left: 12px; border-left: 3px solid var(--accent); }
+.tabs.sub .tab { padding: 4px 12px; font-size: 13px; }
 .tab .n.meet { background: #22a34a; color: #fff; border-radius: 999px; padding: 0 6px; opacity: 1; }
 .meet-when { font: 700 13px var(--font-mono); color: #15803d; }
 .meet-when.today { background: #22a34a; color: #fff; border-radius: 6px; padding: 1px 6px; }
@@ -204,6 +206,14 @@ footer { color: var(--muted); font-size: 12.5px; }
     <button class="tab" role="tab" data-tab="new" aria-selected="false">Нови контакти<span class="n" id="nNew">0</span></button>
     <button class="tab" role="tab" data-tab="bcc" aria-selected="false">Контакти BCC<span class="n" id="nBcc">0</span></button>
   </nav>
+  <nav class="tabs sub" id="bccCities" aria-label="Градове в Контакти BCC" hidden>
+    <button class="tab" data-bcccity="" aria-selected="true">Всички<span class="n" data-nb=""></span></button>
+    <button class="tab" data-bcccity="Пловдив" aria-selected="false">Пловдив<span class="n" data-nb="Пловдив"></span></button>
+    <button class="tab" data-bcccity="София" aria-selected="false">София<span class="n" data-nb="София"></span></button>
+    <button class="tab" data-bcccity="Варна" aria-selected="false">Варна<span class="n" data-nb="Варна"></span></button>
+    <button class="tab" data-bcccity="Бургас" aria-selected="false">Бургас<span class="n" data-nb="Бургас"></span></button>
+    <button class="tab" data-bcccity="Други" aria-selected="false">Други<span class="n" data-nb="Други"></span></button>
+  </nav>
 
   <div class="toolbar" role="search">
     <label class="grow" for="q">Търсене (фирма, лице, телефон, бележка)
@@ -269,6 +279,14 @@ footer { color: var(--muted); font-size: 12.5px; }
   const isInq = (c) => c.group === "inq";
   const OWN_TABS = ["inq", "bcc"];  // раздели със собствен списък (поле group)
   const inMain = (c) => !OWN_TABS.includes(c.group);
+  // градове в „Контакти BCC“: Пловдив (с околностите), София, Варна, Бургас, всички останали – „Други“
+  const BCC_CITIES = ["Пловдив", "София", "Варна", "Бургас"];
+  function bccCityOf(c) {
+    const src = c.source || "", bg = src.match(/България \((.+)\)$/);
+    if (!bg && (/Пловдив/.test(src) || /^BCC – архитекти .*км\)$/.test(src))) return "Пловдив";
+    const city = bg ? bg[1] : c.city;
+    return BCC_CITIES.includes(city) ? city : "Други";
+  }
   // зелена точка = осъществена връзка → „Контакти“; всички останали са в „Нови контакти“
   const isGreen = (c) => DOT_GREEN.includes(statusOf(c));
   const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед", "Проучване"];
@@ -297,7 +315,7 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   const contacts = {}, logs = {};
   let db = null, mode = "loading", readOnly = false, loaded = false;
-  let tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null, mailOpen = null, mailBusy = false, mailDraft = null;
+  let bccCity = store.get("phomi-bcc-city") || "", tab = "all", current = store.get("phomi-c-current") || "", editing = null, confirmDel = null, mailOpen = null, mailBusy = false, mailDraft = null;
   let mcp = null, mailerUrl = "";
   const MAILER_KEY = "JPyiDWlI4wi4Foj71WRMDxci";  // същият ключ е в email/phomi_mailer.gs
 
@@ -346,6 +364,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (tab === "pick" && !c.pick) return false;
     if (tab === "meet" && statusOf(c) !== "Уговорена среща") return false;
     if (OWN_TABS.includes(tab) && c.group !== tab) return false;
+    if (tab === "bcc" && bccCity && bccCityOf(c) !== bccCity) return false;
     if (tab === "all" && !(inMain(c) && isGreen(c))) return false;
     if (tab === "new" && !(inMain(c) && !isGreen(c))) return false;
     if ($("#city").value && c.city !== $("#city").value) return false;
@@ -405,7 +424,13 @@ footer { color: var(--muted); font-size: 12.5px; }
       : ids.filter((i) => statusOf(contacts[i]) === "Уговорена среща").length;
     $("#nMeet").classList.toggle("meet", soon.length > 0);
 
-    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
+    document.querySelectorAll(".tab[data-tab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
+    $("#bccCities").hidden = tab !== "bcc";
+    if (tab === "bcc") {
+      const n = {"": 0}; ids.forEach((i) => { const c = contacts[i]; if (c.group === "bcc") { n[""]++; const k = bccCityOf(c); n[k] = (n[k] || 0) + 1; } });
+      document.querySelectorAll("[data-bcccity]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.bcccity === bccCity)));
+      document.querySelectorAll("[data-nb]").forEach((el) => { el.textContent = n[el.dataset.nb] || 0; });
+    }
   }
 
   // последната написана бележка – от разговорите или от полето „Бележка“ (без автоматичните записи за имейла)
@@ -903,7 +928,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
 
   document.addEventListener("click", (ev) => {
-    const t = ev.target.closest("[data-editlog],[data-savelog],[data-canceledit],[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    const t = ev.target.closest("[data-editlog],[data-savelog],[data-canceledit],[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-bcccity],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
     if (!t) return;
     if (t.dataset.editlog) { editingLog = t.dataset.editlog; render(); const f = $("#le-said"); if (f) f.focus(); return; }
     if (t.dataset.savelog) { saveLogEdit(t.dataset.savelog); return; }
@@ -913,6 +938,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (t.dataset.rowdelyes) { ev.stopPropagation(); deleteContact(t.dataset.rowdelyes); return; }
     if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
+    if (t.dataset.bcccity != null) { bccCity = t.dataset.bcccity; store.set("phomi-bcc-city", bccCity); render(); return; }
     if (t.dataset.open && Date.now() - dragEndAt < 400) return;  // току-що преместен ред – не го отваряме
     if (t.dataset.open) { current = t.dataset.open; store.set("phomi-c-current", current); confirmDel = null; narrowShow = true; render();
       if (window.matchMedia("(max-width: 860px)").matches) window.scrollTo({top: 0}); return; }
