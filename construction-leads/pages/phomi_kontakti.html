@@ -202,7 +202,6 @@ footer { color: var(--muted); font-size: 12.5px; }
     <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
     <button class="tab" role="tab" data-tab="meet" aria-selected="false">Срещи<span class="n" id="nMeet">0</span></button>
     <button class="tab" role="tab" data-tab="new" aria-selected="false">Нови контакти<span class="n" id="nNew">0</span></button>
-    <button class="tab" role="tab" data-tab="arch" aria-selected="false">Архитекти<span class="n" id="nArch">0</span></button>
     <button class="tab" role="tab" data-tab="bcc" aria-selected="false">Контакти BCC<span class="n" id="nBcc">0</span></button>
   </nav>
 
@@ -268,7 +267,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   const KINDS = ["Архитект", "Клиент", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
   // Раздел „Запитвания“: контакти с group "inq" (запитвания от сайта/имейл), отделно от архитектите
   const isInq = (c) => c.group === "inq";
-  const OWN_TABS = ["inq", "arch", "bcc"];  // раздели със собствен списък (поле group)
+  const OWN_TABS = ["inq", "bcc"];  // раздели със собствен списък (поле group)
   const inMain = (c) => !OWN_TABS.includes(c.group);
   // зелена точка = осъществена връзка → „Контакти“; всички останали са в „Нови контакти“
   const isGreen = (c) => DOT_GREEN.includes(statusOf(c));
@@ -398,7 +397,6 @@ footer { color: var(--muted); font-size: 12.5px; }
     const over = rem.filter((k) => logs[k].due && logs[k].due <= today()).length + fu;
     $("#nAll").textContent = ids.filter((i) => inMain(contacts[i]) && isGreen(contacts[i])).length;
     $("#nNew").textContent = ids.filter((i) => inMain(contacts[i]) && !isGreen(contacts[i])).length;
-    $("#nArch").textContent = ids.filter((i) => contacts[i].group === "arch").length;
     $("#nBcc").textContent = ids.filter((i) => contacts[i].group === "bcc").length;
     $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
     $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
@@ -556,7 +554,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     const stopShown = !readOnly && (stopAfter === "" || ids.includes(stopAfter));
     const line = `<div class="stopline" data-stopgrip="1" title="Хвани и премести – отбелязва докъде си стигнала"><span>⠿ Стигнах до тук</span></div>`;
     $("#list").innerHTML = ids.length ? (stopShown && stopAfter === "" ? line : "") + ids.map((id, k) => rowHtml(id, k) + (stopShown && id === stopAfter ? line : "")).join("") :
-      `<p class="empty">${!loaded ? "Контактите се зареждат…" : (tab === "arch" || tab === "bcc") && !total ? "Тук още няма контакти. Натисни „+ Нов контакт“ – ще се запише в този раздел."
+      `<p class="empty">${!loaded ? "Контактите се зареждат…" : tab === "bcc" && !total ? "Тук още няма контакти. Натисни „+ Нов контакт“ – ще се запише в този раздел."
         : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
   function renderProfile() {
