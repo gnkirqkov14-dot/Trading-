@@ -465,6 +465,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <section>
         <h3>Дневник${ents.length ? ` (${ents.length})` : ""}</h3>
         <div class="log">${ents.length ? ents.map((k) => entryHtml(k, false)).join("") : `<p class="meta">Още няма записани разговори.</p>`}</div>
+        ${c.created ? `<p class="meta added">Контактът е добавен на <b>${esc(fmtAt(c.created).slice(0, 10))}</b>${c.source ? ` · ${esc(c.source)}` : ""}</p>` : ""}
       </section>`;
   }
 
