@@ -784,9 +784,9 @@ footer { color: var(--muted); font-size: 12.5px; }
                   due: val("#l-due"), done: false, at: new Date().toISOString()};
     const msg = $("#logMsg");
     if (!body.said && !body.next && !body.due) { msg.textContent = "Напиши какво се разбрахте или следващата стъпка."; msg.classList.add("err"); return; }
-    // статусът се вдига сам, ако още е „Не е звъняно“
+    // статусът се вдига сам само след истински разговор (обаждане или среща), ако още е „Не е звъняно“
     const c = contacts[current];
-    if (statusOf(c) === "Не е звъняно") saveContact(current, {status: body.kind === "Среща" ? "Проведена среща" : "Разговор – интерес"});
+    if (statusOf(c) === "Не е звъняно" && ["Обаждане", "Среща"].includes(body.kind)) saveContact(current, {status: body.kind === "Среща" ? "Проведена среща" : "Разговор – интерес"});
     if (mode === "local") { logs["l" + Date.now()] = body; persistLocal(); document.activeElement.blur(); render(); return; }
     if (!db || readOnly) return;
     msg.textContent = "Запазване…"; msg.classList.remove("err");
