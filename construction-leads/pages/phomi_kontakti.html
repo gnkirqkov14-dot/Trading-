@@ -139,6 +139,8 @@ section h3 { margin: 0 0 6px; font-size: 14px; text-transform: uppercase; letter
   background: var(--surface-2); min-width: 0; }
 .entry.over { border-left-color: var(--warn); } .entry.done { opacity: .6; }
 .entry .em { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.entry.logedit { border-left-color: var(--gold, #d4a017); }
+.entry.logedit .form { display: flex; flex-wrap: wrap; gap: 8px; }
 .entry .said { white-space: pre-wrap; overflow-wrap: anywhere; }
 .entry .nx { font-weight: 600; } .entry.over .nx { color: var(--warn); }
 .log { display: grid; gap: 6px; }
@@ -405,8 +407,23 @@ footer { color: var(--muted); font-size: 12.5px; }
     </button>`;
   }
 
+  let editingLog = null;
   function entryHtml(k, withName) {
     const e = logs[k], c = contacts[e.contact] || {}, over = !e.done && e.due && e.due <= today();
+    if (editingLog === k && !readOnly) {
+      return `<div class="entry logedit">
+        <div class="em"><b>${esc(fmtAt(e.at))}</b> · редакция</div>
+        <div class="form">
+          <label class="short" for="le-kind">Вид<select id="le-kind">${[...new Set([...LOG_KINDS, e.kind || ""])].filter(Boolean).map((x) => `<option${x === e.kind ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+          <label for="le-who">С кого говорих<input id="le-who" value="${esc(e.who || "")}" autocomplete="off"></label>
+          <label class="wide" for="le-said">Какво се разбрахме<textarea id="le-said" rows="3">${esc(e.said || "")}</textarea></label>
+          <label for="le-next">Следваща стъпка<input id="le-next" value="${esc(e.next || "")}" autocomplete="off"></label>
+          <label class="short" for="le-due">До дата<input id="le-due" type="date" value="${esc(e.due || "")}"></label>
+        </div>
+        <div class="em"><button class="mini danger" type="button" data-savelog="${esc(k)}">Запази</button>
+          <button class="mini" type="button" data-canceledit="1">Откажи</button></div>
+      </div>`;
+    }
     return `<div class="entry${over ? " over" : ""}${e.done ? " done" : ""}">
       ${withName ? `<div class="line"><button class="mini" type="button" data-open="${esc(e.contact)}">${esc(c.name || "—")}</button>
         ${(c.phones || [])[0] ? `<span class="val">${esc(c.phones[0])}</span>` : ""}</div>` : ""}
@@ -414,6 +431,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       ${e.said ? `<div class="said">${esc(e.said)}</div>` : ""}
       ${e.next || e.due ? `<div class="nx">Следва: ${esc(e.next || "обаждане")}${e.due ? " · до " + esc(fmtDay(e.due)) : ""}${e.done ? " · ✓ готово" : ""}</div>` : ""}
       ${readOnly ? "" : `<div class="em">${(e.next || e.due) && !e.done ? `<button class="mini" type="button" data-done="${esc(k)}">Готово</button>` : ""}
+        <button class="mini" type="button" data-editlog="${esc(k)}">Редактирай</button>
         ${confirmDel === "log:" + k ? `<span class="confirm">Да изтрия ли записа? <button class="mini" type="button" data-dellog="${esc(k)}">Да, изтрий</button>
           <button class="mini" type="button" data-cancel="1">Не</button></span>` : `<button class="mini" type="button" data-askdellog="${esc(k)}">Изтрий</button>`}</div>`}
     </div>`;
@@ -472,6 +490,8 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
 
   function renderList() {
+    const ae = document.activeElement;
+    if (ae && ae.closest && ae.closest("#list .logedit")) return;  // докато се редактира запис в „Напомняния“
     if (tab === "rem") {
       const keys = openSteps().filter((k) => { const q = $("#q").value.trim().toLowerCase(); const e = logs[k];
         return !q || [contacts[e.contact].name, e.who, e.said, e.next].join(" ").toLowerCase().includes(q); });
@@ -494,7 +514,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   function renderProfile() {
     // не пипаме формите (разговор, имейл), докато се пише в тях
     const a = document.activeElement;
-    if (a && a.matches && a.matches("input,textarea,select") && (a.closest("#logForm") || a.closest("#mailbox")) && contacts[current]) return;
+    if (a && a.matches && a.matches("input,textarea,select") && (a.closest("#logForm") || a.closest("#mailbox") || a.closest(".logedit")) && contacts[current]) return;
     captureDraft();
     $("#profile").innerHTML = profileHtml();
     if (mailOpen === current) refreshPreview();
@@ -725,6 +745,18 @@ footer { color: var(--muted); font-size: 12.5px; }
     db.collection("log").add(body).then(() => { document.activeElement && document.activeElement.blur(); renderProfile(); note("Разговорът е записан."); })
       .catch((e) => fail(e, msg));
   }
+  function saveLogEdit(k) {
+    const val = (sel) => ($(sel) ? $(sel).value.trim() : "");
+    const patch = {kind: val("#le-kind"), who: val("#le-who"), said: val("#le-said"), next: val("#le-next"), due: val("#le-due"),
+                   edited: new Date().toISOString()};
+    if (patch.due !== (logs[k].due || "") && patch.due) patch.done = false;  // нова дата – напомнянето пак е отворено
+    editingLog = null;
+    logs[k] = Object.assign({}, logs[k], patch);
+    if (mode === "local") { persistLocal(); render(); return; }
+    render();
+    if (!db || readOnly) return;
+    db.doc("log/" + k).update(patch).then(() => note("Записът е обновен.")).catch((e) => fail(e));
+  }
   function changeLog(k, del) {
     if (mode === "local") { if (del) delete logs[k]; else logs[k].done = true; persistLocal(); confirmDel = null; render(); return; }
     if (!db || readOnly) return;
@@ -805,8 +837,11 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
 
   document.addEventListener("click", (ev) => {
-    const t = ev.target.closest("[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    const t = ev.target.closest("[data-editlog],[data-savelog],[data-canceledit],[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
     if (!t) return;
+    if (t.dataset.editlog) { editingLog = t.dataset.editlog; render(); const f = $("#le-said"); if (f) f.focus(); return; }
+    if (t.dataset.savelog) { saveLogEdit(t.dataset.savelog); return; }
+    if (t.dataset.canceledit) { editingLog = null; render(); return; }
     if (t.dataset.rowdel) { ev.stopPropagation(); confirmDel = "r:" + t.dataset.rowdel; renderList(); return; }
     if (t.dataset.rowdelno) { ev.stopPropagation(); confirmDel = null; renderList(); return; }
     if (t.dataset.rowdelyes) { ev.stopPropagation(); deleteContact(t.dataset.rowdelyes); return; }
