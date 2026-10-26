@@ -54,6 +54,9 @@ header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
   font: 600 14px var(--font-body); cursor: pointer; }
 .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .tab .n { font-weight: 500; opacity: .8; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.tab .n.meet { background: #22a34a; color: #fff; border-radius: 999px; padding: 0 6px; opacity: 1; }
+.meet-when { font: 700 13px var(--font-mono); color: #15803d; }
+.meet-when.today { background: #22a34a; color: #fff; border-radius: 6px; padding: 1px 6px; }
 .tab .n.over { background: var(--warn); color: var(--surface); border-radius: 999px; padding: 0 6px; opacity: 1; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 10px 12px; }
@@ -192,6 +195,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     <button class="tab" role="tab" data-tab="all" aria-selected="true">Контакти<span class="n" id="nAll">0</span></button>
     <button class="tab" role="tab" data-tab="inq" aria-selected="false">Запитвания<span class="n" id="nInq">0</span></button>
     <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
+    <button class="tab" role="tab" data-tab="meet" aria-selected="false">Срещи<span class="n" id="nMeet">0</span></button>
     <button class="tab" role="tab" data-tab="rem" aria-selected="false">Напомняния<span class="n" id="nRem">0</span></button>
   </nav>
 
@@ -330,6 +334,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   function matches(id) {
     const c = contacts[id], q = $("#q").value.trim().toLowerCase();
     if (tab === "pick" && !c.pick) return false;
+    if (tab === "meet" && statusOf(c) !== "Уговорена среща") return false;
     if (tab === "inq" && !isInq(c)) return false;
     if (tab === "all" && isInq(c)) return false;
     if ($("#city").value && c.city !== $("#city").value) return false;
@@ -342,7 +347,9 @@ footer { color: var(--muted); font-size: 12.5px; }
     return q.split(/\s+/).every((w) => hay.includes(w));
   }
   function shown() {
-    return Object.keys(contacts).filter(matches).sort(byOrder);
+    const ids = Object.keys(contacts).filter(matches);
+    if (tab === "meet") return ids.sort((a, b) => (contacts[a].meetAt || "9999").localeCompare(contacts[b].meetAt || "9999"));
+    return ids.sort(byOrder);
   }
   // избраните (★) най-отпред, после поредността (местене с ⠿), после по име
   // първо по цвета на точката: зелени, жълти, оранжеви, червени, черни – след всяко действие контактът се премества сам
@@ -359,12 +366,31 @@ footer { color: var(--muted); font-size: 12.5px; }
     $("#city").innerHTML = '<option value="">Всички</option>' + cities.map((c) => `<option${c === cur ? " selected" : ""}>${esc(c)}</option>`).join("");
     $("#cityList").innerHTML = cities.map((c) => `<option value="${esc(c)}">`).join("");
   }
+  // срещи: контакти с „Уговорена среща“; дата/час в c.meetAt („2026-10-28T10:30“)
+  function workWeekEnd() {  // петък на текущата седмица (в събота/неделя – следващия петък)
+    const d = new Date(); const wd = d.getDay(); const add = wd === 6 ? 6 : wd === 0 ? 5 : 5 - wd;
+    d.setDate(d.getDate() + add); return d.toISOString().slice(0, 10);
+  }
+  function meetingsSoon() {
+    const end = workWeekEnd();
+    return Object.keys(contacts).filter((i) => statusOf(contacts[i]) === "Уговорена среща" && contacts[i].meetAt
+      && contacts[i].meetAt.slice(0, 10) >= today() && contacts[i].meetAt.slice(0, 10) <= end);
+  }
+  function meetText(c) {
+    if (!c.meetAt) return "";
+    const d = c.meetAt.slice(0, 10), t = c.meetAt.slice(11, 16);
+    return (d === today() ? "днес" : fmtDay(d).slice(0, 5)) + (t ? " " + t : "");
+  }
   function renderTabs() {
     const ids = Object.keys(contacts), rem = openSteps(), fu = followUps().length;
     const over = rem.filter((k) => logs[k].due && logs[k].due <= today()).length + fu;
     $("#nAll").textContent = ids.filter((i) => !isInq(contacts[i])).length;
     $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
     $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
+    const soon = meetingsSoon(), todayN = soon.filter((i) => contacts[i].meetAt.slice(0, 10) === today()).length;
+    $("#nMeet").textContent = todayN ? todayN + " днес" : soon.length ? soon.length + " тази седмица"
+      : ids.filter((i) => statusOf(contacts[i]) === "Уговорена среща").length;
+    $("#nMeet").classList.toggle("meet", soon.length > 0);
     $("#nRem").textContent = over ? over + " за днес" : rem.length;
     $("#nRem").classList.toggle("over", !!over);
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
@@ -399,7 +425,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
       <span class="nm">${readOnly ? "" : `<span class="grip" data-grip="${esc(id)}" title="Хвани и премести нагоре или надолу" aria-label="Премести">⠿</span>`}${i === undefined ? "" : `<span class="no">${i + 1}.</span> `}<span class="dot ${dotOf(st)}" title="${esc(st)}"></span>${esc(c.name)}</span>
       <span class="chipwrap"><span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
-      <span class="sub">${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
+      <span class="sub">${st === "Уговорена среща" && c.meetAt ? `<span class="meet-when${c.meetAt.slice(0, 10) === today() ? " today" : ""}">среща ${esc(meetText(c))}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
         ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}</span>
       ${readOnly ? "" : confirmDel === "r:" + id
         ? `<span class="rowdel-ask">Да изтрия ли „${esc(c.name)}“? <span class="mini danger" role="button" data-rowdelyes="${esc(id)}">Да, изтрий</span> <span class="mini" role="button" data-rowdelno="1">Не</span></span>`
@@ -463,6 +489,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       ${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}
       <div class="status-row">
         <label for="p-status">Статус<select id="p-status" ${readOnly ? "disabled" : ""}>${STATUSES.map((s) => `<option${s === st ? " selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+        ${st === "Уговорена среща" ? `<label for="p-meet" style="flex:0 1 210px">Дата и час на срещата<input type="datetime-local" id="p-meet" value="${esc(c.meetAt || "")}" ${readOnly ? "disabled" : ""}></label>` : ""}
         ${st === "Изпратен имейл" ? `<label for="p-mail" style="flex:0 1 180px">Имейлът е изпратен на<input type="date" id="p-mail" value="${esc(c.emailSent || "")}" ${readOnly ? "disabled" : ""}></label>` : ""}
         ${readOnly ? "" : `<button class="btn" type="button" data-edit="1">Редактирай</button>`}
         ${readOnly || !(c.emails || []).length ? "" : `<button class="btn primary" type="button" data-mailtpl="1">✉ Представителен имейл</button>`}
@@ -506,8 +533,11 @@ footer { color: var(--muted); font-size: 12.5px; }
       return;
     }
     const ids = shown();
-    const total = Object.keys(contacts).filter((i) => tab === "inq" ? isInq(contacts[i]) : tab === "all" ? !isInq(contacts[i]) : true).length;
-    $("#count").textContent = `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
+    const total = Object.keys(contacts).filter((i) => tab === "inq" ? isInq(contacts[i]) : tab === "all" ? !isInq(contacts[i])
+      : tab === "meet" ? statusOf(contacts[i]) === "Уговорена среща" : true).length;
+    $("#count").textContent = tab === "meet" ? `${ids.length} уговорени срещи · ${meetingsSoon().length} до петък`
+      : `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
+    if (tab === "meet" && !ids.length) { $("#list").innerHTML = `<p class="empty">Няма уговорени срещи. Сложи статус „Уговорена среща“ на контакт и избери дата и час в профила му.</p>`; return; }
     $("#list").innerHTML = ids.length ? ids.map(rowHtml).join("") :
       `<p class="empty">${!loaded ? "Контактите се зареждат…" : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
@@ -894,6 +924,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       saveContact(current, patch);
     }
     if (ev.target.id === "p-mail" && contacts[current] && ev.target.value) saveContact(current, {emailSent: ev.target.value});
+    if (ev.target.id === "p-meet" && contacts[current]) saveContact(current, {meetAt: ev.target.value});
   });
   ["#q", "#city", "#kind", "#stf"].forEach((s) => $(s).addEventListener("input", renderList));
 
