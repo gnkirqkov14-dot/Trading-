@@ -107,6 +107,9 @@ body.reordering { user-select: none; cursor: grabbing; }
 .thought .bubble::before { content: ""; position: absolute; right: 10px; top: -7px; width: 12px; height: 12px; background: var(--surface);
   border-left: 1px solid var(--accent); border-top: 1px solid var(--accent); transform: rotate(45deg); }
 .thought:hover .bubble, .thought:focus .bubble { display: block; }
+.thought.glow-y, .thought.glow-g { border-radius: 50%; padding: 2px; }
+.thought.glow-y { background: #fde68a; box-shadow: 0 0 0 2px #facc15, 0 0 8px 2px rgba(250,204,21,.7); }
+.thought.glow-g { background: #bbf7d0; box-shadow: 0 0 0 2px #22a34a, 0 0 8px 2px rgba(34,163,74,.55); }
 .chip { font-size: 11.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
 .due { color: var(--warn); font-weight: 600; }
 .late { color: var(--gold); font-weight: 600; }
@@ -377,7 +380,9 @@ footer { color: var(--muted); font-size: 12.5px; }
   function thoughtHtml(id) {
     const n = lastNote(id);
     if (!n) return "";
-    return `<span class="thought" tabindex="0" aria-label="Последна бележка">💭<span class="bubble" role="tooltip"><b>${esc(n.what)}${n.at ? " · " + esc(fmtAt(n.at).slice(0, 10)) : ""}</b>${esc(n.text)}</span></span>`;
+    // жълто – след проучване; зелено – след разговор (обаждане или среща); обикновена бележка – без цвят
+    const glow = n.what === "Проучване" ? " glow-y" : ["Обаждане", "Среща"].includes(n.what) ? " glow-g" : "";
+    return `<span class="thought${glow}" tabindex="0" aria-label="Последна бележка">💭<span class="bubble" role="tooltip"><b>${esc(n.what)}${n.at ? " · " + esc(fmtAt(n.at).slice(0, 10)) : ""}</b>${esc(n.text)}</span></span>`;
   }
   // зелена точка – положително действие; червена – още нищо или отказ; оранжева – да се звънне пак
   const DOT_GREEN = ["Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл", "Уговорена среща", "Проведена среща", "Изпратена оферта"];
