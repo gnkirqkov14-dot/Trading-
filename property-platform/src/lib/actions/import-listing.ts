@@ -64,6 +64,27 @@ function obiavaId(url: string | null) {
 }
 
 /**
+ * Номерата на всички вече внесени обяви. Supabase връща най-много 1000
+ * реда наведнъж, затова се чете на страници — иначе след хилядната обява
+ * вносът не познава старите и ги качва втори път.
+ */
+async function knownObiavaIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+) {
+  const known = new Set<string>();
+  for (let from = 0; ; from += 1000) {
+    const { data } = await supabase
+      .from("listings")
+      .select("source_url")
+      .not("source_url", "is", null)
+      .order("id")
+      .range(from, from + 999);
+    for (const row of data ?? []) known.add(obiavaId(row.source_url));
+    if (!data || data.length < 1000) return known;
+  }
+}
+
+/**
  * Адресът, както да го прочете човек: улица и номер, когато ги има,
  * иначе кварталът, иначе само населеното място.
  *
@@ -110,12 +131,8 @@ export async function previewImotListing(url: string): Promise<ImportPreview> {
 
   const data = await fetchImotListing(url.trim());
 
-  const { data: known } = await supabase
-    .from("listings")
-    .select("source_url")
-    .not("source_url", "is", null);
-  const existing = (known ?? []).some(
-    (row) => obiavaId(row.source_url) === obiavaId(data.sourceUrl),
+  const existing = (await knownObiavaIds(supabase)).has(
+    obiavaId(data.sourceUrl),
   );
 
   return {
@@ -349,14 +366,7 @@ export async function findImotListings(
   await requireAdmin();
   const supabase = await createClient();
 
-  const { data: existing } = await supabase
-    .from("listings")
-    .select("source_url")
-    .not("source_url", "is", null);
-
-  const known = new Set(
-    (existing ?? []).map((row) => obiavaId(row.source_url)),
-  );
+  const known = await knownObiavaIds(supabase);
   return urls.map((url) => ({
     url,
     alreadyImported: known.has(obiavaId(url)),
