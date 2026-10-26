@@ -75,6 +75,11 @@ textarea { resize: vertical; }
 .row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface);
   border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; cursor: pointer; text-align: left; color: var(--ink);
   font: inherit; width: 100%; position: relative; }
+.stopline { position: relative; height: 18px; margin: 2px 0; cursor: grab; touch-action: none; user-select: none; }
+.stopline::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; border-top: 3px solid #dc2626; border-radius: 2px; }
+.stopline span { position: absolute; left: 12px; top: 0; background: #dc2626; color: #fff; font: 700 11px var(--font-body);
+  padding: 2px 8px; border-radius: 999px; letter-spacing: .02em; }
+.stopline.dragging { opacity: .8; cursor: grabbing; }
 .row .rowdel { position: absolute; right: 6px; bottom: 4px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px;
   color: var(--muted); font-size: 17px; line-height: 1; }
 .row .rowdel:hover { color: #fff; background: #c2410c; }
@@ -538,7 +543,10 @@ footer { color: var(--muted); font-size: 12.5px; }
     $("#count").textContent = tab === "meet" ? `${ids.length} уговорени срещи · ${meetingsSoon().length} до петък`
       : `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
     if (tab === "meet" && !ids.length) { $("#list").innerHTML = `<p class="empty">Няма уговорени срещи. Сложи статус „Уговорена среща“ на контакт и избери дата и час в профила му.</p>`; return; }
-    $("#list").innerHTML = ids.length ? ids.map(rowHtml).join("") :
+    // червената черта „Стигнах до тук“ стои след избрания контакт (или най-горе, ако още не е местена)
+    const stopShown = !readOnly && (stopAfter === "" || ids.includes(stopAfter));
+    const line = `<div class="stopline" data-stopgrip="1" title="Хвани и премести – отбелязва докъде си стигнала"><span>⠿ Стигнах до тук</span></div>`;
+    $("#list").innerHTML = ids.length ? (stopShown && stopAfter === "" ? line : "") + ids.map((id, k) => rowHtml(id, k) + (stopShown && id === stopAfter ? line : "")).join("") :
       `<p class="empty">${!loaded ? "Контактите се зареждат…" : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
   function renderProfile() {
@@ -820,7 +828,19 @@ footer { color: var(--muted); font-size: 12.5px; }
   // ---------- събития ----------
   // ---------- местене на редовете с мишката / пръста (хваща се за ⠿) ----------
   let drag = null, dragEndAt = 0;
+  let stopAfter = store.get("phomi-stop") || "";
+  function saveStop(id) {
+    stopAfter = id; store.set("phomi-stop", id);
+    if (db && !readOnly) db.doc("settings/marker").set({after: id, updated: new Date().toISOString()}).catch((e) => fail(e));
+  }
   document.addEventListener("pointerdown", (ev) => {
+    const sg = ev.target.closest && ev.target.closest("[data-stopgrip]");
+    if (sg && !readOnly) {
+      ev.preventDefault();
+      drag = {stop: true, row: sg};
+      sg.classList.add("dragging"); document.body.classList.add("reordering");
+      return;
+    }
     const g = ev.target.closest && ev.target.closest("[data-grip]");
     if (!g || readOnly) return;
     ev.preventDefault();
@@ -846,6 +866,11 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (!drag) return;
     const moved = drag; drag = null; dragEndAt = Date.now();
     moved.row.classList.remove("dragging"); document.body.classList.remove("reordering");
+    if (moved.stop) {
+      let prev = moved.row.previousElementSibling;
+      while (prev && !prev.classList.contains("row")) prev = prev.previousElementSibling;
+      saveStop(prev ? prev.dataset.open : ""); renderList(); return;
+    }
     saveOrder([...$("#list").querySelectorAll(".row")].map((r) => r.dataset.open));
   };
   document.addEventListener("pointerup", endDrag);
@@ -955,6 +980,11 @@ footer { color: var(--muted); font-size: 12.5px; }
       loaded = true;
       renderFilters(); render();
     }, lost);
+    db.doc("settings/marker").onSnapshot((d) => {
+      if (d && d.exists && typeof d.data().after === "string" && d.data().after !== stopAfter && !drag) {
+        stopAfter = d.data().after; store.set("phomi-stop", stopAfter); renderList();
+      }
+    }, () => {});
     db.doc("settings/mailer").onSnapshot((d) => {
       mailerUrl = (d && d.exists && d.data().url) || "";
       if (mailOpen) renderProfile();
