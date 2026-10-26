@@ -279,6 +279,11 @@ export async function importImotListing(input: ImportInput) {
     id: listingId,
     user_id: admin.id,
     type: input.dealType ?? "sale",
+    // Внесената обява се ражда скрита: снимките от imot.bg носят воден
+    // знак с телефона на собственика и се чистят отделно. Активира се
+    // едва след почистването и проверката — иначе посетителите виждаха
+    // номерата, докато вносът още вървеше.
+    status: "inactive",
     property_type: input.propertyType,
     city_id: input.cityId,
     neighborhood_id: input.neighborhoodId,
