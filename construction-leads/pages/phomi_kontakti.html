@@ -201,7 +201,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     <button class="tab" role="tab" data-tab="inq" aria-selected="false">Запитвания<span class="n" id="nInq">0</span></button>
     <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
     <button class="tab" role="tab" data-tab="meet" aria-selected="false">Срещи<span class="n" id="nMeet">0</span></button>
-    <button class="tab" role="tab" data-tab="rem" aria-selected="false">Напомняния<span class="n" id="nRem">0</span></button>
+    <button class="tab" role="tab" data-tab="new" aria-selected="false">Нови контакти<span class="n" id="nNew">0</span></button>
     <button class="tab" role="tab" data-tab="arch" aria-selected="false">Архитекти<span class="n" id="nArch">0</span></button>
     <button class="tab" role="tab" data-tab="bcc" aria-selected="false">Контакти BCC<span class="n" id="nBcc">0</span></button>
   </nav>
@@ -270,6 +270,8 @@ footer { color: var(--muted); font-size: 12.5px; }
   const isInq = (c) => c.group === "inq";
   const OWN_TABS = ["inq", "arch", "bcc"];  // раздели със собствен списък (поле group)
   const inMain = (c) => !OWN_TABS.includes(c.group);
+  // зелена точка = осъществена връзка → „Контакти“; всички останали са в „Нови контакти“
+  const isGreen = (c) => DOT_GREEN.includes(statusOf(c));
   const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед", "Проучване"];
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -345,7 +347,8 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (tab === "pick" && !c.pick) return false;
     if (tab === "meet" && statusOf(c) !== "Уговорена среща") return false;
     if (OWN_TABS.includes(tab) && c.group !== tab) return false;
-    if (tab === "all" && !inMain(c)) return false;
+    if (tab === "all" && !(inMain(c) && isGreen(c))) return false;
+    if (tab === "new" && !(inMain(c) && !isGreen(c))) return false;
     if ($("#city").value && c.city !== $("#city").value) return false;
     if ($("#kind").value && c.kind !== $("#kind").value) return false;
     if ($("#stf").value && statusOf(c) !== $("#stf").value) return false;
@@ -393,7 +396,8 @@ footer { color: var(--muted); font-size: 12.5px; }
   function renderTabs() {
     const ids = Object.keys(contacts), rem = openSteps(), fu = followUps().length;
     const over = rem.filter((k) => logs[k].due && logs[k].due <= today()).length + fu;
-    $("#nAll").textContent = ids.filter((i) => inMain(contacts[i])).length;
+    $("#nAll").textContent = ids.filter((i) => inMain(contacts[i]) && isGreen(contacts[i])).length;
+    $("#nNew").textContent = ids.filter((i) => inMain(contacts[i]) && !isGreen(contacts[i])).length;
     $("#nArch").textContent = ids.filter((i) => contacts[i].group === "arch").length;
     $("#nBcc").textContent = ids.filter((i) => contacts[i].group === "bcc").length;
     $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
@@ -402,8 +406,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     $("#nMeet").textContent = todayN ? todayN + " днес" : soon.length ? soon.length + " тази седмица"
       : ids.filter((i) => statusOf(contacts[i]) === "Уговорена среща").length;
     $("#nMeet").classList.toggle("meet", soon.length > 0);
-    $("#nRem").textContent = over ? over + " за днес" : rem.length;
-    $("#nRem").classList.toggle("over", !!over);
+
     document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
   }
 
@@ -544,7 +547,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       return;
     }
     const ids = shown();
-    const total = Object.keys(contacts).filter((i) => OWN_TABS.includes(tab) ? contacts[i].group === tab : tab === "all" ? inMain(contacts[i])
+    const total = Object.keys(contacts).filter((i) => OWN_TABS.includes(tab) ? contacts[i].group === tab : tab === "all" ? inMain(contacts[i]) && isGreen(contacts[i]) : tab === "new" ? inMain(contacts[i]) && !isGreen(contacts[i])
       : tab === "meet" ? statusOf(contacts[i]) === "Уговорена среща" : true).length;
     $("#count").textContent = tab === "meet" ? `${ids.length} уговорени срещи · ${meetingsSoon().length} до петък`
       : `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
