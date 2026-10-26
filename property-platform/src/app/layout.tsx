@@ -8,6 +8,8 @@ import { MetaPixel } from "@/components/meta-pixel";
 import { Broyach } from "@/components/broyach";
 import "./globals.css";
 
+const POMOSHTNIK_VKLYUCHEN = false;
+
 // Geist няма кирилица — досега целият български текст падаше на
 // системния шрифт на браузъра и се разминаваше между Windows и Mac.
 //
@@ -76,7 +78,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             Ключът за AI-я стои само на сървъра — тук пращаме единствено
             дали изобщо е настроен, за да не показваме поле за въпроси,
             което няма как да отговори. */}
-        <AiAssistant aiEnabled={Boolean(process.env.ANTHROPIC_API_KEY)} />
+        {/* Скрит временно: ключът за Claude API е невалиден и помощникът
+            отговаряше само с грешка. Връща се, като ПОМОЩНИК_ВКЛЮЧЕН стане
+            true след смяна на ANTHROPIC_API_KEY във Vercel. */}
+        {POMOSHTNIK_VKLYUCHEN && (
+          <AiAssistant aiEnabled={Boolean(process.env.ANTHROPIC_API_KEY)} />
+        )}
         {/* Vercel Web Analytics — брои реални посетители (кои страници,
             откъде идват), за разлика от Observability таблото, което
             брои технически заявки. Без бисквитки и без лични данни, за
