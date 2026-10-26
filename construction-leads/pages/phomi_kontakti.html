@@ -343,9 +343,11 @@ footer { color: var(--muted); font-size: 12.5px; }
     return Object.keys(contacts).filter(matches).sort(byOrder);
   }
   // избраните (★) най-отпред, после поредността (местене с ⠿), после по име
+  // първо по цвета на точката: зелени, жълти, оранжеви, червени, черни – след всяко действие контактът се премества сам
+  const DOT_RANK = {g: 0, y: 1, o: 2, r: 3, k: 4};
   function byOrder(a, b) {
     const A = contacts[a], B = contacts[b];
-    return (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.order ?? 1e9) - (B.order ?? 1e9) || (A.name || "").localeCompare(B.name || "", "bg");
+    return DOT_RANK[dotOf(statusOf(A))] - DOT_RANK[dotOf(statusOf(B))] || (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.order ?? 1e9) - (B.order ?? 1e9) || (A.name || "").localeCompare(B.name || "", "bg");
   }
 
   // ---------- изглед ----------
