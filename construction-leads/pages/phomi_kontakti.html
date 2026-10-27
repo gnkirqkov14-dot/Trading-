@@ -580,9 +580,10 @@ footer { color: var(--muted); font-size: 12.5px; }
       : `Показани ${ids.length} от ${total} ${tab === "inq" ? "запитвания" : "контакта"}`;
     if (tab === "meet" && !ids.length) { $("#list").innerHTML = `<p class="empty">Няма уговорени срещи. Сложи статус „Уговорена среща“ на контакт и избери дата и час в профила му.</p>`; return; }
     // червената черта „Стигнах до тук“ стои след избрания контакт (или най-горе, ако още не е местена)
-    const stopShown = !readOnly && (stopAfter === "" || ids.includes(stopAfter));
+    const stopAfter = stopFor(ids);
+    const stopShown = !readOnly && tab !== "meet", stopTop = stopAfter === "" || !ids.includes(stopAfter);
     const line = `<div class="stopline" data-stopgrip="1" title="Хвани и премести – отбелязва докъде си стигнала"><span>⠿ Стигнах до тук</span></div>`;
-    $("#list").innerHTML = ids.length ? (stopShown && stopAfter === "" ? line : "") + ids.map((id, k) => rowHtml(id, k) + (stopShown && id === stopAfter ? line : "")).join("") :
+    $("#list").innerHTML = ids.length ? (stopShown && stopTop ? line : "") + ids.map((id, k) => rowHtml(id, k) + (stopShown && id === stopAfter ? line : "")).join("") :
       `<p class="empty">${!loaded ? "Контактите се зареждат…" : tab === "bcc" && !total ? "Тук още няма контакти. Натисни „+ Нов контакт“ – ще се запише в този раздел."
         : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
@@ -868,10 +869,18 @@ footer { color: var(--muted); font-size: 12.5px; }
   // ---------- събития ----------
   // ---------- линията „Стигнах до тук“ се мести с мишката / пръста ----------
   let drag = null, dragEndAt = 0;
-  let stopAfter = store.get("phomi-stop") || "";
+  // всеки раздел (и всеки град в „Контакти BCC“) има своя линия; старата обща линия остава там, където е контактът ѝ
+  let stopLegacy = store.get("phomi-stop") || "", stops = {};
+  try { stops = JSON.parse(store.get("phomi-stops") || "{}") || {}; } catch (e) { stops = {}; }
+  const stopKey = () => (tab === "bcc" ? "bcc:" + bccCity : tab);
+  function stopFor(ids) {
+    const k = stopKey();
+    if (typeof stops[k] === "string") return stops[k];
+    return stopLegacy && ids.includes(stopLegacy) ? stopLegacy : "";
+  }
   function saveStop(id) {
-    stopAfter = id; store.set("phomi-stop", id);
-    if (db && !readOnly) db.doc("settings/marker").set({after: id, updated: new Date().toISOString()}).catch((e) => fail(e));
+    stops = Object.assign({}, stops, {[stopKey()]: id}); store.set("phomi-stops", JSON.stringify(stops));
+    if (db && !readOnly) db.doc("settings/marker").set({after: stopLegacy, byList: stops, updated: new Date().toISOString()}).catch((e) => fail(e));
   }
   document.addEventListener("pointerdown", (ev) => {
     const sg = ev.target.closest && ev.target.closest("[data-stopgrip]");
@@ -1042,9 +1051,11 @@ footer { color: var(--muted); font-size: 12.5px; }
       renderFilters(); render();
     }, lost);
     db.doc("settings/marker").onSnapshot((d) => {
-      if (d && d.exists && typeof d.data().after === "string" && d.data().after !== stopAfter && !drag) {
-        stopAfter = d.data().after; store.set("phomi-stop", stopAfter); renderList();
-      }
+      if (!d || !d.exists || drag) return;
+      const m = d.data();
+      if (typeof m.after === "string") { stopLegacy = m.after; store.set("phomi-stop", stopLegacy); }
+      if (m.byList && typeof m.byList === "object") { stops = m.byList; store.set("phomi-stops", JSON.stringify(stops)); }
+      renderList();
     }, () => {});
     db.doc("settings/mailer").onSnapshot((d) => {
       mailerUrl = (d && d.exists && d.data().url) || "";
