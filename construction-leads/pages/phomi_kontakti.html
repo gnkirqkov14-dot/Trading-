@@ -291,8 +291,8 @@ footer { color: var(--muted); font-size: 12.5px; }
     const city = bg ? bg[1] : c.city;
     return BCC_CITIES.includes(city) ? city : "Други";
   }
-  // зелена точка = осъществена връзка → „Контакти“; всички останали са в „Нови контакти“
-  const isGreen = (c) => DOT_GREEN.includes(statusOf(c));
+  // зелена точка или „Запознат“ (бяла) = осъществена връзка → „Контакти“; всички останали са в „Нови контакти“
+  const isGreen = (c) => DOT_GREEN.includes(statusOf(c)) || statusOf(c) === "Запознат";
   const LOG_KINDS = ["Обаждане", "Среща", "Имейл", "Оглед", "Проучване"];
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
