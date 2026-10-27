@@ -9,7 +9,7 @@
   --bg: #eef1f1; --surface: #ffffff; --surface-2: #f5f8f8; --ink: #1a2224; --muted: #5a676b; --line: #d5dcdd;
   --accent: #0e6a70; --accent-ink: #ffffff; --accent-soft: #dcefef;
   --warn: #c2410c; --ok: #3c7a36; --gold: #a86a12;
-  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-later: #ece4fb; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
+  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-later: #ece4fb; --st-aware: #ffffff; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
   --mail: #ff7a00; --st-mail: #ff7a00; --mail-ink: #ffffff; --mail-soft: #fff0e0;
   --meet: #1f9d3a; --meet-ink: #ffffff; --meet-soft: #dcf5e1;
   --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -20,7 +20,7 @@
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
   --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
-  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-aware: #3a4244; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
   --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; } }
@@ -28,7 +28,7 @@
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
   --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
-  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-aware: #3a4244; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
   --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; }
@@ -102,6 +102,7 @@ body.reordering { user-select: none; cursor: grabbing; }
 .row .dot.r { background: #dc2626; }
 .row .dot.o { background: #f59e0b; }
 .row .dot.k { background: #111; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.row .dot.w { background: #fff; box-shadow: inset 0 0 0 1.5px #8a9496; }
 .row .dot.y { background: #facc15; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
 .row .no { color: var(--muted, #6b7678); font-weight: 700; font-variant-numeric: tabular-nums; }
 .row .when { grid-row: 1 / 3; display: grid; justify-items: center; min-width: 54px; padding-right: 10px; border-right: 1px solid var(--line);
@@ -270,10 +271,10 @@ footer { color: var(--muted); font-size: 12.5px; }
 <script>
 (function () {
   "use strict";
-  const STATUSES = ["Не е звъняно", "Звъннато – няма отговор", "Да звънна пак", "Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл",
+  const STATUSES = ["Не е звъняно", "Звъннато – няма отговор", "Да звънна пак", "Запознат", "Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл",
                     "Уговорена среща", "Проведена среща",
                     "Изпратена оферта", "Не се интересува", "Грешен номер"];
-  const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Да звънна пак": "--st-later", "Разговор – интерес": "--st-int",
+  const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Да звънна пак": "--st-later", "Запознат": "--st-aware", "Разговор – интерес": "--st-int",
                  "Чака да изпратим имейл": "--st-mail", "Изпратен имейл": "--st-offer",
                  "Уговорена среща": "--st-meet", "Проведена среща": "--st-meet", "Изпратена оферта": "--st-offer",
                  "Не се интересува": "--st-no", "Грешен номер": "--st-no"};
@@ -385,8 +386,8 @@ footer { color: var(--muted); font-size: 12.5px; }
     return ids.sort(byOrder);
   }
   // избраните (★) най-отпред, после поредността (смяна на номера), после по име
-  // първо по цвета на точката: зелени, жълти, оранжеви, червени, черни – след всяко действие контактът се премества сам
-  const DOT_RANK = {g: 0, y: 1, o: 2, r: 3, k: 4};
+  // първо по цвета на точката: зелени, жълти, оранжеви, червени, бели („Запознат“), черни – след всяко действие контактът се премества сам
+  const DOT_RANK = {g: 0, y: 1, o: 2, r: 3, w: 4, k: 5};
   function byOrder(a, b) {
     const A = contacts[a], B = contacts[b];
     return DOT_RANK[dotOf(statusOf(A))] - DOT_RANK[dotOf(statusOf(B))] || (B.pick ? 1 : 0) - (A.pick ? 1 : 0) || (A.order ?? 1e9) - (B.order ?? 1e9) || (A.name || "").localeCompare(B.name || "", "bg");
@@ -456,7 +457,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
   // зелена точка – положително действие; червена – още нищо или отказ; оранжева – да се звънне пак
   const DOT_GREEN = ["Разговор – интерес", "Чака да изпратим имейл", "Изпратен имейл", "Уговорена среща", "Проведена среща", "Изпратена оферта"];
-  const dotOf = (st) => (DOT_GREEN.includes(st) ? "g" : st === "Да звънна пак" ? "o" : st === "Звъннато – няма отговор" ? "y" : st === "Не се интересува" ? "k" : "r");
+  const dotOf = (st) => (DOT_GREEN.includes(st) ? "g" : st === "Да звънна пак" ? "o" : st === "Запознат" ? "w" : st === "Звъннато – няма отговор" ? "y" : st === "Не се интересува" ? "k" : "r");
   function rowHtml(id, i) {
     const c = contacts[id], st = statusOf(c), due = nextDue(id), last = lastTalk(id);
     const w = whenText(lastAction(id));
@@ -815,7 +816,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     // статусът се вдига сам само след истински разговор (обаждане или среща), ако още е „Не е звъняно“
     const c = contacts[current];
     // имейл → „Изпратен имейл“ и контактът отива в „Контакти“; проучването не пипа статуса
-    const open = ["Не е звъняно", "Звъннато – няма отговор", "Да звънна пак"].includes(statusOf(c));
+    const open = ["Не е звъняно", "Звъннато – няма отговор", "Да звънна пак", "Запознат"].includes(statusOf(c));
     if (open && body.kind === "Имейл") saveContact(current, {status: "Изпратен имейл", statusAt: body.at, emailSent: today()});
     else if (statusOf(c) === "Не е звъняно" && ["Обаждане", "Среща", "Оглед"].includes(body.kind)) saveContact(current, {status: body.kind === "Обаждане" ? "Разговор – интерес" : "Проведена среща"});
     if (mode === "local") { logs["l" + Date.now()] = body; persistLocal(); document.activeElement.blur(); render(); return; }
