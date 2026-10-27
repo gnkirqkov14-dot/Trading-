@@ -91,7 +91,10 @@ textarea { resize: vertical; }
 .row:hover { border-color: var(--accent); }
 .row[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: -1px; }
 .row .nm { font-weight: 600; overflow-wrap: anywhere; }
-.row .grip { display: inline-block; cursor: grab; touch-action: none; user-select: none; color: var(--muted); padding: 0 6px 0 0; font-size: 16px; }
+.row .no.renum { cursor: text; border-bottom: 1px dashed currentColor; }
+.row .no.renum:hover { color: var(--accent); }
+.renum-box { position: absolute; z-index: 50; width: 76px; font: 700 15px var(--font-body); padding: 4px 6px;
+  border: 2px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
 .row.dragging { opacity: .85; border-color: var(--accent); box-shadow: 0 6px 18px rgba(0,0,0,.18); cursor: grabbing; }
 body.reordering { user-select: none; cursor: grabbing; }
 .row .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
@@ -381,7 +384,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (tab === "meet") return ids.sort((a, b) => (contacts[a].meetAt || "9999").localeCompare(contacts[b].meetAt || "9999"));
     return ids.sort(byOrder);
   }
-  // избраните (★) най-отпред, после поредността (местене с ⠿), после по име
+  // избраните (★) най-отпред, после поредността (смяна на номера), после по име
   // първо по цвета на точката: зелени, жълти, оранжеви, червени, черни – след всяко действие контактът се премества сам
   const DOT_RANK = {g: 0, y: 1, o: 2, r: 3, k: 4};
   function byOrder(a, b) {
@@ -460,7 +463,8 @@ footer { color: var(--muted); font-size: 12.5px; }
     return `<button class="row${st === "Чака да изпратим имейл" ? " mail-due" : st === "Уговорена среща" ? " meet-due" : ""}" type="button" data-open="${esc(id)}" aria-current="${id === current}">
       <span class="when" title="Последно действие: ${esc(w.long)}"><small>последно</small>${esc(w.short)}</span>
       <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
-      <span class="nm">${readOnly ? "" : `<span class="grip" data-grip="${esc(id)}" title="Хвани и премести нагоре или надолу" aria-label="Премести">⠿</span>`}${i === undefined ? "" : `<span class="no">${i + 1}.</span> `}<span class="dot ${dotOf(st)}" title="${esc(st)}"></span>${esc(c.name)}</span>
+      <span class="nm">${i === undefined ? "" : readOnly || tab === "meet" ? `<span class="no">${i + 1}.</span> `
+        : `<span class="no renum" data-renum="${esc(id)}" role="button" title="Цъкни и напиши нов номер" aria-label="Смени номера">${i + 1}.</span> `}<span class="dot ${dotOf(st)}" title="${esc(st)}"></span>${esc(c.name)}</span>
       <span class="chipwrap"><span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
       <span class="sub">${st === "Уговорена среща" && c.meetAt ? `<span class="meet-when${c.meetAt.slice(0, 10) === today() ? " today" : ""}">среща ${esc(meetText(c))}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
         ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}</span>
@@ -862,7 +866,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
 
   // ---------- събития ----------
-  // ---------- местене на редовете с мишката / пръста (хваща се за ⠿) ----------
+  // ---------- линията „Стигнах до тук“ се мести с мишката / пръста ----------
   let drag = null, dragEndAt = 0;
   let stopAfter = store.get("phomi-stop") || "";
   function saveStop(id) {
@@ -877,12 +881,6 @@ footer { color: var(--muted); font-size: 12.5px; }
       sg.classList.add("dragging"); document.body.classList.add("reordering");
       return;
     }
-    const g = ev.target.closest && ev.target.closest("[data-grip]");
-    if (!g || readOnly) return;
-    ev.preventDefault();
-    const row = g.closest(".row");
-    drag = {id: g.dataset.grip, row, y: ev.clientY};
-    row.classList.add("dragging"); document.body.classList.add("reordering");
   });
   document.addEventListener("pointermove", (ev) => {
     if (!drag) return;
@@ -892,7 +890,6 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (target && target !== drag.row) {
       const r = target.getBoundingClientRect();
       target.parentNode.insertBefore(drag.row, ev.clientY < r.top + r.height / 2 ? target : target.nextSibling);
-      [...$("#list").querySelectorAll(".row .no")].forEach((n, k) => { n.textContent = k + 1 + "."; });
     }
     // автоматично превъртане до ръба на екрана
     const edge = 60;
@@ -902,33 +899,59 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (!drag) return;
     const moved = drag; drag = null; dragEndAt = Date.now();
     moved.row.classList.remove("dragging"); document.body.classList.remove("reordering");
-    if (moved.stop) {
-      let prev = moved.row.previousElementSibling;
-      while (prev && !prev.classList.contains("row")) prev = prev.previousElementSibling;
-      saveStop(prev ? prev.dataset.open : ""); renderList(); return;
-    }
-    saveOrder([...$("#list").querySelectorAll(".row")].map((r) => r.dataset.open));
+    let prev = moved.row.previousElementSibling;
+    while (prev && !prev.classList.contains("row")) prev = prev.previousElementSibling;
+    saveStop(prev ? prev.dataset.open : ""); renderList();
   };
   document.addEventListener("pointerup", endDrag);
   document.addEventListener("pointercancel", endDrag);
-  // новата поредност на показаните се вмъква в общата (скритите от филтъра остават на местата си)
-  function saveOrder(newShown) {
-    const all = Object.keys(contacts).sort(byOrder);
-    const set = new Set(newShown), queue = [...newShown];
-    const full = all.map((id) => (set.has(id) ? queue.shift() : id));
-    const changed = [];
-    full.forEach((id, k) => { if (contacts[id].order !== (k + 1) * 10) { contacts[id] = Object.assign({}, contacts[id], {order: (k + 1) * 10}); changed.push(id); } });
+  // ---------- смяна на номера: цък върху цифрата, нов номер, Enter → контактът отива на това място ----------
+  const ordOf = (id) => contacts[id].order ?? 1e9;
+  function moveTo(id, pos) {
+    const ids = shown(), from = ids.indexOf(id);
+    if (from < 0) return;
+    pos = Math.max(1, Math.min(ids.length, Math.round(pos)));
+    if (pos === from + 1) return;
+    const rest = ids.filter((x) => x !== id);
+    rest.splice(pos - 1, 0, id);
+    // съседи от същата група (цвят на точката и ★) – другите групи се подреждат отделно
+    const grp = (x) => dotOf(statusOf(contacts[x])) + (contacts[x].pick ? "*" : ""), g = grp(id);
+    const prev = rest.slice(0, pos - 1).reverse().find((x) => grp(x) === g), next = rest.slice(pos).find((x) => grp(x) === g), changes = {};
+    const lo = prev ? ordOf(prev) : null, hi = next ? ordOf(next) : null;
+    if (lo === null && hi !== null) changes[id] = hi - 10;
+    else if (hi === null && lo !== null) changes[id] = lo + 10;
+    else if (lo !== null && hi !== null && lo < hi) changes[id] = (lo + hi) / 2;
+    else {  // съседите нямат различна поредност – номерира се само показаният списък (един запис на контакт)
+      const known = rest.filter((x) => grp(x) === g).map(ordOf).filter((o) => o < 1e9), base = known.length ? Math.min(...known) : 0;
+      rest.filter((x) => grp(x) === g).forEach((x, k) => { const o = base + (k + 1) * 10; if (contacts[x].order !== o) changes[x] = o; });
+    }
+    const changed = Object.keys(changes);
+    changed.forEach((x) => { contacts[x] = Object.assign({}, contacts[x], {order: changes[x]}); });
     render();
+    const now = shown().indexOf(id) + 1;
+    note(now === pos ? `Преместен на №${pos}.` : `Преместен на №${now} – по-нагоре са контактите с друг цвят на точката (или ★).`);
     if (!changed.length) return;
     if (mode === "local") { persistLocal(); return; }
     if (!db || readOnly) return;
-    changed.forEach((id) => { const body = contacts[id];
-      pending[id] = (pending[id] || Promise.resolve()).then(() => db.doc("contacts/" + id).set(body)).catch((e) => fail(e)); });
-    note("Поредността е запазена.");
+    changed.forEach((x) => { const body = contacts[x];
+      pending[x] = (pending[x] || Promise.resolve()).then(() => db.doc("contacts/" + x).set(body)).catch((e) => fail(e)); });
+  }
+  function openRenum(el) {
+    const id = el.dataset.renum, old = document.querySelector(".renum-box");
+    if (old) old.remove();
+    const r = el.getBoundingClientRect(), box = document.createElement("input");
+    box.type = "number"; box.min = "1"; box.max = String(shown().length); box.className = "renum-box";
+    box.value = parseInt(el.textContent, 10); box.setAttribute("aria-label", "Нов номер");
+    box.style.left = (r.left + window.scrollX - 4) + "px"; box.style.top = (r.top + window.scrollY - 6) + "px";
+    document.body.appendChild(box); box.focus(); box.select();
+    let done = false;
+    const finish = (ok) => { if (done) return; done = true; const v = Number(box.value); box.remove(); if (ok && v) moveTo(id, v); };
+    box.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finish(true); } else if (e.key === "Escape") finish(false); });
+    box.addEventListener("blur", () => finish(true));
   }
 
   document.addEventListener("click", (ev) => {
-    const t = ev.target.closest("[data-editlog],[data-savelog],[data-canceledit],[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-open],[data-tab],[data-bcccity],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
+    const t = ev.target.closest("[data-editlog],[data-savelog],[data-canceledit],[data-rowdel],[data-rowdelyes],[data-rowdelno],[data-star],[data-renum],[data-open],[data-tab],[data-bcccity],[data-copy],[data-edit],[data-askdel],[data-delcontact],[data-cancel],[data-addlog],[data-mailtpl],[data-mailclose],[data-mailask],[data-mailcancel],[data-mailsend],[data-mailscript],[data-mailurl],[data-done],[data-askdellog],[data-dellog],[data-back],#addBtn,#copyPhones,#copyMails");
     if (!t) return;
     if (t.dataset.editlog) { editingLog = t.dataset.editlog; render(); const f = $("#le-said"); if (f) f.focus(); return; }
     if (t.dataset.savelog) { saveLogEdit(t.dataset.savelog); return; }
@@ -937,6 +960,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     if (t.dataset.rowdelno) { ev.stopPropagation(); confirmDel = null; renderList(); return; }
     if (t.dataset.rowdelyes) { ev.stopPropagation(); deleteContact(t.dataset.rowdelyes); return; }
     if (t.dataset.star) { ev.stopPropagation(); if (readOnly) return; const c = contacts[t.dataset.star]; saveContact(t.dataset.star, {pick: !c.pick}); return; }
+    if (t.dataset.renum) { ev.stopPropagation(); ev.preventDefault(); openRenum(t); return; }
     if (t.dataset.tab) { tab = t.dataset.tab; render(); return; }
     if (t.dataset.bcccity != null) { bccCity = t.dataset.bcccity; store.set("phomi-bcc-city", bccCity); render(); return; }
     if (t.dataset.open && Date.now() - dragEndAt < 400) return;  // току-що преместен ред – не го отваряме
