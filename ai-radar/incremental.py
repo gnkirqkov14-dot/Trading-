@@ -45,7 +45,7 @@ def merge(prev_p: Path, new_p: Path, work: Path) -> None:
     fresh = {t["id"] for t in new.get("topics", [])}
     # тема остава само с елементи от последните 3 дни; над MAX_TOPICS отпадат най-слабите
     alive = [t for k, t in topics.items() if cnt.get(k)]
-    alive.sort(key=lambda t: (t["id"] in fresh, (t.get("importance") or 0) * 2 + math.log(cnt.get(t["id"], 0) + 1) * 3), reverse=True)
+    alive.sort(key=lambda t: (t.get("importance") or 0, t["id"] in fresh, math.log(cnt.get(t["id"], 0) + 1)), reverse=True)
     keep = {t["id"] for t in alive[:MAX_TOPICS]}
     topics = {k: t for k, t in topics.items() if k in keep}
     for a in items.values():
