@@ -109,3 +109,49 @@ export async function sendNewSignupEmail(row: NewSignupRow) {
     throw new Error(`Resend error ${res.status}: ${await res.text()}`);
   }
 }
+
+export type BotReport = {
+  zayavki: number;
+  iztochnici: number;
+  programi: { agent: string; broi: number }[];
+  stranici: { pat: string; broi: number }[];
+};
+
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+}
+
+// Сутрешният отчет за спрените копирачи (app/api/cron/bot-report).
+// Праща се само когато е имало поне един опит.
+export async function sendBotReportEmail(report: BotReport) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const programi = report.programi
+    .map((p) => `<tr><td>${escapeHtml(p.agent)}</td><td align="right">${p.broi}</td></tr>`)
+    .join("");
+  const stranici = report.stranici
+    .map((s) => `<tr><td>${escapeHtml(s.pat)}</td><td align="right">${s.broi}</td></tr>`)
+    .join("");
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `Спрени копирачи: ${report.zayavki} опита за последните 24 часа`,
+      html: `<p>През последните 24 часа сайтът е спрял <strong>${report.zayavki}</strong> опита за копиране от <strong>${report.iztochnici}</strong> различни източника. Нищо не е изтеглено — всички са получили „Достъпът е отказан“.</p>
+<p><strong>Програми</strong></p>
+<table cellpadding="4" border="1" style="border-collapse:collapse">${programi}</table>
+<p><strong>Кои страници са опитали</strong></p>
+<table cellpadding="4" border="1" style="border-collapse:collapse">${stranici}</table>`,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+  }
+}
