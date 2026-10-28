@@ -392,6 +392,11 @@ export interface Database {
         Args: { p_id: string; p_sekundi: number };
         Returns: undefined;
       };
+      /** Спрени копирачи за последните часове (20261028090000_bot_blokirani.sql). */
+      bot_otchet: {
+        Args: { p_secret: string | null; p_chasa?: number };
+        Returns: import("@/lib/email").BotReport;
+      };
       /** Всичко за /admin/statistika; виж миграцията за формата. */
       admin_statistika: {
         Args: Record<string, never>;
