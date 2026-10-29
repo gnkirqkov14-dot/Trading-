@@ -210,6 +210,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     <button class="tab" role="tab" data-tab="met" aria-selected="false">Проведени срещи<span class="n" id="nMet">0</span></button>
     <button class="tab" role="tab" data-tab="new" aria-selected="false">Нови контакти<span class="n" id="nNew">0</span></button>
     <button class="tab" role="tab" data-tab="bcc" aria-selected="false">Контакти BCC<span class="n" id="nBcc">0</span></button>
+    <button class="tab" role="tab" data-tab="inv" aria-selected="false">Инвеститори<span class="n" id="nInv">0</span></button>
   </nav>
   <nav class="tabs sub" id="bccCities" aria-label="Градове в Контакти BCC" hidden>
     <button class="tab" data-bcccity="" aria-selected="true">Всички<span class="n" data-nb=""></span></button>
@@ -282,7 +283,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   const KINDS = ["Архитект", "Клиент", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
   // Раздел „Запитвания“: контакти с group "inq" (запитвания от сайта/имейл), отделно от архитектите
   const isInq = (c) => c.group === "inq";
-  const OWN_TABS = ["inq", "bcc"];  // раздели със собствен списък (поле group)
+  const OWN_TABS = ["inq", "bcc", "inv"];  // раздели със собствен списък (поле group)
   const inMain = (c) => !OWN_TABS.includes(c.group);
   // градове в „Контакти BCC“: Пловдив (с околностите), София, Варна, Бургас, всички останали – „Други“
   const BCC_CITIES = ["Пловдив", "София", "Варна", "Бургас"];
@@ -423,6 +424,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     $("#nAll").textContent = ids.filter((i) => inMain(contacts[i]) && isGreen(contacts[i])).length;
     $("#nNew").textContent = ids.filter((i) => inMain(contacts[i]) && !isGreen(contacts[i])).length;
     $("#nBcc").textContent = ids.filter((i) => contacts[i].group === "bcc").length;
+    $("#nInv").textContent = ids.filter((i) => contacts[i].group === "inv").length;
     $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
     $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
     $("#nMet").textContent = ids.filter((i) => statusOf(contacts[i]) === "Проведена среща").length;
@@ -589,7 +591,7 @@ footer { color: var(--muted); font-size: 12.5px; }
     const stopShown = !readOnly && tab !== "meet", stopTop = stopAfter === "" || !ids.includes(stopAfter);
     const line = `<div class="stopline" data-stopgrip="1" title="Хвани и премести – отбелязва докъде си стигнала"><span>⠿ Стигнах до тук</span></div>`;
     $("#list").innerHTML = ids.length ? (stopShown && stopTop ? line : "") + ids.map((id, k) => rowHtml(id, k) + (stopShown && id === stopAfter ? line : "")).join("") :
-      `<p class="empty">${!loaded ? "Контактите се зареждат…" : tab === "bcc" && !total ? "Тук още няма контакти. Натисни „+ Нов контакт“ – ще се запише в този раздел."
+      `<p class="empty">${!loaded ? "Контактите се зареждат…" : (tab === "bcc" || tab === "inv") && !total ? "Тук още няма контакти. Натисни „+ Нов контакт“ – ще се запише в този раздел."
         : Object.keys(contacts).length ? "Няма контакти с тези филтри." : "Още няма контакти. Натисни „+ Нов контакт“."}</p>`;
   }
   function renderProfile() {
@@ -625,7 +627,7 @@ footer { color: var(--muted); font-size: 12.5px; }
 
   function openDialog(id) {
     editing = id || null;
-    const c = id ? contacts[id] : tab === "inq" ? {kind: "Клиент", city: ""} : {kind: "Архитект", city: $("#city").value || "Пловдив"};
+    const c = id ? contacts[id] : tab === "inq" ? {kind: "Клиент", city: ""} : tab === "inv" ? {kind: "Инвеститор", city: $("#city").value || "Пловдив"} : {kind: "Архитект", city: $("#city").value || "Пловдив"};
     $("#dlgTitle").textContent = id ? "Редактирай контакт" : "Нов контакт";
     $("#f-name").value = c.name || ""; $("#f-kind").value = c.kind || "Друго"; $("#f-city").value = c.city || "";
     $("#f-person").value = c.person || ""; $("#f-phones").value = (c.phones || []).join(", ");
