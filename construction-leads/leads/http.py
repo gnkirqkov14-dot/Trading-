@@ -1,0 +1,59 @@
+"""Обща HTTP сесия: User-Agent, повторни опити и пауза между заявките,
+за да не натоварваме общинските сайтове."""
+import time
+
+import requests
+
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0 Safari/537.36 construction-leads/0.1"
+)
+
+
+class Http:
+    def __init__(self, delay: float = 0.4, retries: int = 4, timeout: int = 60):
+        self.session = requests.Session()
+        self.session.headers["User-Agent"] = USER_AGENT
+        self.delay = delay
+        self.base_delay = delay
+        self._ok = 0
+        self.retries = retries
+        self.timeout = timeout
+        self._last = 0.0
+
+    def request(self, method: str, url: str, **kw) -> requests.Response:
+        kw.setdefault("timeout", self.timeout)
+        for attempt in range(self.retries):
+            wait = self.delay - (time.time() - self._last)
+            if wait > 0:
+                time.sleep(wait)
+            self._last = time.time()
+            try:
+                resp = self.session.request(method, url, **kw)
+                if resp.status_code == 429:
+                    # Твърде много заявки: забавяме темпото трайно (не само еднократно),
+                    # за да не удряме лимита отново веднага след паузата.
+                    self.delay = min(self.delay * 1.5, 15.0)
+                    self._ok = 0
+                    time.sleep(int(resp.headers.get("Retry-After") or 0) or 20 * (attempt + 1))
+                    continue
+                if resp.status_code < 500:
+                    resp.raise_for_status()
+                    # След 20 поредни успеха постепенно връщаме нормалното темпо
+                    self._ok += 1
+                    if self._ok >= 20 and self.delay > self.base_delay:
+                        self.delay = max(self.base_delay, self.delay * 0.85)
+                        self._ok = 0
+                    return resp
+            except requests.ConnectionError:
+                if attempt == self.retries - 1:
+                    raise
+            time.sleep(2 ** (attempt + 1))
+        resp.raise_for_status()
+        return resp
+
+    def get(self, url: str, **kw) -> requests.Response:
+        return self.request("GET", url, **kw)
+
+    def post(self, url: str, **kw) -> requests.Response:
+        return self.request("POST", url, **kw)
