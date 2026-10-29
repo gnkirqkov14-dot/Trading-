@@ -205,7 +205,6 @@ footer { color: var(--muted); font-size: 12.5px; }
   <nav class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" data-tab="all" aria-selected="true">Контакти<span class="n" id="nAll">0</span></button>
     <button class="tab" role="tab" data-tab="inq" aria-selected="false">Запитвания<span class="n" id="nInq">0</span></button>
-    <button class="tab" role="tab" data-tab="pick" aria-selected="false">★ Избрани<span class="n" id="nPick">0</span></button>
     <button class="tab" role="tab" data-tab="meet" aria-selected="false">Срещи<span class="n" id="nMeet">0</span></button>
     <button class="tab" role="tab" data-tab="met" aria-selected="false">Проведени срещи<span class="n" id="nMet">0</span></button>
     <button class="tab" role="tab" data-tab="new" aria-selected="false">Нови контакти<span class="n" id="nNew">0</span></button>
@@ -426,7 +425,6 @@ footer { color: var(--muted); font-size: 12.5px; }
     $("#nBcc").textContent = ids.filter((i) => contacts[i].group === "bcc").length;
     $("#nInv").textContent = ids.filter((i) => contacts[i].group === "inv").length;
     $("#nInq").textContent = ids.filter((i) => isInq(contacts[i])).length;
-    $("#nPick").textContent = ids.filter((i) => contacts[i].pick).length;
     $("#nMet").textContent = ids.filter((i) => statusOf(contacts[i]) === "Проведена среща").length;
     const soon = meetingsSoon(), todayN = soon.filter((i) => contacts[i].meetAt.slice(0, 10) === today()).length;
     $("#nMeet").textContent = todayN ? todayN + " днес" : soon.length ? soon.length + " тази седмица"
