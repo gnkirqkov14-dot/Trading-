@@ -663,6 +663,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   const OPENERS = {
     interest: "Благодаря за интереса към PHOMI. Изпращам ви кратко представяне и полезните материали на едно място.",
     call: "Както се разбрахме по телефона, изпращам ви кратко представяне на PHOMI и полезните материали на едно място.",
+    intro: "Ние от PHOMI България искаме да ви представим един различен материал за фасади и интериори, който може да намери място във вашите проекти. По-долу ще намерите основното на едно място.",
   };
   const sender = () => { try { return JSON.parse(store.get("phomi-sender") || "{}"); } catch (e) { return {}; } };
   function firstName(c) {
@@ -729,7 +730,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <h3>Представителен имейл</h3>
       <div class="form">
         <label for="m-to">До<select id="m-to">${(c.emails || []).map((m) => `<option${m === d.to ? " selected" : ""}>${esc(m)}</option>`).join("")}</select></label>
-        <label for="m-open">Начало<select id="m-open"><option value="interest">Благодаря за интереса…</option><option value="call"${d.open === "call" ? " selected" : ""}>Както се разбрахме по телефона…</option></select></label>
+        <label for="m-open">Начало<select id="m-open"><option value="interest">Благодаря за интереса…</option><option value="call"${d.open === "call" ? " selected" : ""}>Както се разбрахме по телефона…</option><option value="intro"${d.open === "intro" ? " selected" : ""}>Ние от PHOMI България искаме да ви представим… (без предишен контакт)</option></select></label>
         <label class="wide" for="m-greet">Обръщение<input id="m-greet" value="${esc(d.greet ?? "Здравейте,")}" autocomplete="off"></label>
         <label for="m-name">Подпис – име<input id="m-name" value="${esc(d.name ?? s.name ?? "")}" placeholder="напр. Станислав Каадан" autocomplete="off"></label>
         <label for="m-phone">Подпис – телефон<input id="m-phone" value="${esc(d.phone ?? s.phone ?? "+359 884 30 30 70")}" autocomplete="off"></label>
