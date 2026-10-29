@@ -776,7 +776,9 @@ footer { color: var(--muted); font-size: 12.5px; }
   }
   function recordMailed(id, to) {
     const now = new Date().toISOString(), due = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
-    saveContact(id, {status: "Изпратен имейл", statusAt: now, emailSent: today()});
+    // уговорена/проведена среща и изпратена оферта не се сменят от имейл – статусът се сменя само ръчно
+    const keep = ["Уговорена среща", "Проведена среща", "Изпратена оферта"].includes(statusOf(contacts[id]));
+    saveContact(id, keep ? {emailSent: today()} : {status: "Изпратен имейл", statusAt: now, emailSent: today()});
     const entry = {contact: id, kind: "Имейл", who: to, said: "Изпратен представителен имейл (каталози, ценоразпис, сертификати, проекти).",
                    next: "Да провериш за отговор", due, done: false, at: now};
     if (mode === "local") { logs["l" + Date.now()] = entry; persistLocal(); render(); }
