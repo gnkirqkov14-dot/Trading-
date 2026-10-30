@@ -52,7 +52,8 @@ commit-ва).
    `work/db/fulltext__<дата>.json` като `fulltext/<дата>` в базата (ArtifactData set с
    file_path). ElevenLabs вече НЕ се ползва (потребителят го спря заради цената) —
    не качвай нищо в агента.
-8в. Безплатно аудио (Microsoft Kalina): `python3 audio_daily.py --work work` → качи
+8в. Безплатно аудио (Microsoft Kalina): в нов контейнер първо `pip install -q edge-tts` (на 2026-10-30
+   свежата версия върна гласа — 403 беше от остаряла); после `python3 audio_daily.py --work work` → качи
    `work/audio_day.mp4` с Artifact (`url` на таблото, `asset: true`) и запиши
    `audio/day-<дата>` = съдържанието на `work/audio_day.json` + `"asset": "<id>"`.
    Изтрий `audio/day-*` по-стари от 7 дни и техните файлове (Artifact delete с id).
