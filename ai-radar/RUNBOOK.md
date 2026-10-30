@@ -68,6 +68,14 @@ commit-ва).
 
 ## Ако нещо се счупи
 
+- Нов контейнер и `work/prev/` липсва (вчерашният анализ е изгубен) → прочети от
+  базата `digests/<вчера>` и `digest_items/<вчера>-1..N` (ArtifactData get, `out_dir: work/dbread`)
+  и пусни `python3 rebuild_prev.py work/dbread <вчера> work/prev_analysis.json`
+  (после `mkdir -p work/prev && cp work/prev_analysis.json work/prev/analysis-<вчера>.json`).
+  Така остава инкременталният режим. Ако `ai-radar/` изобщо липсва след `git pull`, клонът
+  е върнат към основния: `git fetch origin claude/adoring-ritchie-q8pg6l &&
+  git checkout -B claude/adoring-ritchie-q8pg6l origin/claude/adoring-ritchie-q8pg6l`.
+
 - Анализиращият subagent виси (над ~20 мин без нов `work/analysis_new.json`;
   внимавай — файл с вчерашна дата е от вчера, виж `stat`) → `TaskStop` и го
   пусни пак със забрана да тегли страници, най-много 3 WebSearch и изискване да
