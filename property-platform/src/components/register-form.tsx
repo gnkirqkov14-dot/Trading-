@@ -47,6 +47,21 @@ export function RegisterForm() {
         </div>
 
         <div className="flex flex-col gap-1">
+          <label htmlFor="phone" className="text-sm font-medium text-slate-700">
+            Мобилен телефон
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="08xx xxx xxx"
+            required
+            className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
           <label
             htmlFor="password"
             className="text-sm font-medium text-slate-700"

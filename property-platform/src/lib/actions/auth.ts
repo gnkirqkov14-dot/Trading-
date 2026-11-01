@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { checkPhone, PHONE_TAKEN_MESSAGE } from "@/lib/phone";
 
 export type AuthFormState = { error: string } | undefined;
 
@@ -29,6 +30,7 @@ export async function signUp(
 ): Promise<AuthFormState> {
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
   if (!name || name.length < 2) {
@@ -37,11 +39,19 @@ export async function signUp(
   if (!email) {
     return { error: "Въведете валиден имейл." };
   }
+  if (!phone) {
+    return { error: "Телефонът е задължителен." };
+  }
   if (password.length < 8) {
     return { error: "Паролата трябва да е поне 8 символа." };
   }
 
   const supabase = await createClient();
+
+  const phoneError = await checkPhone(supabase, phone);
+  if (phoneError) {
+    return { error: phoneError };
+  }
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
     p_phone: null,
@@ -54,11 +64,17 @@ export async function signUp(
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name } },
+    options: { data: { name, phone } },
   });
 
   if (error) {
-    return { error: error.message };
+    // Тригерът в базата е последната проверка: двама с един номер в
+    // една и съща секунда стигат дотук и получават обща грешка на Supabase.
+    return {
+      error: error.message.includes("Database error")
+        ? PHONE_TAKEN_MESSAGE
+        : error.message,
+    };
   }
 
   revalidatePath("/", "layout");

@@ -45,5 +45,26 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Профил без телефон (вход с Google или стар акаунт) не минава нататък.
+  // Само за /dashboard: там трафикът е малък и заявката не тежи.
+  if (
+    isProtectedRoute &&
+    user &&
+    !request.nextUrl.pathname.startsWith("/dashboard/profile")
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("phone")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && !profile.phone) {
+      const redirectUrl = new URL("/dashboard/profile", request.url);
+      redirectUrl.searchParams.set("telefon", "1");
+      redirectUrl.searchParams.set("next", request.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
   return response;
 }

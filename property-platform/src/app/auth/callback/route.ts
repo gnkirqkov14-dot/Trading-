@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/phone";
 
 // Google/Facebook redirect the browser here (via Supabase) with a ?code=
 // after the user approves the OAuth consent screen. We exchange it for a
@@ -8,13 +9,23 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next");
-  const safeNext = next && next.startsWith("/") ? next : "/dashboard";
+  const target = safeNext(next);
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${safeNext}`);
+      // Google не дава телефон: без номер първо минава през профила.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("phone")
+        .eq("id", data.user.id)
+        .single();
+      return NextResponse.redirect(
+        profile?.phone
+          ? `${origin}${target}`
+          : `${origin}/dashboard/profile?telefon=1&next=${encodeURIComponent(target)}`,
+      );
     }
   }
 
