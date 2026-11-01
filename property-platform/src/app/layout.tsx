@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AiAssistant } from "@/components/assistant/ai-assistant";
 import { MetaPixel } from "@/components/meta-pixel";
 import { Broyach } from "@/components/broyach";
+import { RegistraciyaSledSkrol } from "@/components/registraciya-sled-skrol";
 import "./globals.css";
 
 const POMOSHTNIK_VKLYUCHEN = false;
@@ -93,6 +94,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Нашият брояч за /admin/statistika: колко са на сайта сега,
             колко стоят и какво гледат. Анонимен, без бисквитки. */}
         <Broyach />
+        {/* След 30 секунди скролване гостът вижда леко замъглен екран с
+            покана за регистрация. */}
+        <RegistraciyaSledSkrol />
         {/* Meta (Facebook) Pixel — за рекламите във Facebook/Instagram.
             ⚠️ За разлика от Vercel Analytics отгоре, ТОЙ слага
             бисквитка и праща данни на Meta, тоест изисква съгласие по
