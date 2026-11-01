@@ -48,7 +48,7 @@ export function RegisterForm() {
 
         <div className="flex flex-col gap-1">
           <label htmlFor="phone" className="text-sm font-medium text-slate-700">
-            Мобилен телефон
+            Телефон
           </label>
           <input
             id="phone"
@@ -59,6 +59,9 @@ export function RegisterForm() {
             required
             className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
           />
+          <p className="text-xs text-slate-500">
+            Чужд номер? Напиши го с кода на държавата, например +49 170 1234567.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1">
