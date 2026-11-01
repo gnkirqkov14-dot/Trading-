@@ -20,7 +20,7 @@ export default async function ProfilePage({
       <h1 className="mb-6 text-2xl font-semibold">Настройки на профила</h1>
       {needsPhone && (
         <p className="mb-6 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Остана една стъпка: добави мобилния си телефон, за да продължиш.
+          Остана една стъпка: добави телефона си, за да продължиш.
         </p>
       )}
       <ProfileForm

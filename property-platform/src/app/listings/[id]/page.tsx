@@ -364,7 +364,7 @@ export default async function ListingDetailPage({
       {needsPhone && (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
           <p className="font-medium text-slate-900">
-            Добави мобилния си телефон, за да видиш всички снимки, описанието,
+            Добави телефона си, за да видиш всички снимки, описанието,
             мястото на картата и данните за връзка.
           </p>
           <Link
