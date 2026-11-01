@@ -138,10 +138,14 @@ export default async function ListingDetailPage({
     });
   }
 
-  // Пълни детайли (снимки, описание, точен квартал, контакти) — само
-  // регистрация е нужна, не абонамент. Виж "Регистрация вместо планове"
-  // в CLAUDE.md.
-  const hasFullAccess = isOwner || Boolean(user);
+  // Пълни детайли (снимки, описание, точен квартал, контакти) — нужна е
+  // само регистрация с телефон, не абонамент. Виж "Регистрация вместо
+  // планове" в CLAUDE.md.
+  const { data: viewer } = user
+    ? await supabase.from("profiles").select("phone").eq("id", user.id).single()
+    : { data: null };
+  const needsPhone = Boolean(user) && !isOwner && !viewer?.phone;
+  const hasFullAccess = isOwner || (Boolean(user) && !needsPhone);
 
   const photos = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
@@ -357,7 +361,22 @@ export default async function ListingDetailPage({
         </div>
       )}
 
-      {!hasFullAccess && (
+      {needsPhone && (
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+          <p className="font-medium text-slate-900">
+            Добави мобилния си телефон, за да видиш всички снимки, описанието,
+            мястото на картата и данните за връзка.
+          </p>
+          <Link
+            href={`/dashboard/profile?telefon=1&next=${encodeURIComponent(`/listings/${listing.id}`)}`}
+            className="mt-4 inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
+          >
+            Добави телефон
+          </Link>
+        </div>
+      )}
+
+      {!hasFullAccess && !needsPhone && (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
           <p className="font-medium text-slate-900">
             Регистрирай се безплатно, за да видиш всички снимки, описанието,

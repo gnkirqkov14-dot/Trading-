@@ -7,9 +7,12 @@ import { updateProfile } from "@/lib/actions/profile";
 export function ProfileForm({
   initialName,
   initialPhone,
+  next,
 }: {
   initialName: string;
   initialPhone: string;
+  // Откъде е дошъл, ако е спрян заради липсващ телефон.
+  next?: string;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
@@ -29,7 +32,15 @@ export function ProfileForm({
     setSubmitting(true);
 
     try {
-      await updateProfile({ name, phone });
+      const result = await updateProfile({ name, phone });
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      if (next) {
+        router.push(next);
+        return;
+      }
       setSaved(true);
       router.refresh();
     } catch (err) {
