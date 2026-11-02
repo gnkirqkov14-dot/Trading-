@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { checkPhone, PHONE_TAKEN_MESSAGE } from "@/lib/phone";
+import { checkPhone, PHONE_TAKEN_MESSAGE, safeNext } from "@/lib/phone";
 
 export type AuthFormState = { error: string } | undefined;
 
@@ -78,11 +78,12 @@ export async function signUp(
   }
 
   revalidatePath("/", "layout");
-  // `?registered=1` казва на таблото да отчете `CompleteRegistration`
-  // към Meta Pixel. ⚠️ Регистрацията през Google минава по друг път
+  // `?registered=1` казва на таблото (или на обявата, ако човекът идва от
+  // стената) да отчете `CompleteRegistration` към Meta Pixel.
+  // ⚠️ Регистрацията през Google минава по друг път
   // (`auth/callback`) и оттам не се различава нов потребител от
   // връщащ се — тези регистрации не се броят. Виж CLAUDE.md.
-  redirect("/dashboard?registered=1");
+  redirect(`${safeNext(String(formData.get("redirectTo") ?? ""))}?registered=1`);
 }
 
 export async function signIn(

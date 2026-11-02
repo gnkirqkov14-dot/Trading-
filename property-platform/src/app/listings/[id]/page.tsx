@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ZadalzhitelnaRegistraciya } from "@/components/zadalzhitelna-registraciya";
 import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
 import { PixelEvent } from "@/components/pixel-event";
@@ -114,10 +115,11 @@ export default async function ListingDetailPage({
   params: Promise<{ id: string }>;
   // `?published=1` слага `createListing` при пренасочването след
   // успешно публикуване — само тогава се праща `Lead` към Meta Pixel.
-  searchParams: Promise<{ published?: string }>;
+  // `?registered=1` слага `signUp`, когато новият потребител идва от стената.
+  searchParams: Promise<{ published?: string; registered?: string }>;
 }) {
   const { id } = await params;
-  const { published } = await searchParams;
+  const { published, registered } = await searchParams;
   const listing = await getListing(id);
 
   if (!listing) {
@@ -215,6 +217,9 @@ export default async function ListingDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
+      {!user && <ZadalzhitelnaRegistraciya sled={`/listings/${listing.id}`} />}
+      {registered === "1" && <PixelEvent name="CompleteRegistration" />}
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
