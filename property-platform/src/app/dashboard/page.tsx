@@ -22,10 +22,10 @@ export default async function DashboardPage({
   // Собственикът иска да знае за всяка нова регистрация. Върви след
   // отговора, за да не чака никой Resend, и се обажда само първия път —
   // бележката е на самия профил.
-  after(notifyAdminOfSignup);
+  const supabase = await createClient();
+  after(() => notifyAdminOfSignup(supabase));
 
   const profile = await getProfile();
-  const supabase = await createClient();
 
   const { data: listings } = await supabase
     .from("listings")

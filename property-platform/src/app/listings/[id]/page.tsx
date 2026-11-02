@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   KOLONI_BEZ_KONTAKTI,
   imaKontakti,
   type OtgovorKontakti,
 } from "@/lib/listing-koloni";
+import { notifyAdminOfSignup } from "@/lib/notify-signup";
 import { ZadalzhitelnaRegistraciya } from "@/components/zadalzhitelna-registraciya";
 import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
@@ -129,6 +131,8 @@ export default async function ListingDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (user) after(() => notifyAdminOfSignup(supabase));
 
   const isOwner = user?.id === listing.user_id;
 

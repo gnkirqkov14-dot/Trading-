@@ -50,8 +50,18 @@ export async function seoCityIds() {
   return ids;
 }
 
-/** Активните обяви в един град, най-новите първи. */
-export async function getCityListings(cityName: string) {
+export const NA_STRANICA_GRAD = 24;
+const OTKAS_SVODKA = 1000;
+
+export type CitySvodkaRed = {
+  type: CityListing["type"];
+  price: number;
+  area_sqm: number;
+  neighborhoods: { id: string; name: string } | null;
+};
+
+/** Активните обяви в един град: една страница карти и леки редове за сводката. */
+export async function getCityListings(cityName: string, stranica = 1) {
   const supabase = await createClient();
   const { data: city } = await supabase
     .from("cities")
@@ -61,8 +71,15 @@ export async function getCityListings(cityName: string) {
     .limit(1)
     .maybeSingle();
 
-  if (!city) return { cityId: null, listings: [] as CityListing[] };
+  if (!city) {
+    return {
+      cityId: null,
+      listings: [] as CityListing[],
+      svodka: [] as CitySvodkaRed[],
+    };
+  }
 
+  const ot = (stranica - 1) * NA_STRANICA_GRAD;
   const { data } = await supabase
     .from("listings")
     .select(
@@ -70,10 +87,26 @@ export async function getCityListings(cityName: string) {
     )
     .eq("status", "active")
     .eq("city_id", city.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(ot, ot + NA_STRANICA_GRAD - 1);
+
+  // Цените и кварталите са за целия град, не за една страница.
+  const svodka: CitySvodkaRed[] = [];
+  for (let from = 0; ; from += OTKAS_SVODKA) {
+    const { data: redove } = await supabase
+      .from("listings")
+      .select("type, price, area_sqm, neighborhoods(id, name)")
+      .eq("status", "active")
+      .eq("city_id", city.id)
+      .order("id")
+      .range(from, from + OTKAS_SVODKA - 1);
+    svodka.push(...((redove ?? []) as unknown as CitySvodkaRed[]));
+    if ((redove ?? []).length < OTKAS_SVODKA) break;
+  }
 
   return {
     cityId: city.id,
     listings: (data ?? []) as unknown as CityListing[],
+    svodka,
   };
 }

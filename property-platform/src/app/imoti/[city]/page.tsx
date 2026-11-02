@@ -5,22 +5,30 @@ import { cache } from "react";
 import { ListingCard } from "@/components/listing-card";
 import { formatPrice } from "@/lib/listing-labels";
 import {
+  NA_STRANICA_GRAD,
   SEO_CITIES,
   getCityListings,
   seoCityBySlug,
-  type CityListing,
+  type CitySvodkaRed,
 } from "@/lib/seo-cities";
 
 // generateMetadata и самата страница искат едни и същи обяви — `cache`
 // ги тегли веднъж на заявка.
-const loadCity = cache(async (slug: string) => {
+const loadCity = cache(async (slug: string, stranica: number) => {
   const city = seoCityBySlug(slug);
   if (!city) return null;
-  const { cityId, listings } = await getCityListings(city.name);
-  return { city, cityId, listings };
+  const { cityId, listings, svodka } = await getCityListings(
+    city.name,
+    stranica,
+  );
+  return { city, cityId, listings, svodka };
 });
 
-function summarize(listings: CityListing[]) {
+function nomerStranica(page: string | undefined) {
+  return Math.max(1, Math.floor(Number(page)) || 1);
+}
+
+function summarize(listings: CitySvodkaRed[]) {
   const sales = listings.filter(
     (listing) => listing.type === "sale" && listing.area_sqm > 0,
   );
@@ -48,41 +56,61 @@ function summarize(listings: CityListing[]) {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ city: string }>;
+  searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
   const { city: slug } = await params;
-  const data = await loadCity(slug);
+  const stranica = nomerStranica((await searchParams).page);
+  const data = await loadCity(slug, stranica);
   if (!data) return { title: "Обяви" };
 
-  const { city, listings } = data;
-  const title = `Имоти в ${city.name} без посредници`;
-  const description = listings.length
-    ? `${listings.length} обяви за апартаменти и къщи в ${city.name} директно от собственик и строител — без агенция и без комисиона.`
+  const { city, svodka } = data;
+  const title =
+    stranica > 1
+      ? `Имоти в ${city.name} без посредници, страница ${stranica}`
+      : `Имоти в ${city.name} без посредници`;
+  const description = svodka.length
+    ? `${svodka.length} обяви за апартаменти и къщи в ${city.name} директно от собственик и строител — без агенция и без комисиона.`
     : `Обяви за имоти в ${city.name} директно от собственик — без агенция и без комисиона.`;
 
   return {
     title,
     description,
-    alternates: { canonical: `/imoti/${city.slug}` },
+    alternates: {
+      canonical:
+        stranica > 1
+          ? `/imoti/${city.slug}?page=${stranica}`
+          : `/imoti/${city.slug}`,
+    },
     openGraph: { title, description },
     // Празна градска страница е „тънко“ съдържание за Google — пускаме
     // я в индекса чак когато има поне една обява.
-    ...(listings.length ? {} : { robots: { index: false, follow: true } }),
+    ...(svodka.length ? {} : { robots: { index: false, follow: true } }),
   };
 }
 
 export default async function CityPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ city: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { city: slug } = await params;
-  const data = await loadCity(slug);
+  const stranica = nomerStranica((await searchParams).page);
+  const data = await loadCity(slug, stranica);
   if (!data) notFound();
 
-  const { city, cityId, listings } = data;
-  const { minPrice, maxPrice, avgPerSqm, neighborhoods } = summarize(listings);
+  const { city, cityId, listings, svodka } = data;
+  const obshto = svodka.length;
+  const stranici = Math.max(1, Math.ceil(obshto / NA_STRANICA_GRAD));
+  if (stranica > stranici) notFound();
+
+  const { minPrice, maxPrice, avgPerSqm, neighborhoods } = summarize(svodka);
+  const kamStranica = (n: number) =>
+    n > 1 ? `/imoti/${city.slug}?page=${n}` : `/imoti/${city.slug}`;
   const otherCities = SEO_CITIES.filter((other) => other.slug !== city.slug);
 
   return (
@@ -91,10 +119,10 @@ export default async function CityPage({
         Имоти в {city.name} без посредници
       </h1>
 
-      {listings.length > 0 ? (
+      {obshto > 0 ? (
         <p className="mt-3 max-w-3xl text-slate-600">
-          {listings.length}{" "}
-          {listings.length === 1 ? "обява" : "обяви"} за имоти в {city.name},
+          {obshto}{" "}
+          {obshto === 1 ? "обява" : "обяви"} за имоти в {city.name},
           публикувани директно от собственици и строители — без агенция и
           без комисиона.
           {minPrice !== null && maxPrice !== null && (
@@ -116,7 +144,7 @@ export default async function CityPage({
       )}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        {cityId && listings.length > 0 && (
+        {cityId && obshto > 0 && (
           <Link
             href={`/listings?city=${cityId}`}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50"
@@ -161,6 +189,33 @@ export default async function CityPage({
               <ListingCard key={listing.id} listing={listing} />
             ))}
           </div>
+
+          {stranici > 1 && (
+            <nav
+              aria-label="Страници"
+              className="mt-8 flex items-center justify-center gap-3 text-sm"
+            >
+              {stranica > 1 && (
+                <Link
+                  href={kamStranica(stranica - 1)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-100"
+                >
+                  ← Назад
+                </Link>
+              )}
+              <span className="text-slate-500">
+                Страница {stranica} от {stranici}
+              </span>
+              {stranica < stranici && (
+                <Link
+                  href={kamStranica(stranica + 1)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-100"
+                >
+                  Напред →
+                </Link>
+              )}
+            </nav>
+          )}
         </section>
       )}
 
