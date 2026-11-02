@@ -24,6 +24,23 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
 export interface Database {
   public: {
     Tables: {
+      obyava_saglasie: Table<
+        {
+          listing_id: string;
+          ime: string;
+          telefon: string;
+          data: string;
+          dobaveno_ot: string;
+          created_at: string;
+        },
+        {
+          listing_id: string;
+          ime: string;
+          telefon: string;
+          data: string;
+          dobaveno_ot: string;
+        }
+      >;
       contacts: Table<
         {
           id: string;
@@ -456,6 +473,10 @@ export interface Database {
       ime_na_profil: {
         Args: { p_id: string };
         Returns: string | null;
+      };
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
       };
     };
     Enums: {

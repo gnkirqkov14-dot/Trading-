@@ -60,6 +60,8 @@ export type CreateListingInput = {
   address: string;
   photoUrls: string[];
   videoUrl: string | null;
+  /** Само за админ: обявата е на собственик, който е дал съгласие. */
+  sobstvenik?: { ime: string; telefon: string; data: string };
 };
 
 export async function createListing(input: CreateListingInput) {
@@ -82,10 +84,23 @@ export async function createListing(input: CreateListingInput) {
   }
 
   const supabase = await createClient();
-  const { phone, listingLimit } = await getProfileContactInfo(
-    supabase,
-    user.id,
-  );
+  const profileInfo = input.sobstvenik
+    ? null
+    : await getProfileContactInfo(supabase, user.id);
+  const { sobstvenik } = input;
+
+  if (sobstvenik) {
+    const { data: isAdmin } = await supabase.rpc("is_admin");
+    if (!isAdmin) {
+      throw new Error("Само администратор може да качва от името на собственик.");
+    }
+    if (!sobstvenik.ime.trim() || !sobstvenik.telefon.trim() || !sobstvenik.data) {
+      throw new Error("Името, телефонът и датата на съгласието са задължителни.");
+    }
+  }
+
+  const phone = sobstvenik ? sobstvenik.telefon.trim() : profileInfo!.phone;
+  const listingLimit = profileInfo?.listingLimit ?? DEFAULT_LISTING_LIMIT;
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
     p_phone: phone,
@@ -102,7 +117,7 @@ export async function createListing(input: CreateListingInput) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
-  if ((listingCount ?? 0) >= listingLimit) {
+  if (!sobstvenik && (listingCount ?? 0) >= listingLimit) {
     throw new Error(
       `Достигна лимита от ${listingLimit} обяви за един акаунт. Ако имаш ` +
         `нужда от повече (напр. строителна фирма с няколко имота), пиши ни ` +
@@ -113,6 +128,8 @@ export async function createListing(input: CreateListingInput) {
   const { error: listingError } = await supabase.from("listings").insert({
     id: input.id,
     user_id: user.id,
+    // Обява от името на собственик се ражда скрита до преглед на снимките.
+    ...(sobstvenik ? { status: "inactive" as const } : {}),
     type: input.type,
     property_type: input.propertyType,
     city_id: input.cityId,
@@ -153,6 +170,23 @@ export async function createListing(input: CreateListingInput) {
     await supabase
       .from("listing_videos")
       .insert({ listing_id: input.id, url: input.videoUrl });
+  }
+
+  if (sobstvenik) {
+    const { error: saglasieError } = await supabase
+      .from("obyava_saglasie")
+      .insert({
+        listing_id: input.id,
+        ime: sobstvenik.ime.trim(),
+        telefon: sobstvenik.telefon.trim(),
+        data: sobstvenik.data,
+        dobaveno_ot: user.id,
+      });
+    if (saglasieError) {
+      throw new Error(`Грешка при запис на съгласието: ${saglasieError.message}`);
+    }
+    revalidatePath("/admin");
+    redirect(`/admin/ot-sobstvenik?dobavena=${input.id}`);
   }
 
   revalidatePath("/listings");
