@@ -23,14 +23,10 @@ export default async function MessageThreadPage({
   const user = await getAuthedUser();
   const supabase = await createClient();
 
-  const [{ data: listing }, { data: otherProfile }, { data: messages }] =
+  const [{ data: listing }, { data: otherName }, { data: messages }] =
     await Promise.all([
       supabase.from("listings").select("id, title").eq("id", listingId).maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("name")
-        .eq("id", otherUserId)
-        .maybeSingle(),
+      supabase.rpc("ime_na_profil", { p_id: otherUserId }),
       supabase
         .from("messages")
         .select("id, from_user_id, content, created_at")
@@ -57,7 +53,7 @@ export default async function MessageThreadPage({
       </Link>
 
       <h1 className="mt-2 text-xl font-semibold">
-        {otherProfile?.name ?? "Потребител"}
+        {otherName ?? "Потребител"}
       </h1>
       <Link
         href={`/listings/${listing.id}`}
