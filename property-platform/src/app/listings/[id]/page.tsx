@@ -55,12 +55,20 @@ type ListingDetail = {
   profiles: { name: string | null } | null;
 };
 
+// Без телефон, адрес, описание и координати: тези колони са затворени за
+// нелогнати и в самата база, затова `*` за гост би гръмнало.
+const KOLONI_ZA_GOST =
+  "id, user_id, created_at, type, property_type, price, area_sqm, rooms, floor, year_built, heating, has_parking, has_elevator, has_terrace, is_furnished, title, status, project_name, construction_stage, completion_year";
+
 async function getListing(id: string) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data } = await supabase
     .from("listings")
     .select(
-      "*, cities(name), neighborhoods(name), listing_photos(url, position), listing_videos(url), profiles(name)",
+      `${user ? "*" : KOLONI_ZA_GOST}, cities(name), neighborhoods(name), listing_photos(url, position), listing_videos(url), profiles(name)`,
     )
     .eq("id", id)
     .maybeSingle();
