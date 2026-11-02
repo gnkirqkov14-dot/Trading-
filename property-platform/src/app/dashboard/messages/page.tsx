@@ -10,8 +10,6 @@ type RawMessage = {
   content: string;
   created_at: string;
   listings: { title: string } | null;
-  from_profile: { name: string | null } | null;
-  to_profile: { name: string | null } | null;
 };
 
 export const metadata: Metadata = { title: "Съобщения" };
@@ -23,7 +21,7 @@ export default async function MessagesPage() {
   const { data } = await supabase
     .from("messages")
     .select(
-      "from_user_id, to_user_id, listing_id, content, created_at, listings(title), from_profile:profiles!messages_from_user_id_fkey(name), to_profile:profiles!messages_to_user_id_fkey(name)",
+      "from_user_id, to_user_id, listing_id, content, created_at, listings(title)",
     )
     .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
     .order("created_at", { ascending: false });
@@ -40,6 +38,23 @@ export default async function MessagesPage() {
     return true;
   });
 
+  // Чужд профил не се чете директно: той съдържа и телефона.
+  const drugi = [
+    ...new Set(
+      conversations.map((m) =>
+        m.from_user_id === user.id ? m.to_user_id : m.from_user_id,
+      ),
+    ),
+  ];
+  const imena = new Map(
+    await Promise.all(
+      drugi.map(async (id) => {
+        const { data: ime } = await supabase.rpc("ime_na_profil", { p_id: id });
+        return [id, ime] as const;
+      }),
+    ),
+  );
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-semibold">Съобщения</h1>
@@ -53,9 +68,7 @@ export default async function MessagesPage() {
           {conversations.map((m) => {
             const otherId =
               m.from_user_id === user.id ? m.to_user_id : m.from_user_id;
-            const otherName =
-              (m.from_user_id === user.id ? m.to_profile : m.from_profile)
-                ?.name ?? "Потребител";
+            const otherName = imena.get(otherId) ?? "Потребител";
 
             return (
               <li key={`${m.listing_id}-${otherId}`}>
