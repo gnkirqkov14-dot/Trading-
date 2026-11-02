@@ -348,6 +348,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      complete_bulk_listing: {
+        Args: { p_id: string; p_urls: string[] };
+        Returns: undefined;
+      };
       process_listing_reminders: {
         Args: { p_secret: string };
         Returns: {

@@ -173,7 +173,10 @@ export default async function AdminPage({
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Админ панел — обяви</h1>
-        <div className="flex gap-4 text-sm">
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link href="/admin/bulk-import" className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900">
+            Пакетно внасяне
+          </Link>
           <Link
             href="/admin/ot-sobstvenik"
             className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
