@@ -32,6 +32,7 @@ export function NewListingForm({
   draft = null,
   initialPhotos = [],
   draftsLeft = null,
+  otSobstvenik = false,
 }: {
   userId: string;
   neighborhoods: Neighborhood[];
@@ -45,6 +46,8 @@ export function NewListingForm({
   initialPhotos?: File[];
   /** Колко пъти още профилът може да ползва помощника; null = не знаем. */
   draftsLeft?: number | null;
+  /** Админът качва вместо собственик, който е дал съгласие. */
+  otSobstvenik?: boolean;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +77,13 @@ export function NewListingForm({
   const [description, setDescription] = useState(draft?.description ?? "");
   const [address, setAddress] = useState(draft?.address ?? "");
   const [videoUrl, setVideoUrl] = useState("");
+  const [imeSobstvenik, setImeSobstvenik] = useState("");
+  const [telefonSobstvenik, setTelefonSobstvenik] = useState("");
+  const [dataSaglasie, setDataSaglasie] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [imaSaglasie, setImaSaglasie] = useState(false);
+  const [snimkiOtSobstvenik, setSnimkiOtSobstvenik] = useState(false);
   const [photos, setPhotos] = useState<File[]>(initialPhotos);
 
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +128,16 @@ export function NewListingForm({
       setError("Въведете адрес на имота.");
       return;
     }
-    if (!profilePhone.trim()) {
+    if (otSobstvenik) {
+      if (!imeSobstvenik.trim() || !telefonSobstvenik.trim()) {
+        setError("Въведете името и телефона на собственика.");
+        return;
+      }
+      if (!imaSaglasie || !snimkiOtSobstvenik) {
+        setError("Потвърдете съгласието и произхода на снимките.");
+        return;
+      }
+    } else if (!profilePhone.trim()) {
       setError("Добави телефон в профила си, преди да публикуваш обява.");
       return;
     }
@@ -183,6 +202,15 @@ export function NewListingForm({
         address,
         photoUrls,
         videoUrl: videoUrl.trim() || null,
+        ...(otSobstvenik
+          ? {
+              sobstvenik: {
+                ime: imeSobstvenik,
+                telefon: telefonSobstvenik,
+                data: dataSaglasie,
+              },
+            }
+          : {}),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Възникна грешка.");
@@ -402,6 +430,59 @@ export function NewListingForm({
             required
           />
         </div>
+        {otSobstvenik ? (
+          <div className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+            <div className="flex flex-col gap-1">
+              <label className={labelClass}>Име на собственика</label>
+              <input
+                value={imeSobstvenik}
+                onChange={(e) => setImeSobstvenik(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelClass}>Телефон на собственика</label>
+              <input
+                type="tel"
+                value={telefonSobstvenik}
+                onChange={(e) => setTelefonSobstvenik(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelClass}>Дата на съгласието</label>
+              <input
+                type="date"
+                value={dataSaglasie}
+                onChange={(e) => setDataSaglasie(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </div>
+            <label className="flex items-start gap-2 text-sm text-slate-700 sm:col-span-3">
+              <input
+                type="checkbox"
+                checked={imaSaglasie}
+                onChange={(e) => setImaSaglasie(e.target.checked)}
+                className="mt-1"
+              />
+              Собственикът се съгласи обявата, снимките и телефонът му да са на
+              imotpoint.com.
+            </label>
+            <label className="flex items-start gap-2 text-sm text-slate-700 sm:col-span-3">
+              <input
+                type="checkbox"
+                checked={snimkiOtSobstvenik}
+                onChange={(e) => setSnimkiOtSobstvenik(e.target.checked)}
+                className="mt-1"
+              />
+              Снимките са от собственика и по тях няма и не е махан чужд воден
+              знак.
+            </label>
+          </div>
+        ) : (
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Телефон за връзка</label>
           {profilePhone ? (
@@ -430,6 +511,7 @@ export function NewListingForm({
             Един телефон за всичките ти обяви — не се задава поотделно.
           </p>
         </div>
+        )}
         <div className="flex flex-col gap-1">
           <label className={labelClass}>Описание</label>
           <textarea
@@ -498,14 +580,16 @@ export function NewListingForm({
 
       <button
         type="submit"
-        disabled={submitting || !profilePhone.trim()}
+        disabled={submitting || (!otSobstvenik && !profilePhone.trim())}
         className="rounded-lg bg-slate-900 px-6 py-3 font-medium text-white transition hover:bg-slate-700 disabled:opacity-60"
       >
         {submitting
           ? uploadProgress
             ? `Качване на снимки (${uploadProgress.done}/${uploadProgress.total})…`
             : "Публикуване…"
-          : "Публикувай обявата"}
+          : otSobstvenik
+            ? "Запиши като скрита"
+            : "Публикувай обявата"}
       </button>
     </form>
   );

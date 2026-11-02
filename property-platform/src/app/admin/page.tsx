@@ -175,6 +175,12 @@ export default async function AdminPage({
         <h1 className="text-2xl font-semibold">Админ панел — обяви</h1>
         <div className="flex gap-4 text-sm">
           <Link
+            href="/admin/ot-sobstvenik"
+            className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
+          >
+            Обява от собственик
+          </Link>
+          <Link
             href="/admin/users"
             className="text-slate-500 underline underline-offset-2 hover:text-slate-900"
           >
