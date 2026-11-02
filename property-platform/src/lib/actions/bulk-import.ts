@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
+import { cleanListingDescription } from "@/lib/listing-description";
 import { bulkIdentity, normalizePlace, sourceIdFromUrl, validateBulkDraft, type BulkDraft, type BulkPreview } from "@/lib/bulk-import";
 
 function stableId(value: string) {
@@ -84,7 +85,7 @@ export async function prepareBulkListing(draft: BulkDraft) {
     const { error } = await db.from("listings").insert({
       id, user_id: admin.id, type: draft.type, property_type: draft.propertyType,
       city_id: cityId, neighborhood_id: neighborhoodId, price: draft.price, area_sqm: draft.area,
-      rooms: draft.rooms, floor: draft.floor, title: draft.title, description: draft.description,
+      rooms: draft.rooms, floor: draft.floor, title: draft.title, description: cleanListingDescription(draft.description) || null,
       address: draft.address, phone: draft.phone, status: "inactive",
       is_furnished: draft.furnished, has_elevator: draft.elevator, has_parking: draft.parking,
       has_terrace: draft.terrace, heating: draft.heating,

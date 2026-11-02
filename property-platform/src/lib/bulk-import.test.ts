@@ -44,6 +44,13 @@ test("repeated data retain identity across renamed folders", () => {
   assert.notEqual(bulkIdentity(a), bulkIdentity({ ...b, area: 81 }));
 });
 
+test("keeps the dedicated contact phone while removing contact data from the body", () => {
+  const input = description.replace("Дава под наем обзаведен апартамент, без асансьор. Паркомясто + 50 евро.", "Дава под наем обзаведен апартамент.\nТел: 0888123456\nСайт: www.example.bg");
+  const d = parseBulkDescription("test", input);
+  assert.equal(d.phone, "0878000000");
+  assert.equal(d.description, "Дава под наем обзаведен апартамент.");
+});
+
 test("rejects invalid client values and empty city rather than reading the next field", () => {
   const d = parseBulkDescription("test", description);
   assert.throws(() => validateBulkDraft({ ...d, price: Infinity }), /цена/);

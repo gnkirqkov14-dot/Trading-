@@ -1,4 +1,5 @@
 import type { ListingDealType, PropertyType } from "@/lib/types/database";
+import { cleanListingDescription } from "@/lib/listing-description";
 
 export type BulkDraft = {
   folder: string;
@@ -75,7 +76,7 @@ export function parseBulkDescription(folder: string, input: string): BulkDraft {
   const floorText = field("Етаж");
   const floor = /партер/i.test(floorText) ? 0 : floorText.match(/^-?\d+/)?.[0];
   const body = text.split(/^Вид имот:/mi)[0].replace(/^Описание на имота:\s*/i, "").trim();
-  const description = body + (/Цената е без ДДС/i.test(text) && !/Цената е без ДДС/i.test(body) ? "\n\nЦената е без ДДС." : "");
+  const description = cleanListingDescription(body + (/Цената е без ДДС/i.test(text) && !/Цената е без ДДС/i.test(body) ? "\n\nЦената е без ДДС." : ""));
   const city = field("Град");
   const neighborhood = field("Квартал");
   const deal = rent ? "под наем" : "за продажба";

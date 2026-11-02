@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { cleanListingDescription } from "@/lib/listing-description";
 import {
   KOLONI_BEZ_KONTAKTI,
   imaKontakti,
@@ -156,6 +157,7 @@ export default async function ListingDetailPage({
       : { data: null };
   const kontakti = otgovor as OtgovorKontakti;
   const detayli = imaKontakti(kontakti) ? kontakti : null;
+  const description = cleanListingDescription(detayli?.description);
   const hasFullAccess = detayli !== null;
   const prezLimit = kontakti !== null && !detayli;
   const { data: imeNaSobstvenika } = user
@@ -206,7 +208,7 @@ export default async function ListingDetailPage({
     // Google иска structured data да съвпада с видимото на страницата.
     // Нерегистриран посетител (вкл. Googlebot) не вижда описанието и
     // вижда само първата снимка — затова и тук е същото.
-    description: detayli?.description ?? undefined,
+    description: description || undefined,
     url: `${siteUrl}/listings/${listing.id}`,
     datePosted: listing.created_at,
     image: visiblePhotos.map((photo) => photo.url),
@@ -331,7 +333,7 @@ export default async function ListingDetailPage({
         ))}
       </dl>
 
-      {detayli?.description && (
+      {description && (
         // Описанието не се маркира с мишка — това е трудът на собственика
         // и първото, което конкурент би копирал. Ключалка от станиол е
         // (Ctrl+U я заобикаля), но спира мързеливия. Контактите отдолу
@@ -340,7 +342,7 @@ export default async function ListingDetailPage({
         <div className="mt-8 select-none">
           <h2 className="mb-2 text-lg font-semibold">Описание</h2>
           <p className="whitespace-pre-wrap text-slate-700">
-            {detayli.description}
+            {description}
           </p>
         </div>
       )}

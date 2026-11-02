@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/supabase/dal";
+import { cleanListingDescription } from "@/lib/listing-description";
 import {
   DEFAULT_LISTING_LIMIT,
   MAX_LISTING_PHOTOS,
@@ -145,7 +146,7 @@ export async function createListing(input: CreateListingInput) {
     has_terrace: input.hasTerrace,
     is_furnished: input.isFurnished,
     title: input.title.trim(),
-    description: input.description?.trim() || null,
+    description: cleanListingDescription(input.description) || null,
     address: input.address.trim(),
     phone,
   });
@@ -289,7 +290,7 @@ export async function updateListing(input: UpdateListingInput) {
       has_terrace: input.hasTerrace,
       is_furnished: input.isFurnished,
       title: input.title.trim(),
-      description: input.description?.trim() || null,
+      description: cleanListingDescription(input.description) || null,
       address: input.address.trim(),
       phone,
     })

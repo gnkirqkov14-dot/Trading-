@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
+import { cleanListingDescription } from "@/lib/listing-description";
 import sharp from "sharp";
 import { fetchImotListing, guessStage, type ImotListing } from "@/lib/imot-bg";
 import type { PropertyType } from "@/lib/types/database";
@@ -309,7 +310,7 @@ export async function importImotListing(input: ImportInput) {
     rooms: input.rooms,
     floor: input.floor,
     title: input.title.trim(),
-    description: input.description?.trim() || null,
+    description: cleanListingDescription(input.description) || null,
     address: input.address.trim(),
     // Телефонът е НА ФИРМАТА, не на профила, който я качва.
     phone: input.developerPhone.trim(),
@@ -615,7 +616,7 @@ export async function refreshDescriptions() {
       const { error } = await supabase
         .from("listings")
         .update({
-          description: data.description,
+          description: cleanListingDescription(data.description) || null,
           // Всички телефони от обявата, не само първият.
           ...(data.phones.length ? { phone: data.phones.join(", ") } : {}),
           // Адресът се пипа САМО ако източникът дава улица.
