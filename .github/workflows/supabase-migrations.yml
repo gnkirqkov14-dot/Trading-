@@ -11,6 +11,7 @@ on:
       - claude/ai-autonomous-trader-crypto-etf-anstj4
     paths:
       - "property-platform/supabase/migrations/**"
+      - ".github/workflows/supabase-migrations.yml"
   workflow_dispatch: {}
 
 jobs:
@@ -24,7 +25,8 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: "3.0.0"
+          github-token: ${{ github.token }}
 
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF"

@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { prepareBulkListing, previewBulkImport, finishBulkListing } from "@/lib/actions/bulk-import";
 import { bulkIdentity, parseBulkDescription, type BulkDraft, type BulkPreview } from "@/lib/bulk-import";
-import { createClient } from "@/lib/supabase/client";
 import { preparePhoto } from "@/lib/prepare-photo";
 
 type Row = { folder: string; draft?: BulkDraft; photos: File[]; state: BulkPreview["state"] | "uploading" | "done"; message: string; selected: boolean; listingId?: string };
@@ -104,13 +103,12 @@ export function BulkImport() {
     const selected = rows.filter(r => r.selected && r.draft && (r.state === "ready" || r.state === "resume" || r.state === "error"));
     if (!selected.length) return;
     running.current = true; setBusy(true); setError("");
-    const db = createClient();
     try {
       for (let index = 0; index < selected.length; index++) {
         const row = selected[index];
         update(row.folder, { state: "uploading", message: "Подготовка…" });
         try {
-          const { id, ownerId } = await prepareBulkListing(row.draft!);
+          const { id } = await prepareBulkListing(row.draft!);
           let done = 0;
           const names: string[] = new Array(row.photos.length);
           for (let from = 0; from < row.photos.length; from += 3) {
@@ -119,9 +117,11 @@ export function BulkImport() {
               const name = `bulk-${from + offset}-${digest}.jpg`;
               names[from + offset] = name;
               const photo = await preparePhoto(file);
-              const { error } = await db.storage.from("listing-photos").upload(`${ownerId}/${id}/${name}`, photo, { upsert: false, contentType: photo.type, cacheControl: "3600" });
-              // Immutable names preserve already-published files even if two tabs import together.
-              if (error && error.message !== "The resource already exists" && !("statusCode" in error && String(error.statusCode) === "409")) throw new Error(error.message);
+              const body = new FormData();
+              body.set("listingId", id); body.set("name", name); body.set("photo", photo);
+              const response = await fetch("/api/admin/bulk-photo", { method: "POST", body });
+              const result = await response.json();
+              if (!response.ok) throw new Error(result.error ?? "Качването не успя.");
               done++; update(row.folder, { message: `Качени ${done}/${row.photos.length} снимки` });
             }));
             const failed = results.find(r => r.status === "rejected");
