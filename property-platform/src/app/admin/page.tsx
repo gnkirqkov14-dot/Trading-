@@ -58,7 +58,7 @@ export default async function AdminPage({
   let zayavka = supabase
     .from("listings")
     .select(
-      "id, title, status, price, phone, user_id, view_count, created_at, updated_at, profiles(name, listing_limit)",
+      "id, title, status, price, user_id, view_count, created_at, updated_at, profiles(name, listing_limit)",
     )
     .order("created_at", { ascending: false });
   // Внесената обява помни откъде е дошла; ръчно пуснатата няма източник.
@@ -66,7 +66,20 @@ export default async function AdminPage({
     izvor === "vneseni"
       ? zayavka.not("source_url", "is", null).limit(300)
       : zayavka.is("source_url", null);
-  const { data: listings } = await zayavka;
+  const { data: bezTelefoni } = await zayavka;
+  const { data: telefoni } = await supabase.rpc("admin_telefoni_obyavi", {
+    p_ids: (bezTelefoni ?? []).map((row) => row.id),
+  });
+  const telefonNa = new Map(
+    ((telefoni ?? []) as { id: string; phone: string }[]).map((row) => [
+      row.id,
+      row.phone,
+    ]),
+  );
+  const listings = (bezTelefoni ?? []).map((row) => ({
+    ...row,
+    phone: telefonNa.get(row.id) ?? "",
+  }));
 
   const rows = (listings ?? []) as unknown as RawListingRow[];
 

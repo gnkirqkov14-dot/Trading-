@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  KOLONI_BEZ_KONTAKTI,
+  imaKontakti,
+  type OtgovorKontakti,
+} from "@/lib/listing-koloni";
 import { ZadalzhitelnaRegistraciya } from "@/components/zadalzhitelna-registraciya";
 import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
@@ -39,36 +44,22 @@ type ListingDetail = {
   has_terrace: boolean;
   is_furnished: boolean;
   title: string;
-  description: string | null;
-  address: string;
-  phone: string;
   status: ListingStatus;
   project_name: string | null;
   construction_stage: ConstructionStage | null;
   completion_year: number | null;
-  lat: number | null;
-  lng: number | null;
   cities: { name: string } | null;
   neighborhoods: { name: string } | null;
   listing_photos: { url: string; position: number }[];
   listing_videos: { url: string }[];
-  profiles: { name: string | null } | null;
 };
-
-// Без телефон, адрес, описание и координати: тези колони са затворени за
-// нелогнати и в самата база, затова `*` за гост би гръмнало.
-const KOLONI_ZA_GOST =
-  "id, user_id, created_at, type, property_type, price, area_sqm, rooms, floor, year_built, heating, has_parking, has_elevator, has_terrace, is_furnished, title, status, project_name, construction_stage, completion_year";
 
 async function getListing(id: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const { data } = await supabase
     .from("listings")
     .select(
-      `${user ? "*" : KOLONI_ZA_GOST}, cities(name), neighborhoods(name), listing_photos(url, position), listing_videos(url), profiles(name)`,
+      `${KOLONI_BEZ_KONTAKTI}, cities(name), neighborhoods(name), listing_photos(url, position), listing_videos(url)`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -155,7 +146,17 @@ export default async function ListingDetailPage({
     ? await supabase.from("profiles").select("phone").eq("id", user.id).single()
     : { data: null };
   const needsPhone = Boolean(user) && !isOwner && !viewer?.phone;
-  const hasFullAccess = isOwner || (Boolean(user) && !needsPhone);
+  const { data: otgovor } =
+    user && !needsPhone
+      ? await supabase.rpc("obyava_kontakti", { p_id: listing.id })
+      : { data: null };
+  const kontakti = otgovor as OtgovorKontakti;
+  const detayli = imaKontakti(kontakti) ? kontakti : null;
+  const hasFullAccess = detayli !== null;
+  const prezLimit = kontakti !== null && !detayli;
+  const { data: imeNaSobstvenika } = user
+    ? await supabase.rpc("ime_na_profil", { p_id: listing.user_id })
+    : { data: null };
 
   const photos = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
@@ -201,7 +202,7 @@ export default async function ListingDetailPage({
     // Google иска structured data да съвпада с видимото на страницата.
     // Нерегистриран посетител (вкл. Googlebot) не вижда описанието и
     // вижда само първата снимка — затова и тук е същото.
-    description: hasFullAccess ? listing.description ?? undefined : undefined,
+    description: detayli?.description ?? undefined,
     url: `${siteUrl}/listings/${listing.id}`,
     datePosted: listing.created_at,
     image: visiblePhotos.map((photo) => photo.url),
@@ -326,7 +327,7 @@ export default async function ListingDetailPage({
         ))}
       </dl>
 
-      {hasFullAccess && listing.description && (
+      {detayli?.description && (
         // Описанието не се маркира с мишка — това е трудът на собственика
         // и първото, което конкурент би копирал. Ключалка от станиол е
         // (Ctrl+U я заобикаля), но спира мързеливия. Контактите отдолу
@@ -335,20 +336,28 @@ export default async function ListingDetailPage({
         <div className="mt-8 select-none">
           <h2 className="mb-2 text-lg font-semibold">Описание</h2>
           <p className="whitespace-pre-wrap text-slate-700">
-            {listing.description}
+            {detayli.description}
           </p>
         </div>
       )}
 
-      {hasFullAccess && listing.lat != null && listing.lng != null && (
+      {detayli && detayli.lat != null && detayli.lng != null && (
         <ListingMap
-          lat={listing.lat}
-          lng={listing.lng}
-          label={listing.project_name ?? listing.address}
+          lat={detayli.lat}
+          lng={detayli.lng}
+          label={listing.project_name ?? detayli.address}
         />
       )}
 
-      {hasFullAccess && (
+      {prezLimit && (
+        <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+          <p className="font-medium text-slate-900">
+            Отвори много обяви за кратко време. Опитай отново след час.
+          </p>
+        </div>
+      )}
+
+      {detayli && (
         <div className="mt-8 rounded-2xl border border-slate-200 p-6">
           <h2 className="mb-3 text-lg font-semibold">Контакти</h2>
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -356,7 +365,7 @@ export default async function ListingDetailPage({
               <dt className="text-xs uppercase tracking-wide text-slate-400">
                 Адрес
               </dt>
-              <dd className="font-medium text-slate-900">{listing.address}</dd>
+              <dd className="font-medium text-slate-900">{detayli.address}</dd>
             </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-slate-400">
@@ -364,7 +373,7 @@ export default async function ListingDetailPage({
               </dt>
               <dd className="font-medium text-slate-900">
                 <PhoneLink
-                  phone={listing.phone}
+                  phone={detayli.phone}
                   listingId={listing.id}
                   city={listing.cities?.name}
                 />
@@ -389,7 +398,7 @@ export default async function ListingDetailPage({
         </div>
       )}
 
-      {!hasFullAccess && !needsPhone && (
+      {!user && (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
           <p className="font-medium text-slate-900">
             Регистрирай се безплатно, за да видиш всички снимки, описанието,
@@ -416,14 +425,14 @@ export default async function ListingDetailPage({
             <Link href="/register" className="font-medium text-slate-900 underline">
               Регистрирай се
             </Link>{" "}
-            безплатно, за да пишеш на {listing.profiles?.name ?? "собственика"}.
+            безплатно, за да пишеш на собственика.
           </p>
         ) : (
           <Link
             href={`/dashboard/messages/${listing.id}/${listing.user_id}`}
             className="inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white hover:bg-slate-700"
           >
-            Пиши на {listing.profiles?.name ?? "собственика"}
+            Пиши на {imeNaSobstvenika ?? "собственика"}
           </Link>
         )}
       </div>

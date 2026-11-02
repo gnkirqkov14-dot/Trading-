@@ -445,6 +445,18 @@ export interface Database {
         Args: { account: string };
         Returns: void;
       };
+      obyava_kontakti: {
+        Args: { p_id: string };
+        Returns: unknown;
+      };
+      admin_telefoni_obyavi: {
+        Args: { p_ids: string[] };
+        Returns: { id: string; phone: string }[];
+      };
+      ime_na_profil: {
+        Args: { p_id: string };
+        Returns: string | null;
+      };
     };
     Enums: {
       subscription_plan: SubscriptionPlan;

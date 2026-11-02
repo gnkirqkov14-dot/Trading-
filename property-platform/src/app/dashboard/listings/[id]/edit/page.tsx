@@ -1,3 +1,9 @@
+import {
+  KOLONI_BEZ_KONTAKTI,
+  imaKontakti,
+  type KontaktiNaObyava,
+  type OtgovorKontakti,
+} from "@/lib/listing-koloni";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAuthedUser } from "@/lib/supabase/dal";
@@ -47,18 +53,34 @@ export default async function EditListingPage({
   const [{ data: listingData }, { data: neighborhoods }] = await Promise.all([
     supabase
       .from("listings")
-      .select("*, listing_photos(url, position), listing_videos(url)")
+      .select(`${KOLONI_BEZ_KONTAKTI}, listing_photos(url, position), listing_videos(url)`)
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase.from("neighborhoods").select("id, city_id, name").order("name"),
   ]);
 
-  const listing = listingData as unknown as EditableListing | null;
+  const baza = listingData as unknown as Omit<
+    EditableListing,
+    keyof KontaktiNaObyava
+  > | null;
 
-  if (!listing) {
+  if (!baza) {
     notFound();
   }
+
+  const { data: kontakti } = await supabase.rpc("obyava_kontakti", {
+    p_id: baza.id,
+  });
+
+  if (!imaKontakti(kontakti as OtgovorKontakti)) {
+    notFound();
+  }
+
+  const listing = {
+    ...baza,
+    ...(kontakti as KontaktiNaObyava),
+  } as EditableListing;
 
   // Само текущо избраното населено място — останалите се търсят динамично
   // в SettlementSearch (в базата вече са всичките 5267).
