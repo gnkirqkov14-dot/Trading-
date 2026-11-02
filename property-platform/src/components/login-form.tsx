@@ -11,6 +11,9 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
   const oauthFailed = searchParams.get("error") === "oauth_failed";
+  const kam = searchParams.has("redirectTo")
+    ? `?redirectTo=${encodeURIComponent(redirectTo)}`
+    : "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -78,7 +81,7 @@ export function LoginForm() {
         <p className="text-center text-sm text-slate-500">
           Нямате акаунт?{" "}
           <Link
-            href="/register"
+            href={`/register${kam}`}
             className="font-medium text-slate-900 underline"
           >
             Регистрирайте се

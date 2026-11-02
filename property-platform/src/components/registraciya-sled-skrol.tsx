@@ -40,10 +40,11 @@ export function RegistraciyaSledSkrol() {
   const pathname = usePathname();
   const [otvoren, setOtvoren] = useState(false);
 
-  // Само там, където се разглеждат обяви. Формите и профилът не се пипат.
+  // Само в списъците с обяви. Формите и профилът не се пипат, а отворената
+  // обява има своя стена (`zadalzhitelna-registraciya.tsx`).
   const razreshena =
     pathname === "/" ||
-    pathname.startsWith("/listings") ||
+    pathname === "/listings" ||
     pathname.startsWith("/imoti");
   const pokazan = otvoren && razreshena;
 

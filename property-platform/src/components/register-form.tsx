@@ -1,16 +1,23 @@
 "use client";
 
 import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "@/lib/actions/auth";
 import { OAuthButtons } from "@/components/oauth-buttons";
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState(signUp, undefined);
+  const searchParams = useSearchParams();
+  // Само от стената на обявата: иначе новият потребител отива на таблото.
+  const redirectTo = searchParams.get("redirectTo") ?? "";
+  const kam = redirectTo
+    ? `?redirectTo=${encodeURIComponent(redirectTo)}`
+    : "";
 
   return (
     <div className="flex flex-col gap-4">
-      <OAuthButtons />
+      <OAuthButtons redirectTo={redirectTo || undefined} />
 
       <div className="flex items-center gap-3 text-xs text-slate-400">
         <div className="h-px flex-1 bg-slate-200" />
@@ -19,6 +26,8 @@ export function RegisterForm() {
       </div>
 
       <form action={action} className="flex flex-col gap-4">
+        <input type="hidden" name="redirectTo" value={redirectTo} />
+
         <div className="flex flex-col gap-1">
           <label htmlFor="name" className="text-sm font-medium text-slate-700">
             Име
@@ -98,7 +107,10 @@ export function RegisterForm() {
 
         <p className="text-center text-sm text-slate-500">
           Вече имате акаунт?{" "}
-          <Link href="/login" className="font-medium text-slate-900 underline">
+          <Link
+            href={`/login${kam}`}
+            className="font-medium text-slate-900 underline"
+          >
             Вход
           </Link>
         </p>
