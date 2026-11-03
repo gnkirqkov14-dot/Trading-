@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { checkPhone, PHONE_TAKEN_MESSAGE, safeNext } from "@/lib/phone";
 
-export type AuthFormState = { error: string } | undefined;
+// `pole` е полето, което формата оцветява в червено и показва.
+export type AuthFormState = { error: string; pole?: string } | undefined;
 
 function getRedirectTarget(formData: FormData) {
   const redirectTo = formData.get("redirectTo");
@@ -34,23 +35,23 @@ export async function signUp(
   const password = String(formData.get("password") ?? "");
 
   if (!name || name.length < 2) {
-    return { error: "Името трябва да е поне 2 символа." };
+    return { error: "Името трябва да е поне 2 символа.", pole: "name" };
   }
   if (!email) {
-    return { error: "Въведете валиден имейл." };
+    return { error: "Въведете валиден имейл.", pole: "email" };
   }
   if (!phone) {
-    return { error: "Телефонът е задължителен." };
+    return { error: "Телефонът е задължителен.", pole: "phone" };
   }
   if (password.length < 8) {
-    return { error: "Паролата трябва да е поне 8 символа." };
+    return { error: "Паролата трябва да е поне 8 символа.", pole: "password" };
   }
 
   const supabase = await createClient();
 
   const phoneError = await checkPhone(supabase, phone);
   if (phoneError) {
-    return { error: phoneError };
+    return { error: phoneError, pole: "phone" };
   }
 
   const { data: isBanned } = await supabase.rpc("is_contact_banned", {
@@ -58,7 +59,7 @@ export async function signUp(
     p_email: email,
   });
   if (isBanned) {
-    return { error: "Този имейл е блокиран за регистрация." };
+    return { error: "Този имейл е блокиран за регистрация.", pole: "email" };
   }
 
   const { error } = await supabase.auth.signUp({
@@ -74,6 +75,7 @@ export async function signUp(
       error: error.message.includes("Database error")
         ? PHONE_TAKEN_MESSAGE
         : error.message,
+      pole: error.message.includes("Database error") ? "phone" : undefined,
     };
   }
 
@@ -83,7 +85,9 @@ export async function signUp(
   // ⚠️ Регистрацията през Google минава по друг път
   // (`auth/callback`) и оттам не се различава нов потребител от
   // връщащ се — тези регистрации не се броят. Виж CLAUDE.md.
-  redirect(`${safeNext(String(formData.get("redirectTo") ?? ""))}?registered=1`);
+  redirect(
+    `${safeNext(String(formData.get("redirectTo") ?? ""))}?registered=1`,
+  );
 }
 
 export async function signIn(
