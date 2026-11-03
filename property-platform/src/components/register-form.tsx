@@ -1,19 +1,86 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signUp } from "@/lib/actions/auth";
+import { signUp, type AuthFormState } from "@/lib/actions/auth";
 import { OAuthButtons } from "@/components/oauth-buttons";
+
+const POLE = "rounded-lg border px-3 py-2 outline-none";
+const POLE_OK = `${POLE} border-slate-300 focus:border-slate-900`;
+const POLE_GRESHKA = `${POLE} border-red-500 bg-red-50 focus:border-red-600`;
+
+/** Текстът под празно или грешно попълнено поле. */
+function suobshtenie(pole: HTMLInputElement) {
+  if (pole.validity.valueMissing) return "Това поле е задължително.";
+  if (pole.validity.typeMismatch) return "Въведете валиден имейл.";
+  if (pole.validity.tooShort) return "Поне 8 символа.";
+  return pole.validationMessage;
+}
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState(signUp, undefined);
+  // Грешките по полета: от проверката в браузъра и от сървъра.
+  const [greshkiBrauzar, setGreshkiBrauzar] = useState<Record<string, string>>(
+    {},
+  );
+  // Грешката от сървъра изчезва, щом човекът поправи полето.
+  const [popravena, setPopravena] = useState<AuthFormState>();
+  const greshki =
+    state?.pole && popravena !== state
+      ? { ...greshkiBrauzar, [state.pole]: state.error }
+      : greshkiBrauzar;
+  const parvoNevalidno = useRef(true);
+  const formaRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!state?.pole) return;
+    const pole = formaRef.current?.elements.namedItem(state.pole);
+    if (pole instanceof HTMLInputElement) {
+      pole.scrollIntoView({ behavior: "smooth", block: "center" });
+      pole.focus({ preventScroll: true });
+    }
+  }, [state]);
+
+  // Вместо балончето на браузъра: полето светва в червено и страницата
+  // се връща до първото празно поле.
+  function naNevalidno(e: React.FormEvent<HTMLFormElement>) {
+    const pole = e.target;
+    if (!(pole instanceof HTMLInputElement)) return;
+    e.preventDefault();
+    setGreshkiBrauzar((g) => ({ ...g, [pole.name]: suobshtenie(pole) }));
+    if (parvoNevalidno.current) {
+      parvoNevalidno.current = false;
+      pole.scrollIntoView({ behavior: "smooth", block: "center" });
+      pole.focus({ preventScroll: true });
+      setTimeout(() => {
+        parvoNevalidno.current = true;
+      });
+    }
+  }
+
+  function naVavezhdane(e: React.FormEvent<HTMLFormElement>) {
+    const pole = e.target;
+    if (!(pole instanceof HTMLInputElement) || !greshki[pole.name]) return;
+    if (pole.name === state?.pole) setPopravena(state);
+    setGreshkiBrauzar((g) => {
+      const ostanali = { ...g };
+      delete ostanali[pole.name];
+      return ostanali;
+    });
+  }
+
+  const klas = (ime: string) => (greshki[ime] ? POLE_GRESHKA : POLE_OK);
+  const greshka = (ime: string) =>
+    greshki[ime] ? (
+      <p id={`${ime}-greshka`} className="text-xs font-medium text-red-600">
+        {greshki[ime]}
+      </p>
+    ) : null;
   const searchParams = useSearchParams();
   // Само от стената на обявата: иначе новият потребител отива на таблото.
   const redirectTo = searchParams.get("redirectTo") ?? "";
-  const kam = redirectTo
-    ? `?redirectTo=${encodeURIComponent(redirectTo)}`
-    : "";
+  const kam = redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -25,7 +92,13 @@ export function RegisterForm() {
         <div className="h-px flex-1 bg-slate-200" />
       </div>
 
-      <form action={action} className="flex flex-col gap-4">
+      <form
+        ref={formaRef}
+        action={action}
+        onInvalidCapture={naNevalidno}
+        onInput={naVavezhdane}
+        className="flex flex-col gap-4"
+      >
         <input type="hidden" name="redirectTo" value={redirectTo} />
 
         <div className="flex flex-col gap-1">
@@ -37,8 +110,11 @@ export function RegisterForm() {
             name="name"
             placeholder="Иван Иванов"
             required
-            className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
+            aria-invalid={!!greshki.name}
+            aria-describedby={greshki.name ? "name-greshka" : undefined}
+            className={klas("name")}
           />
+          {greshka("name")}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -51,8 +127,11 @@ export function RegisterForm() {
             type="email"
             placeholder="you@example.com"
             required
-            className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
+            aria-invalid={!!greshki.email}
+            aria-describedby={greshki.email ? "email-greshka" : undefined}
+            className={klas("email")}
           />
+          {greshka("email")}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -66,8 +145,11 @@ export function RegisterForm() {
             autoComplete="tel"
             placeholder="08xx xxx xxx"
             required
-            className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
+            aria-invalid={!!greshki.phone}
+            aria-describedby={greshki.phone ? "phone-greshka" : undefined}
+            className={klas("phone")}
           />
+          {greshka("phone")}
           <p className="text-xs text-slate-500">
             Чужд номер? Напиши го с кода на държавата, например +49 170 1234567.
           </p>
@@ -86,12 +168,15 @@ export function RegisterForm() {
             type="password"
             minLength={8}
             required
-            className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
+            aria-invalid={!!greshki.password}
+            aria-describedby={greshki.password ? "password-greshka" : undefined}
+            className={klas("password")}
           />
+          {greshka("password")}
           <p className="text-xs text-slate-500">Поне 8 символа.</p>
         </div>
 
-        {state?.error && (
+        {state?.error && !state.pole && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {state.error}
           </p>
