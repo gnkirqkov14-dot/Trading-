@@ -68,7 +68,7 @@ export type CreateListingInput = {
 export async function createListing(input: CreateListingInput) {
   const user = await getAuthedUser();
 
-  if (!input.title.trim()) {
+  if (!cleanListingDescription(input.title)) {
     throw new Error("Заглавието е задължително.");
   }
   if (!input.address.trim()) {
@@ -145,7 +145,7 @@ export async function createListing(input: CreateListingInput) {
     has_elevator: input.hasElevator,
     has_terrace: input.hasTerrace,
     is_furnished: input.isFurnished,
-    title: input.title.trim(),
+    title: cleanListingDescription(input.title),
     description: cleanListingDescription(input.description) || null,
     address: input.address.trim(),
     phone,
@@ -231,7 +231,7 @@ function storagePathFromUrl(url: string) {
 export async function updateListing(input: UpdateListingInput) {
   const user = await getAuthedUser();
 
-  if (!input.title.trim()) {
+  if (!cleanListingDescription(input.title)) {
     throw new Error("Заглавието е задължително.");
   }
   if (!input.address.trim()) {
@@ -289,7 +289,7 @@ export async function updateListing(input: UpdateListingInput) {
       has_elevator: input.hasElevator,
       has_terrace: input.hasTerrace,
       is_furnished: input.isFurnished,
-      title: input.title.trim(),
+      title: cleanListingDescription(input.title),
       description: cleanListingDescription(input.description) || null,
       address: input.address.trim(),
       phone,
