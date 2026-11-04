@@ -195,6 +195,8 @@ export interface Database {
           has_elevator: boolean;
           has_terrace: boolean;
           is_furnished: boolean;
+          socialni_mrezhi: boolean;
+          socialni_mrezhi_na: string | null;
           title: string;
           description: string | null;
           address: string;
@@ -232,6 +234,7 @@ export interface Database {
           has_elevator?: boolean;
           has_terrace?: boolean;
           is_furnished?: boolean;
+          socialni_mrezhi?: boolean;
           title: string;
           description?: string | null;
           address: string;

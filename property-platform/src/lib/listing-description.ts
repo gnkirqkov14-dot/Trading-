@@ -11,6 +11,19 @@ const CONTACT_WORDS = new Set([
   "вижте", "посетете", "пишете", "viber", "вайбър", "whatsapp", "ватсап",
 ]);
 
+/** Къде в текста има телефон, имейл или сайт: [начало, край] за всяко. */
+export function kontaktiVTekst(text: string): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const izraz of [PHONE, EMAIL, WEBSITE]) {
+    for (const m of text.matchAll(new RegExp(izraz.source, izraz.flags))) {
+      // Нашият знак „imotpoint.com“ стои на всяка снимка.
+      if (/imotpoint/i.test(m[0])) continue;
+      out.push([m.index, m.index + m[0].length]);
+    }
+  }
+  return out;
+}
+
 export function cleanListingDescription(value: string | null | undefined): string {
   if (!value) return "";
   return value.replace(/\r\n?/g, "\n").split("\n").map(line => {

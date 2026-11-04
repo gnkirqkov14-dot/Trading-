@@ -48,6 +48,7 @@ export function EditListingForm({
     hasElevator: boolean;
     hasTerrace: boolean;
     isFurnished: boolean;
+    socialniMrezhi: boolean;
     title: string;
     description: string | null;
     address: string;
@@ -84,6 +85,9 @@ export function EditListingForm({
   const [hasElevator, setHasElevator] = useState(initial.hasElevator);
   const [hasTerrace, setHasTerrace] = useState(initial.hasTerrace);
   const [isFurnished, setIsFurnished] = useState(initial.isFurnished);
+  const [socialniMrezhi, setSocialniMrezhi] = useState(
+    initial.socialniMrezhi,
+  );
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description ?? "");
   const [address, setAddress] = useState(initial.address);
@@ -202,6 +206,7 @@ export function EditListingForm({
         hasElevator,
         hasTerrace,
         isFurnished,
+        socialniMrezhi,
         title,
         description: description || null,
         address,
@@ -493,6 +498,24 @@ export function EditListingForm({
           </div>
         )}
       </section>
+
+      <label className="flex items-start gap-3 rounded-xl border border-accent-200 bg-accent-50 p-4 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={socialniMrezhi}
+          onChange={(e) => setSocialniMrezhi(e.target.checked)}
+          className="mt-0.5 h-4 w-4"
+        />
+        <span>
+          <span className="font-semibold text-slate-900">
+            Покажете обявата ми безплатно в социалните мрежи на imotpoint
+          </span>
+          <br />
+          Пускаме я във Facebook, Instagram и TikTok, за да я видят повече
+          купувачи и наематели. Телефонът ти не се публикува там. Можеш да
+          махнеш отметката по всяко време от редакцията на обявата.
+        </span>
+      </label>
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

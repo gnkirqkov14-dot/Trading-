@@ -31,6 +31,7 @@ type EditableListing = {
   has_elevator: boolean;
   has_terrace: boolean;
   is_furnished: boolean;
+  socialni_mrezhi: boolean;
   title: string;
   description: string | null;
   address: string;
@@ -53,7 +54,7 @@ export default async function EditListingPage({
   const [{ data: listingData }, { data: neighborhoods }] = await Promise.all([
     supabase
       .from("listings")
-      .select(`${KOLONI_BEZ_KONTAKTI}, listing_photos(url, position), listing_videos(url)`)
+      .select(`${KOLONI_BEZ_KONTAKTI}, socialni_mrezhi, listing_photos(url, position), listing_videos(url)`)
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -118,6 +119,7 @@ export default async function EditListingPage({
           hasElevator: listing.has_elevator,
           hasTerrace: listing.has_terrace,
           isFurnished: listing.is_furnished,
+          socialniMrezhi: listing.socialni_mrezhi,
           title: listing.title,
           description: listing.description,
           address: listing.address,
