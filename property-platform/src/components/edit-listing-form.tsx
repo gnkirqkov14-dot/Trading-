@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { preparePhoto } from "@/lib/prepare-photo";
 import { updateListing } from "@/lib/actions/listings";
+import { SocialniMrezhiIzbor } from "@/components/socialni-mrezhi-izbor";
 import {
   DEAL_TYPE_LABELS,
   HEATING_OPTIONS,
@@ -499,24 +500,10 @@ export function EditListingForm({
         )}
       </section>
 
-      <label className="flex items-start gap-3 rounded-xl border border-accent-200 bg-accent-50 p-4 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={socialniMrezhi}
-          onChange={(e) => setSocialniMrezhi(e.target.checked)}
-          className="mt-0.5 h-4 w-4"
-        />
-        <span>
-          <span className="font-semibold text-slate-900">
-            Покажете обявата ми безплатно в социалните мрежи на imotpoint
-          </span>
-          <br />
-          Пускаме я във Facebook, Instagram и TikTok, за да я видят повече
-          купувачи и наематели. Телефонът ти не се показва там, той остава
-          само в сайта. Можеш да махнеш отметката по всяко време от
-          редакцията на обявата.
-        </span>
-      </label>
+      <SocialniMrezhiIzbor
+        value={socialniMrezhi}
+        onChange={setSocialniMrezhi}
+      />
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
