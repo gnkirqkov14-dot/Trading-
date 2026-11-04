@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/supabase/dal";
 import { cleanListingDescription } from "@/lib/listing-description";
+import { mahniKontaktiOtSnimki } from "@/lib/mahni-tel-ot-snimki";
 import {
   DEFAULT_LISTING_LIMIT,
   MAX_LISTING_PHOTOS,
@@ -56,6 +58,8 @@ export type CreateListingInput = {
   hasElevator: boolean;
   hasTerrace: boolean;
   isFurnished: boolean;
+  /** Съгласие обявата да се пуска безплатно в социалните мрежи. */
+  socialniMrezhi: boolean;
   title: string;
   description: string | null;
   address: string;
@@ -145,6 +149,7 @@ export async function createListing(input: CreateListingInput) {
     has_elevator: input.hasElevator,
     has_terrace: input.hasTerrace,
     is_furnished: input.isFurnished,
+    socialni_mrezhi: input.socialniMrezhi,
     title: cleanListingDescription(input.title),
     description: cleanListingDescription(input.description) || null,
     address: input.address.trim(),
@@ -166,6 +171,8 @@ export async function createListing(input: CreateListingInput) {
   if (photosError) {
     throw new Error(`Грешка при запис на снимките: ${photosError.message}`);
   }
+  // Телефон върху снимка: махаме го, след като отговорът е тръгнал.
+  after(() => mahniKontaktiOtSnimki(supabase, input.id, input.photoUrls));
 
   if (input.videoUrl) {
     await supabase
@@ -214,6 +221,8 @@ export type UpdateListingInput = {
   hasElevator: boolean;
   hasTerrace: boolean;
   isFurnished: boolean;
+  /** Съгласие обявата да се пуска безплатно в социалните мрежи. */
+  socialniMrezhi: boolean;
   title: string;
   description: string | null;
   address: string;
@@ -289,6 +298,7 @@ export async function updateListing(input: UpdateListingInput) {
       has_elevator: input.hasElevator,
       has_terrace: input.hasTerrace,
       is_furnished: input.isFurnished,
+      socialni_mrezhi: input.socialniMrezhi,
       title: cleanListingDescription(input.title),
       description: cleanListingDescription(input.description) || null,
       address: input.address.trim(),
@@ -352,6 +362,7 @@ export async function updateListing(input: UpdateListingInput) {
     if (photosError) {
       throw new Error(`Грешка при запис на снимките: ${photosError.message}`);
     }
+    after(() => mahniKontaktiOtSnimki(supabase, input.id, input.newPhotoUrls));
   }
 
   await supabase.from("listing_videos").delete().eq("listing_id", input.id);

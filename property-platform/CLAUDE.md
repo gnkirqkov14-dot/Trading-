@@ -1096,6 +1096,22 @@ Viber четат само metadata, затова прегледът на спо�
 съгласието и две задължителни отметки. Обявата се записва скрита, с телефона на
 собственика, а съгласието стои в `obyava_saglasie`. Пуска се ръчно от `/admin`.
 
+### Телефони по снимките и съгласие за социалните мрежи
+
+`lib/mahni-tel-ot-snimki.ts` се пуска с `after()` от `createListing` и
+`updateListing`, само за новите снимки. Google Vision (`GOOGLE_VISION_API_KEY`)
+чете текста. Редовете минават през `kontaktiVTekst` от
+`listing-description.ts`, същите правила като за описанието. Намерената
+кутия се запълва от ръбовете ѝ, качва се като `*-bez-tel.jpg` и
+`listing_photos.url` се сменя. Без ключ функцията не прави нищо. Знакът
+„imotpoint.com“ се пропуска нарочно. Заглавието също минава през
+`cleanListingDescription`.
+
+`listings.socialni_mrezhi` е отметката „покажете обявата ми безплатно в
+социалните мрежи“ във формите за нова и редакция. Тригер записва
+`socialni_mrezhi_na`. Списъкът е в `/admin/socialni-mrezhi`. Гостите не
+виждат колоната.
+
 ### Web Analytics
 
 `@vercel/analytics` е добавен в `app/layout.tsx` (`<Analytics />` най-долу
