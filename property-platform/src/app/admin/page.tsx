@@ -69,6 +69,35 @@ export default async function AdminPage({
     .select("id")
     .eq("is_admin", true);
   const adminIds = (adminRows ?? []).map((r) => r.id).join(",");
+  // Бройки за обявите на клиентите: колко са и има ли нови днес.
+  const { nachaloDnes, predi7 } = vremena();
+  const klientski = () => {
+    let q = supabase
+      .from("listings")
+      .select("id", { count: "exact", head: true })
+      .is("source_url", null);
+    if (adminIds) q = q.not("user_id", "in", `(${adminIds})`);
+    return q;
+  };
+  const [vsichki, aktivni, dnes, sedmica, regDnes] = await Promise.all([
+    klientski(),
+    klientski().eq("status", "active"),
+    klientski().gte("created_at", nachaloDnes),
+    klientski().gte("created_at", predi7),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("is_admin", false)
+      .gte("created_at", nachaloDnes),
+  ]);
+  const broyki = [
+    { ime: "Нови днес", stoynost: dnes.count ?? 0, akcent: true },
+    { ime: "Последните 7 дни", stoynost: sedmica.count ?? 0 },
+    { ime: "Активни", stoynost: aktivni.count ?? 0 },
+    { ime: "Общо от клиенти", stoynost: vsichki.count ?? 0 },
+    { ime: "Нови регистрации днес", stoynost: regDnes.count ?? 0 },
+  ];
+
   zayavka =
     izvor === "vneseni"
       ? zayavka
@@ -230,6 +259,23 @@ export default async function AdminPage({
           </Link>
         </div>
       </div>
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {broyki.map((b) => (
+          <div
+            key={b.ime}
+            className={`rounded-xl border p-3 ${
+              b.akcent && b.stoynost > 0
+                ? "border-emerald-500 bg-emerald-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <p className="text-2xl font-semibold text-slate-900">
+              {b.stoynost}
+            </p>
+            <p className="text-xs text-slate-500">{b.ime}</p>
+          </div>
+        ))}
+      </div>
       <div className="mb-4 flex gap-2 text-sm">
         {(Object.keys(IZVORI) as Izvor[]).map((k) => (
           <Link
@@ -257,4 +303,32 @@ export default async function AdminPage({
       />
     </div>
   );
+}
+
+/** Началото на днешния ден и моментът преди 7 дни. */
+function vremena() {
+  const sega = new Date();
+  return {
+    nachaloDnes: nachaloNaDenya(sega),
+    predi7: new Date(sega.getTime() - 7 * 24 * 3600 * 1000).toISOString(),
+  };
+}
+
+/** Полунощ днес по българско време, като ISO низ. */
+function nachaloNaDenya(sega: Date): string {
+  const den = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Sofia",
+  }).format(sega); // ГГГГ-ММ-ДД
+  const chas = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Sofia",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(sega),
+  );
+  const utcChas = sega.getUTCHours();
+  const otmestvane = (((chas - utcChas) % 24) + 24) % 24; // 2 или 3
+  return new Date(
+    Date.parse(`${den}T00:00:00Z`) - otmestvane * 3600 * 1000,
+  ).toISOString();
 }
