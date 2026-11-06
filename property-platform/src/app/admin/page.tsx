@@ -40,7 +40,7 @@ type EditLogRow = {
 // Кои обяви да се показват. Внесените от imot.bg са хиляди и затрупваха
 // малкото, които хората пускат сами — а точно тях трябва да следиш.
 const IZVORI = {
-  potrebiteli: "От потребители",
+  potrebiteli: "От клиенти",
   vneseni: "Внесени (последните 300)",
 } as const;
 type Izvor = keyof typeof IZVORI;
@@ -62,10 +62,25 @@ export default async function AdminPage({
     )
     .order("created_at", { ascending: false });
   // Внесената обява помни откъде е дошла; ръчно пуснатата няма източник.
+  // Обявите от админ профила (внос или пуснати от теб) не са от клиенти,
+  // затова отиват при внесените, не при „От потребители“.
+  const { data: adminRows } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("is_admin", true);
+  const adminIds = (adminRows ?? []).map((r) => r.id).join(",");
   zayavka =
     izvor === "vneseni"
-      ? zayavka.not("source_url", "is", null).limit(300)
-      : zayavka.is("source_url", null);
+      ? zayavka
+          .or(
+            adminIds
+              ? `source_url.not.is.null,user_id.in.(${adminIds})`
+              : "source_url.not.is.null",
+          )
+          .limit(300)
+      : adminIds
+        ? zayavka.is("source_url", null).not("user_id", "in", `(${adminIds})`)
+        : zayavka.is("source_url", null);
   const { data: bezTelefoni } = await zayavka;
   const { data: telefoni } = await supabase.rpc("admin_telefoni_obyavi", {
     p_ids: (bezTelefoni ?? []).map((row) => row.id),
