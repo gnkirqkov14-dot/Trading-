@@ -473,6 +473,32 @@ export interface Database {
         Args: { p_id: string };
         Returns: unknown;
       };
+      admin_eksport_obyavi: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          status: string;
+          type: string;
+          property_type: string;
+          title: string;
+          description: string | null;
+          grad: string | null;
+          kvartal: string | null;
+          price: number;
+          area_sqm: number;
+          rooms: number | null;
+          floor: number | null;
+          phone: string | null;
+          telefon: string | null;
+          address: string | null;
+          sobstvenik: string | null;
+          created_at: string;
+          updated_at: string;
+          broy_snimki: number;
+          korica: string | null;
+          source_url: string | null;
+        }[];
+      };
       admin_telefoni_obyavi: {
         Args: { p_ids: string[] };
         Returns: { id: string; phone: string }[];

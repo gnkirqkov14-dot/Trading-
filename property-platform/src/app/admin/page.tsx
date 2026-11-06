@@ -178,6 +178,12 @@ export default async function AdminPage({
             Пакетно внасяне
           </Link>
           <Link
+            href="/admin/dublikati"
+            className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
+          >
+            Дубликати
+          </Link>
+          <Link
             href="/admin/socialni-mrezhi"
             className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
           >
