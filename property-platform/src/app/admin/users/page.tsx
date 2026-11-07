@@ -35,6 +35,7 @@ export default async function AdminUsersPage() {
     { data: listingOwners },
     { data: statsRows },
     { data: stateRows },
+    { data: gradRows },
   ] =
     await Promise.all([
       supabase
@@ -55,6 +56,8 @@ export default async function AdminUsersPage() {
       // Потвърден ли е имейлът и влизал ли е изобщо — живее в auth.users,
       // до което приложението няма пряк достъп.
       supabase.rpc("admin_user_states"),
+      // Приблизителен град по IP при регистрация (само за новите).
+      supabase.rpc("admin_gradove_potrebiteli"),
     ]);
 
   const bezImeyl = (profiles ?? []) as Omit<ProfileRow, "email">[];
@@ -82,6 +85,15 @@ export default async function AdminUsersPage() {
   const states = new Map(
     (stateRows ?? []).map((row) => [row.user_id, row]),
   );
+
+  const gradNa = new Map(
+    (gradRows ?? []).map((row) => [row.id, row.grad_ip]),
+  );
+  const poGradove = new Map<string, number>();
+  for (const g of gradNa.values()) {
+    poGradove.set(g, (poGradove.get(g) ?? 0) + 1);
+  }
+  const gradove = [...poGradove.entries()].sort((a, b) => b[1] - a[1]);
 
   const counts = statsRows?.[0];
   const stats = [
@@ -138,6 +150,31 @@ export default async function AdminUsersPage() {
         ))}
       </div>
 
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+        <p className="mb-2 text-sm font-semibold text-slate-900">
+          По градове{" "}
+          <span className="font-normal text-slate-500">
+            (приблизително, по IP при регистрация; само новите)
+          </span>
+        </p>
+        {gradove.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            Още няма. Ще се попълва с новите регистрации.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {gradove.map(([g, n]) => (
+              <span
+                key={g}
+                className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700"
+              >
+                {g} · <b>{n}</b>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <p className="mb-4 text-sm text-slate-500">
         Най-новите са най-отгоре. За всяка нова регистрация получаваш и
         писмо.
@@ -149,12 +186,13 @@ export default async function AdminUsersPage() {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Име</th>
                 <th className="px-4 py-3 font-medium">Имейл</th>
                 <th className="px-4 py-3 font-medium">Телефон</th>
+                <th className="px-4 py-3 font-medium">Град (IP)</th>
                 <th className="px-4 py-3 font-medium">Регистриран</th>
                 <th className="px-4 py-3 font-medium">Докъде стигна</th>
                 <th className="px-4 py-3 text-right font-medium">Обяви</th>
@@ -190,6 +228,11 @@ export default async function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     {row.phone || <span className="text-slate-400">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {gradNa.get(row.id) ?? (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                     {formatDateTime(row.created_at)}

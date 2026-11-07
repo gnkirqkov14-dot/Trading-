@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/phone";
+import { gradPoIp } from "@/lib/grad-po-ip";
 
 // Google/Facebook redirect the browser here (via Supabase) with a ?code=
 // after the user approves the OAuth consent screen. We exchange it for a
@@ -15,6 +16,8 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Нов профил от Google няма град; съществуващ не се пипа.
+      await supabase.rpc("zapishi_grad_ip", { p_grad: await gradPoIp() });
       // Google не дава телефон: без номер първо минава през профила.
       const { data: profile } = await supabase
         .from("profiles")

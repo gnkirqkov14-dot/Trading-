@@ -440,6 +440,14 @@ export interface Database {
           last_sign_in_at: string | null;
         }[];
       };
+      zapishi_grad_ip: {
+        Args: { p_grad: string };
+        Returns: undefined;
+      };
+      admin_gradove_potrebiteli: {
+        Args: Record<string, never>;
+        Returns: { id: string; grad_ip: string }[];
+      };
       admin_signup_stats: {
         Args: Record<string, never>;
         Returns: { total: number; today: number; this_week: number }[];

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { gradPoIp } from "@/lib/grad-po-ip";
 import { checkPhone, PHONE_TAKEN_MESSAGE, safeNext } from "@/lib/phone";
 
 // `pole` е полето, което формата оцветява в червено и показва.
@@ -65,7 +66,7 @@ export async function signUp(
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name, phone } },
+    options: { data: { name, phone, grad_ip: await gradPoIp() } },
   });
 
   if (error) {
