@@ -42,10 +42,10 @@ type ListingDetail = {
   floor: number | null;
   year_built: number | null;
   heating: string | null;
-  has_parking: boolean;
-  has_elevator: boolean;
-  has_terrace: boolean;
-  is_furnished: boolean;
+  has_parking: boolean | null;
+  has_elevator: boolean | null;
+  has_terrace: boolean | null;
+  is_furnished: boolean | null;
   title: string;
   status: ListingStatus;
   project_name: string | null;
@@ -191,12 +191,15 @@ export default async function ListingDetailPage({
     if (listing.year_built)
       facts.push(["Година на строеж", String(listing.year_built)]);
     if (listing.heating) facts.push(["Отопление", listing.heating]);
-    facts.push(["Паркинг", listing.has_parking ? "Да" : "Не"]);
-    facts.push(["Асансьор", listing.has_elevator ? "Да" : "Не"]);
-    facts.push(["Тераса", listing.has_terrace ? "Да" : "Не"]);
+    // null = собственикът/вносът не го е посочил — не го представяме като „Не“.
+    const daNe = (v: boolean | null, da = "Да", ne = "Не") =>
+      v === null ? "Не е посочено" : v ? da : ne;
+    facts.push(["Паркинг", daNe(listing.has_parking)]);
+    facts.push(["Асансьор", daNe(listing.has_elevator)]);
+    facts.push(["Тераса", daNe(listing.has_terrace)]);
     facts.push([
       "Обзавеждане",
-      listing.is_furnished ? "Обзаведен" : "Необзаведен",
+      daNe(listing.is_furnished, "Обзаведен", "Необзаведен"),
     ]);
   }
 

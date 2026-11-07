@@ -16,11 +16,24 @@ export type BulkDraft = {
   title: string;
   description: string;
   address: string;
-  furnished: boolean;
-  elevator: boolean;
-  parking: boolean;
-  terrace: boolean;
+  /** true = Да, false = Не, null = Не е посочено. */
+  furnished: boolean | null;
+  elevator: boolean | null;
+  parking: boolean | null;
+  terrace: boolean | null;
   heating: string | null;
+  /** Откъде е взета всяка стойност — показва се в прегледа преди внос. */
+  izvor?: Partial<Record<Udobstvo | "heating", "pole" | "tekst">>;
+};
+
+export type Udobstvo = "parking" | "elevator" | "terrace" | "furnished";
+
+/** Полетата в Описание.txt, с които се посочват удобствата изрично. */
+export const POLETA_UDOBSTVA: Record<Udobstvo, string> = {
+  parking: "Паркомясто",
+  elevator: "Асансьор",
+  terrace: "Тераса",
+  furnished: "Обзавеждане",
 };
 
 export type BulkPreview = {
@@ -55,7 +68,7 @@ export function validateBulkDraft(d: BulkDraft) {
     if (d[key] !== null && (!Number.isInteger(d[key]) || Math.abs(d[key]!) > 1000 || (key === "rooms" && d[key]! < 1))) throw new Error("Невалиден брой стаи или етаж.");
   }
   for (const key of ["furnished", "elevator", "parking", "terrace"] as const) {
-    if (typeof d[key] !== "boolean") throw new Error("Невалидни удобства.");
+    if (d[key] !== null && typeof d[key] !== "boolean") throw new Error("Невалидни удобства.");
   }
   if (d.heating !== null && (typeof d.heating !== "string" || d.heating.length > 120)) throw new Error("Невалидно отопление.");
 }
@@ -76,6 +89,10 @@ export function parseBulkDescription(folder: string, input: string): BulkDraft {
   const floorText = field("Етаж");
   const floor = /партер/i.test(floorText) ? 0 : floorText.match(/^-?\d+/)?.[0];
   const body = text.split(/^Вид имот:/mi)[0].replace(/^Описание на имота:\s*/i, "").trim();
+  // Полетата за удобства и отопление се четат само от частта с данните
+  // (от „Вид имот:“ надолу), за да не се объркат с ред от текста на обявата.
+  const danni = text.slice(text.search(/^Вид имот:/mi));
+  const poleOtDanni = (name: string) => danni.match(new RegExp(`^${name}:[ \\t]*([^\\n]*)$`, "mi"))?.[1].trim() ?? "";
   const description = cleanListingDescription(body + (/Цената е без ДДС/i.test(text) && !/Цената е без ДДС/i.test(body) ? "\n\nЦената е без ДДС." : ""));
   const city = field("Град");
   const neighborhood = field("Квартал");
@@ -90,14 +107,50 @@ export function parseBulkDescription(folder: string, input: string): BulkDraft {
     floor: floor === undefined ? null : Number(floor), phone,
     title: `${kind.charAt(0) + kind.slice(1).toLowerCase()} ${deal} в ${city}${neighborhood ? `, ${neighborhood}` : ""} — ${area ?? "?"} кв.м`,
     description, address: field("Адрес") || [neighborhood ? `кв. ${neighborhood}` : "", city].filter(Boolean).join(", "),
-    furnished: /обзаведен/i.test(body) && !/необзаведен/i.test(body),
-    elevator: /асансьор/i.test(body) && !/без асансьор|няма асансьор/i.test(body),
-    parking: /с паркомясто|със? (?:собствен |едно |две )?паркоме?ст/i.test(body) && !/без паркомясто/i.test(body),
-    terrace: /терас[аи]/i.test(body), heating: /климатик|климатици/i.test(body) ? "Климатик" : /\bТЕЦ\b/u.test(body) ? "ТЕЦ" : null,
+    furnished: null, elevator: null, parking: null, terrace: null, heating: null, izvor: {},
   };
+  // Първо изрично попълненото поле; без него — само ясно казаното в текста.
+  // Каквото не е посочено, остава „Не е посочено“, не „Не“.
+  for (const key of Object.keys(POLETA_UDOBSTVA) as Udobstvo[]) {
+    const pole = poleOtDanni(POLETA_UDOBSTVA[key]);
+    if (pole) {
+      const v = daNe(pole);
+      if (v === undefined) throw new Error(`${POLETA_UDOBSTVA[key]}: „${pole}“ — напиши Да, Не или Не е посочено.`);
+      draft[key] = v;
+      if (v !== null) draft.izvor![key] = "pole";
+    } else {
+      const v = OT_TEKSTA[key](body);
+      draft[key] = v;
+      if (v !== null) draft.izvor![key] = "tekst";
+    }
+  }
+  // Отоплението се записва дословно, само от полето. Климатик в текста не
+  // значи, че с него се отоплява.
+  const otoplenie = poleOtDanni("Отопление");
+  if (otoplenie && !/^не е посочено$|^-+$|^—$/i.test(otoplenie)) {
+    draft.heating = otoplenie.slice(0, 120);
+    draft.izvor!.heating = "pole";
+  }
   validateBulkDraft(draft);
   return draft;
 }
+
+/** Да / Не / Не е посочено от поле; undefined, ако стойността е неясна. */
+function daNe(value: string): boolean | null | undefined {
+  const v = value.toLocaleLowerCase("bg").replace(/[.\s]+$/, "").trim();
+  if (/^(?:не е посочено|непосочено|няма информация|-+|—|\?)$/.test(v)) return null;
+  if (/^(?:да|има|обзаведен[аио]?|частично обзаведен[аио]?)$/.test(v)) return true;
+  if (/^(?:не|няма|необзаведен[аио]?)$/.test(v)) return false;
+  return undefined;
+}
+
+/** Само изрично казаното в текста; иначе null („Не е посочено“). */
+const OT_TEKSTA: Record<Udobstvo, (t: string) => boolean | null> = {
+  furnished: t => /необзаведен|без обзавеждане/i.test(t) ? false : /обзаведен/i.test(t) ? true : null,
+  elevator: t => /без асансьор|няма асансьор/i.test(t) ? false : /асансьор/i.test(t) ? true : null,
+  parking: t => /без паркомясто|няма паркомясто/i.test(t) ? false : /с паркомясто|със? (?:собствен[оа]? |едно |две )?паркоме?ст/i.test(t) ? true : null,
+  terrace: t => /без тераса|няма тераса/i.test(t) ? false : /терас[аи]/i.test(t) ? true : null,
+};
 
 /** Same data produce the same identity even when imported from another ZIP. */
 export function bulkIdentity(d: BulkDraft) {

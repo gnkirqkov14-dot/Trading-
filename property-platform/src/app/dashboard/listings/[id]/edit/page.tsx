@@ -27,10 +27,10 @@ type EditableListing = {
   floor: number | null;
   year_built: number | null;
   heating: string | null;
-  has_parking: boolean;
-  has_elevator: boolean;
-  has_terrace: boolean;
-  is_furnished: boolean;
+  has_parking: boolean | null;
+  has_elevator: boolean | null;
+  has_terrace: boolean | null;
+  is_furnished: boolean | null;
   socialni_mrezhi: boolean;
   title: string;
   description: string | null;
@@ -115,10 +115,10 @@ export default async function EditListingPage({
           floor: listing.floor,
           yearBuilt: listing.year_built,
           heating: listing.heating,
-          hasParking: listing.has_parking,
-          hasElevator: listing.has_elevator,
-          hasTerrace: listing.has_terrace,
-          isFurnished: listing.is_furnished,
+          hasParking: listing.has_parking ?? false,
+          hasElevator: listing.has_elevator ?? false,
+          hasTerrace: listing.has_terrace ?? false,
+          isFurnished: listing.is_furnished ?? false,
           socialniMrezhi: listing.socialni_mrezhi,
           title: listing.title,
           description: listing.description,

@@ -58,3 +58,25 @@ test("rejects invalid client values and empty city rather than reading the next 
   assert.throws(() => validateBulkDraft({ ...d, phone: "not-a-phone" }), /телефон/);
   assert.throws(() => parseBulkDescription("test", description.replace("Град: Пловдив", "Град:")), /city/);
 });
+
+test("amenities: missing data stays null, explicit fields win, heating kept verbatim", () => {
+  const plain = description.replace("Дава под наем обзаведен апартамент, без асансьор. Паркомясто + 50 евро.", "Дава под наем апартамент с климатик.");
+  const d = parseBulkDescription("test", plain);
+  assert.equal(d.parking, null); assert.equal(d.elevator, null); assert.equal(d.terrace, null); assert.equal(d.furnished, null);
+  assert.equal(d.heating, null, "климатик в текста не е отопление");
+
+  const withFields = plain + "\nПаркомясто: Да\nАсансьор: Не\nТераса: Не е посочено\nОбзавеждане: Необзаведен\nОтопление: ТЕЦ или климатик";
+  const f = parseBulkDescription("test", withFields);
+  assert.equal(f.parking, true); assert.equal(f.elevator, false); assert.equal(f.terrace, null); assert.equal(f.furnished, false);
+  assert.equal(f.heating, "ТЕЦ или климатик");
+  assert.equal(f.izvor?.parking, "pole");
+  assert.doesNotMatch(f.description, /Паркомясто: Да/);
+
+  assert.throws(() => parseBulkDescription("test", plain + "\nАсансьор: може би"), /Да, Не или Не е посочено/);
+});
+
+test("amenities from text only when stated clearly", () => {
+  const d = parseBulkDescription("test", description);
+  assert.equal(d.furnished, true); assert.equal(d.elevator, false); assert.equal(d.izvor?.elevator, "tekst");
+  assert.equal(d.parking, null);
+});
