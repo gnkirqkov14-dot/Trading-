@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { prepareBulkListing, previewBulkImport, finishBulkListing } from "@/lib/actions/bulk-import";
-import { bulkIdentity, parseBulkDescription, type BulkDraft, type BulkPreview } from "@/lib/bulk-import";
+import { bulkIdentity, parseBulkDescription, POLETA_UDOBSTVA, type BulkDraft, type BulkPreview, type Udobstvo } from "@/lib/bulk-import";
 import { preparePhoto } from "@/lib/prepare-photo";
 
 type Row = { folder: string; draft?: BulkDraft; photos: File[]; state: BulkPreview["state"] | "uploading" | "done"; message: string; selected: boolean; listingId?: string };
@@ -69,6 +69,26 @@ async function readArchive(file: File): Promise<Row[]> {
       return { folder, photos: [], state: "error", message: error instanceof Error ? error.message : "Невалидна обява.", selected: false };
     }
   });
+}
+
+/** Разпознатите филтри: зелено Да, сиво Не, жълто „Не е посочено“. „от текста“ = познато от описанието, не от отделно поле. */
+function Filtri({ d }: { d: BulkDraft }) {
+  const chip = (key: string, ime: string, stoynost: string, cvyat: string, otTeksta: boolean) => (
+    <span key={key} className={`inline-block rounded px-1.5 py-0.5 ${cvyat}`}>
+      {ime}: <b>{stoynost}</b>{otTeksta && <span className="font-normal opacity-70"> (от текста)</span>}
+    </span>
+  );
+  return (
+    <div className="flex flex-wrap gap-1 text-xs">
+      {(Object.keys(POLETA_UDOBSTVA) as Udobstvo[]).map(key => {
+        const v = d[key];
+        return chip(key, POLETA_UDOBSTVA[key], v === null ? "Не е посочено" : v ? "Да" : "Не",
+          v === null ? "bg-amber-50 text-amber-800" : v ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700",
+          d.izvor?.[key] === "tekst");
+      })}
+      {chip("heating", "Отопление", d.heating ?? "Не е посочено", d.heating ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800", false)}
+    </div>
+  );
 }
 
 export function BulkImport() {
@@ -162,13 +182,13 @@ export function BulkImport() {
           <button type="button" disabled={busy || !selected} onClick={() => void publish()} className="rounded-lg bg-emerald-700 px-5 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">{busy ? "Внасяне…" : `Внеси избраните (${selected})`}</button>
         </div>
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600"><tr><th className="p-3">Избор</th><th className="p-3">Имот</th><th className="p-3">Цена</th><th className="p-3">Площ</th><th className="p-3">Снимки</th><th className="p-3">Състояние</th></tr></thead>
+          <table className="w-full min-w-[960px] text-left text-sm">
+            <thead className="bg-slate-50 text-slate-600"><tr><th className="p-3">Избор</th><th className="p-3">Имот</th><th className="p-3">Цена</th><th className="p-3">Площ</th><th className="p-3">Филтри</th><th className="p-3">Снимки</th><th className="p-3">Състояние</th></tr></thead>
             <tbody className="divide-y divide-slate-100">{rows.map(row => <tr key={row.folder}>
               <td className="p-3"><input type="checkbox" aria-label={`Избери ${row.folder}`} checked={row.selected} disabled={busy || !row.draft || row.state === "done" || row.state === "duplicate"} onChange={e => update(row.folder, { selected: e.target.checked })} className="size-4 accent-emerald-700" /></td>
               <td className="max-w-sm p-3"><div className="font-medium text-slate-900">{row.draft?.title ?? row.folder}</div><div className="mt-1 text-xs text-slate-500">{row.folder}</div></td>
               <td className="whitespace-nowrap p-3">{row.draft ? `${row.draft.price.toLocaleString("bg-BG")} €${row.draft.type === "rent" ? "/мес." : ""}` : "—"}</td>
-              <td className="p-3">{row.draft ? `${row.draft.area} м²` : "—"}</td><td className="p-3">{row.photos.length}</td>
+              <td className="p-3">{row.draft ? `${row.draft.area} м²` : "—"}</td><td className="min-w-56 p-3">{row.draft ? <Filtri d={row.draft} /> : "—"}</td><td className="p-3">{row.photos.length}</td>
               <td className={`max-w-xs p-3 ${row.state === "error" ? "text-red-700" : row.state === "done" ? "text-emerald-700" : "text-slate-600"}`}>{row.message}{row.listingId && <a href={`/listings/${row.listingId}`} target="_blank" rel="noreferrer" className="mt-1 block font-medium underline underline-offset-2">Виж обявата</a>}</td>
             </tr>)}</tbody>
           </table>
