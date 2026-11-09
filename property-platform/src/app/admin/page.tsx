@@ -48,19 +48,28 @@ type Izvor = keyof typeof IZVORI;
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ izvor?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   await requireAdmin();
   const supabase = await createClient();
-  const { izvor: izvorParam } = await searchParams;
-  const izvor: Izvor = izvorParam === "vneseni" ? "vneseni" : "potrebiteli";
+  const params = await searchParams;
+  const izvor: Izvor = params.izvor === "vneseni" ? "vneseni" : "potrebiteli";
+  const f = prochetiFiltri(params);
 
   let zayavka = supabase
     .from("listings")
     .select(
       "id, title, status, price, user_id, view_count, created_at, updated_at, profiles(name, listing_limit)",
     )
-    .order("created_at", { ascending: false });
+    .order(f.red === "cena_vazh" || f.red === "cena_nizh" ? "price" : "created_at", {
+      ascending: f.red === "cena_vazh" || f.red === "stari",
+    });
+  if (f.od) zayavka = zayavka.gte("created_at", polunoshtVSofia(f.od));
+  if (f.do) zayavka = zayavka.lt("created_at", polunoshtVSofia(f.do, 1));
+  if (f.cenaOd !== null) zayavka = zayavka.gte("price", f.cenaOd);
+  if (f.cenaDo !== null) zayavka = zayavka.lte("price", f.cenaDo);
+  if (f.grad) zayavka = zayavka.eq("city_id", f.grad);
+  if (f.status) zayavka = zayavka.eq("status", f.status);
   // Внесената обява помни откъде е дошла; ръчно пуснатата няма източник.
   // Обявите от админ профила (внос или пуснати от теб) не са от клиенти,
   // затова отиват при внесените, не при „От потребители“.
@@ -69,6 +78,30 @@ export default async function AdminPage({
     .select("id")
     .eq("is_admin", true);
   const adminIds = (adminRows ?? []).map((r) => r.id).join(",");
+  // Градовете в падащото меню: само тези, в които има обяви от раздела.
+  let gradoveZayavka = supabase
+    .from("listings")
+    .select("city_id, cities(name)")
+    .limit(5000);
+  gradoveZayavka =
+    izvor === "vneseni"
+      ? gradoveZayavka.or(
+          adminIds
+            ? `source_url.not.is.null,user_id.in.(${adminIds})`
+            : "source_url.not.is.null",
+        )
+      : adminIds
+        ? gradoveZayavka.is("source_url", null).not("user_id", "in", `(${adminIds})`)
+        : gradoveZayavka.is("source_url", null);
+  const { data: gradoveRows } = await gradoveZayavka;
+  const gradove = [
+    ...new Map(
+      ((gradoveRows ?? []) as unknown as { city_id: string; cities: { name: string } | null }[])
+        .filter((r) => r.cities)
+        .map((r) => [r.city_id, r.cities!.name]),
+    ).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1], "bg"));
+
   // Бройки за обявите на клиентите: колко са и има ли нови днес.
   const { nachaloDnes, predi7 } = vremena();
   const klientski = () => {
@@ -205,7 +238,7 @@ export default async function AdminPage({
 
   // Заподозрените (споделен телефон с 3+ обяви) най-отгоре, за да не се
   // налага да скролваш през целия списък, за да ги забележиш.
-  const sorted = [...rowsWithExtras].sort((a, b) => {
+  const sorted = f.red !== "agencii" ? rowsWithExtras : [...rowsWithExtras].sort((a, b) => {
     const countA = phoneCounts.get(a.phone) ?? 1;
     const countB = phoneCounts.get(b.phone) ?? 1;
     if (countA !== countB) return countB - countA;
@@ -291,6 +324,69 @@ export default async function AdminPage({
           </Link>
         ))}
       </div>
+      <form
+        method="get"
+        action="/admin"
+        className="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm sm:grid-cols-4"
+      >
+        {izvor === "vneseni" && <input type="hidden" name="izvor" value="vneseni" />}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Качена от</span>
+          <input type="date" name="od" defaultValue={f.od} className={POLE} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Качена до</span>
+          <input type="date" name="do" defaultValue={f.do} className={POLE} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Цена от €</span>
+          <input type="number" name="cena_od" min={0} inputMode="numeric" defaultValue={f.cenaOd ?? ""} className={POLE} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Цена до €</span>
+          <input type="number" name="cena_do" min={0} inputMode="numeric" defaultValue={f.cenaDo ?? ""} className={POLE} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Град</span>
+          <select name="grad" defaultValue={f.grad} className={POLE}>
+            <option value="">Всички</option>
+            {gradove.map(([id, ime]) => (
+              <option key={id} value={id}>{ime}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Статус</span>
+          <select name="status" defaultValue={f.status} className={POLE}>
+            <option value="">Всички</option>
+            {Object.entries(STATUSI).map(([k, ime]) => (
+              <option key={k} value={k}>{ime}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Подреди</span>
+          <select name="red" defaultValue={f.red} className={POLE}>
+            {Object.entries(REDOVE).map(([k, ime]) => (
+              <option key={k} value={k}>{ime}</option>
+            ))}
+          </select>
+        </label>
+        <div className="flex items-end gap-2">
+          <button type="submit" className="flex-1 rounded-lg bg-slate-900 px-3 py-2 font-medium text-white hover:bg-slate-700">
+            Филтрирай
+          </button>
+          <Link
+            href={izvor === "vneseni" ? "/admin?izvor=vneseni" : "/admin"}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-600 hover:bg-white"
+          >
+            Изчисти
+          </Link>
+        </div>
+      </form>
+      <p className="mb-2 text-sm font-medium text-slate-700">
+        Намерени: {sorted.length}
+      </p>
       <p className="mb-6 text-sm text-slate-500">
         Обяви със споделен телефон между {SUSPECTED_AGENCY_THRESHOLD}+ обяви
         са маркирани и подредени най-отгоре — вероятни агенции, не лични
@@ -330,5 +426,58 @@ function nachaloNaDenya(sega: Date): string {
   const otmestvane = (((chas - utcChas) % 24) + 24) % 24; // 2 или 3
   return new Date(
     Date.parse(`${den}T00:00:00Z`) - otmestvane * 3600 * 1000,
+  ).toISOString();
+}
+
+const POLE =
+  "w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-slate-900";
+
+const STATUSI = {
+  active: "Активна",
+  inactive: "Неактивна",
+  expired: "Изтекла",
+  archived: "Архивирана",
+} as const;
+
+const REDOVE = {
+  agencii: "Вероятни агенции отгоре",
+  novi: "Най-новите отгоре",
+  stari: "Най-старите отгоре",
+  cena_nizh: "Най-скъпите отгоре",
+  cena_vazh: "Най-евтините отгоре",
+} as const;
+
+/** Филтрите от адреса; невалидното се пренебрегва. */
+function prochetiFiltri(p: Record<string, string | undefined>) {
+  const den = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
+  const chislo = (v?: string) => {
+    const n = Number(v);
+    return v && Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  return {
+    od: den(p.od),
+    do: den(p.do),
+    cenaOd: chislo(p.cena_od),
+    cenaDo: chislo(p.cena_do),
+    grad: p.grad && /^[0-9a-f-]{36}$/i.test(p.grad) ? p.grad : "",
+    status: (p.status && p.status in STATUSI ? p.status : "") as keyof typeof STATUSI | "",
+    red: (p.red && p.red in REDOVE ? p.red : "agencii") as keyof typeof REDOVE,
+  };
+}
+
+/** Полунощ по българско време на дадения ден (+ dni), като ISO низ. */
+function polunoshtVSofia(den: string, dni = 0): string {
+  const obed = new Date(Date.parse(`${den}T12:00:00Z`) + dni * 86_400_000);
+  const chas = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Sofia",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(obed),
+  );
+  const otmestvane = chas - 12; // 2 или 3
+  const denIso = obed.toISOString().slice(0, 10);
+  return new Date(
+    Date.parse(`${denIso}T00:00:00Z`) - otmestvane * 3_600_000,
   ).toISOString();
 }
