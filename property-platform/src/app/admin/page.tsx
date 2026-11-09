@@ -384,9 +384,30 @@ export default async function AdminPage({
           </Link>
         </div>
       </form>
-      <p className="mb-2 text-sm font-medium text-slate-700">
-        Намерени: {sorted.length}
-      </p>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-slate-700">
+          Намерени: {sorted.length}
+        </p>
+        {/* Един бутон: най-новите отгоре; натиснат пак — най-старите. */}
+        <Link
+          href={`/admin?${new URLSearchParams({
+            ...Object.fromEntries(
+              Object.entries(params).filter(
+                (e): e is [string, string] => !!e[1] && e[0] !== "red",
+              ),
+            ),
+            red: f.red === "novi" ? "stari" : "novi",
+          }).toString()}`}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+            f.red === "novi" || f.red === "stari"
+              ? "bg-slate-900 text-white"
+              : "border border-slate-300 text-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          Подреди по дата{" "}
+          {f.red === "novi" ? "↓ най-новите" : f.red === "stari" ? "↑ най-старите" : ""}
+        </Link>
+      </div>
       <p className="mb-6 text-sm text-slate-500">
         Обяви със споделен телефон между {SUSPECTED_AGENCY_THRESHOLD}+ обяви
         са маркирани и подредени най-отгоре — вероятни агенции, не лични
