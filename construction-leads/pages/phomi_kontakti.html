@@ -9,7 +9,7 @@
   --bg: #eef1f1; --surface: #ffffff; --surface-2: #f5f8f8; --ink: #1a2224; --muted: #5a676b; --line: #d5dcdd;
   --accent: #0e6a70; --accent-ink: #ffffff; --accent-soft: #dcefef;
   --warn: #c2410c; --ok: #3c7a36; --gold: #a86a12;
-  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-later: #ece4fb; --st-aware: #ffffff; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3;
+  --st-none: #e7ebeb; --st-try: #fdf0d5; --st-later: #ece4fb; --st-aware: #ffffff; --st-int: #dcf2d6; --st-meet: #bfe5b2; --st-offer: #d9e8fb; --st-no: #e3e3e3; --st-wrong: #111111;
   --mail: #ff7a00; --st-mail: #ff7a00; --mail-ink: #ffffff; --mail-soft: #fff0e0;
   --meet: #1f9d3a; --meet-ink: #ffffff; --meet-soft: #dcf5e1;
   --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -20,7 +20,7 @@
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
   --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
-  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-aware: #3a4244; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-aware: #3a4244; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30; --st-wrong: #000000;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
   --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; } }
@@ -28,7 +28,7 @@
   --bg: #111718; --surface: #182022; --surface-2: #1e2729; --ink: #e5ecec; --muted: #9aa8ab; --line: #2b3537;
   --accent: #4fb5ba; --accent-ink: #0b1213; --accent-soft: #173638;
   --warn: #f08a5d; --ok: #85c47a; --gold: #e2b05a;
-  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-aware: #3a4244; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30;
+  --st-none: #232c2e; --st-try: #3a3220; --st-later: #332a45; --st-aware: #3a4244; --st-int: #213a22; --st-meet: #2c4d27; --st-offer: #1f3047; --st-no: #2a2f30; --st-wrong: #000000;
   --mail: #ff8a1f; --st-mail: #ff8a1f; --mail-ink: #1a1000; --mail-soft: #3d2410;
   --meet: #3cc45d; --meet-ink: #06200d; --meet-soft: #173a20;
   color-scheme: dark; }
@@ -124,6 +124,7 @@ body.reordering { user-select: none; cursor: grabbing; }
 .thought.glow-y, .thought.glow-g { border-radius: 50%; padding: 2px; }
 .thought.glow-y { background: #fde68a; box-shadow: 0 0 0 2px #facc15, 0 0 8px 2px rgba(250,204,21,.7); }
 .thought.glow-g { background: #bbf7d0; box-shadow: 0 0 0 2px #22a34a, 0 0 8px 2px rgba(34,163,74,.55); }
+.chip.wrong { color: #fff; border-color: #000; font-weight: 700; }
 .chip { font-size: 11.5px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); white-space: nowrap; }
 .due { color: var(--warn); font-weight: 600; }
 .late { color: var(--gold); font-weight: 600; }
@@ -278,7 +279,7 @@ footer { color: var(--muted); font-size: 12.5px; }
   const ST_BG = {"Не е звъняно": "--st-none", "Звъннато – няма отговор": "--st-try", "Да звънна пак": "--st-later", "Запознат": "--st-aware", "Разговор – интерес": "--st-int",
                  "Чака да изпратим имейл": "--st-mail", "Изпратен имейл": "--st-offer",
                  "Уговорена среща": "--st-meet", "Проведена среща": "--st-meet", "Изпратена оферта": "--st-offer",
-                 "Не се интересува": "--st-no", "Грешен номер": "--st-no"};
+                 "Не се интересува": "--st-no", "Грешен номер": "--st-wrong"};
   const KINDS = ["Архитект", "Клиент", "Инвеститор", "Строител", "Надзор", "Проектант", "Друго"];
   // Раздел „Запитвания“: контакти с group "inq" (запитвания от сайта/имейл), отделно от архитектите
   const isInq = (c) => c.group === "inq";
@@ -469,7 +470,7 @@ footer { color: var(--muted); font-size: 12.5px; }
       <span class="star" data-star="${esc(id)}" role="button" aria-pressed="${!!c.pick}" title="Избран" aria-label="Избран">★</span>
       <span class="nm">${i === undefined ? "" : readOnly || tab === "meet" ? `<span class="no">${i + 1}.</span> `
         : `<span class="no renum" data-renum="${esc(id)}" role="button" title="Цъкни и напиши нов номер" aria-label="Смени номера">${i + 1}.</span> `}<span class="dot ${dotOf(st)}" title="${esc(st)}"></span>${esc(c.name)}</span>
-      <span class="chipwrap"><span class="chip" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
+      <span class="chipwrap"><span class="chip${st === "Грешен номер" ? " wrong" : ""}" style="background: var(${ST_BG[st]})">${esc(st)}${st === "Изпратен имейл" && c.emailSent ? " · " + esc(fmtDay(c.emailSent).slice(0, 5)) : ""}</span>${thoughtHtml(id)}</span>
       <span class="sub">${st === "Уговорена среща" && c.meetAt ? `<span class="meet-when${c.meetAt.slice(0, 10) === today() ? " today" : ""}">среща ${esc(meetText(c))}</span>` : ""}${c.city ? `<span>${esc(c.city)}</span>` : ""}${c.kind ? `<span>${esc(c.kind)}</span>` : ""}
         ${(c.phones || [])[0] ? `<span class="ph">${esc(c.phones[0])}</span>` : ""}</span>
       ${readOnly ? "" : confirmDel === "r:" + id
