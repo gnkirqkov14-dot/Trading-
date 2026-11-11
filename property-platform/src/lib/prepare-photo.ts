@@ -44,7 +44,29 @@ function drawWatermark(
   context.fillText(WATERMARK_TEXT, width - padding, height - padding);
 }
 
+/** Същите граници важат и в базата (bucket-а `listing-photos`). */
+const POZVOLENI_VIDOVE = ["image/jpeg", "image/png", "image/webp"];
+const NAY_GOLYAM_FAYL = 10 * 1024 * 1024;
+
+/**
+ * Смалява и подписва снимката. Хвърля грешка с разбираем текст, ако
+ * файлът не е снимка, която сайтът приема — иначе човекът вижда
+ * техническото съобщение на хранилището.
+ */
 export async function preparePhoto(file: File): Promise<File> {
+  const gotova = await smaliIPodpishi(file);
+  if (!POZVOLENI_VIDOVE.includes(gotova.type)) {
+    throw new Error(
+      `„${file.name}“ не е снимка, която можем да качим. Приемаме JPG, PNG и WebP.`,
+    );
+  }
+  if (gotova.size > NAY_GOLYAM_FAYL) {
+    throw new Error(`„${file.name}“ е твърде голяма. Най-много 10 MB на снимка.`);
+  }
+  return gotova;
+}
+
+async function smaliIPodpishi(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
 
   try {
