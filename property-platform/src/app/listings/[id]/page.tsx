@@ -1,3 +1,4 @@
+import { jsonLdZaScript } from "@/lib/json-ld";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -240,7 +241,7 @@ export default async function ListingDetailPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdZaScript(jsonLd) }}
       />
 
       {/* Meta Pixel: разглеждане на имот. Праща се id, тип сделка,

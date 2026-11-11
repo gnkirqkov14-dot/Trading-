@@ -1,3 +1,4 @@
+import { jsonLdZaScript } from "@/lib/json-ld";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ListingCard, type ListingCardData } from "@/components/listing-card";
@@ -70,7 +71,7 @@ export default async function Home() {
     <div className="flex flex-1 flex-col">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdZaScript(jsonLd) }}
       />
 
       {/* Една снимка, обещанието на сайта и бутон към обявите — на
