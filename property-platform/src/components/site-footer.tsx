@@ -23,6 +23,9 @@ export function SiteFooter() {
           <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-900">
             {SUPPORT_EMAIL}
           </a>
+          <Link href="/poveritelnost" className="hover:text-slate-900">
+            Поверителност
+          </Link>
           <BiskvitkiVrazka />
         </nav>
 

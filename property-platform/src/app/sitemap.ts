@@ -37,6 +37,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: siteUrl, changeFrequency: "daily", priority: 1 },
     { url: `${siteUrl}/listings`, changeFrequency: "hourly", priority: 0.9 },
     { url: `${siteUrl}/about`, changeFrequency: "monthly", priority: 0.5 },
+    {
+      url: `${siteUrl}/poveritelnost`,
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
   ];
 
   // Само градовете с поне една обява — празните са noindex.
