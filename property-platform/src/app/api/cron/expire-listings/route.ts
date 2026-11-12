@@ -1,3 +1,4 @@
+import { otkazZaCron } from "@/lib/cron-auth";
 import { createClient } from "@/lib/supabase/server";
 import { sendListingReminderEmail } from "@/lib/email";
 
@@ -14,13 +15,8 @@ import { sendListingReminderEmail } from "@/lib/email";
 // is not enough. Without the env var we fail here with a clear message
 // instead of a bare "forbidden" from Postgres.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const otkaz = otkazZaCron(request);
+  if (otkaz) return otkaz;
 
   const secret = process.env.REMINDERS_DB_SECRET;
   if (!secret) {
