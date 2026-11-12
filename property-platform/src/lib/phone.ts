@@ -25,9 +25,20 @@ export async function checkPhone(
   return data === "ok" ? null : MESSAGES[data];
 }
 
-/** Само вътрешни адреси: `//чужд-сайт` също започва с наклонена черта. */
+/**
+ * Само вътрешни адреси. `//чужд-сайт` и `/\\чужд-сайт` също започват с
+ * наклонена черта, а браузърът ги чете като друг сайт. Затова адресът се
+ * сглобява спрямо измислен домейн и се приема само ако остане в него.
+ */
 export function safeNext(next: string | null | undefined) {
-  return next && next.startsWith("/") && !next.startsWith("//")
-    ? next
-    : "/dashboard";
+  if (!next || !next.startsWith("/") || /[\\\u0000-\u001f]/.test(next)) {
+    return "/dashboard";
+  }
+  try {
+    const url = new URL(next, "http://vatre.invalid");
+    if (url.origin !== "http://vatre.invalid") return "/dashboard";
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return "/dashboard";
+  }
 }
