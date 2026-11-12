@@ -519,6 +519,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      iztriy_profila_mi: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
     };
     Enums: {
       subscription_plan: SubscriptionPlan;
