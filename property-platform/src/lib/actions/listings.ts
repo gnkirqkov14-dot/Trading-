@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthedUser } from "@/lib/supabase/dal";
 import { cleanListingDescription } from "@/lib/listing-description";
 import { mahniKontaktiOtSnimki } from "@/lib/mahni-tel-ot-snimki";
+import { eSnimkaNaPotrebitel, eVideoLink } from "@/lib/snimka-url";
 import {
   DEFAULT_LISTING_LIMIT,
   MAX_LISTING_PHOTOS,
@@ -87,6 +88,8 @@ export async function createListing(input: CreateListingInput) {
   if (input.photoUrls.length > MAX_LISTING_PHOTOS) {
     throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
   }
+
+  proveriAdresi(user.id, input.photoUrls, input.videoUrl);
 
   const supabase = await createClient();
   const profileInfo = input.sobstvenik
@@ -231,6 +234,20 @@ export type UpdateListingInput = {
   newPhotoUrls: string[];
 };
 
+/** Спира адреси, които не са от нашето хранилище и папката на потребителя. */
+function proveriAdresi(
+  userId: string,
+  snimki: string[],
+  video: string | null,
+) {
+  if (!Array.isArray(snimki) || snimki.some((u) => !eSnimkaNaPotrebitel(u, userId))) {
+    throw new Error("Невалидна снимка. Качи снимките отново от формата.");
+  }
+  if (video && !eVideoLink(video)) {
+    throw new Error("Линкът към видеото трябва да започва с https://");
+  }
+}
+
 function storagePathFromUrl(url: string) {
   const marker = "/listing-photos/";
   const idx = url.indexOf(marker);
@@ -256,6 +273,8 @@ export async function updateListing(input: UpdateListingInput) {
   if (totalPhotos > MAX_LISTING_PHOTOS) {
     throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
   }
+
+  proveriAdresi(user.id, input.newPhotoUrls, input.videoUrl);
 
   const supabase = await createClient();
   const { phone } = await getProfileContactInfo(supabase, user.id);
