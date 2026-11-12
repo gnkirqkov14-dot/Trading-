@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getProfile } from "@/lib/supabase/dal";
 import { ProfileForm } from "@/components/profile-form";
+import { IztriyProfila } from "@/components/iztriy-profila";
 import { safeNext } from "@/lib/phone";
 
 export const metadata: Metadata = { title: "Настройки на профила" };
@@ -28,6 +29,7 @@ export default async function ProfilePage({
         initialPhone={profile?.phone ?? ""}
         next={needsPhone ? safeNext(next) : undefined}
       />
+      {!needsPhone && !profile?.is_admin && <IztriyProfila />}
     </div>
   );
 }
