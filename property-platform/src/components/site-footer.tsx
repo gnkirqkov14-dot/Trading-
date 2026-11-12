@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BiskvitkiVrazka } from "@/components/biskvitki-lenta";
 import { Logo } from "@/components/logo";
 import { SUPPORT_EMAIL } from "@/lib/listing-labels";
 import { SEO_CITIES } from "@/lib/seo-cities";
@@ -22,6 +23,7 @@ export function SiteFooter() {
           <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-slate-900">
             {SUPPORT_EMAIL}
           </a>
+          <BiskvitkiVrazka />
         </nav>
 
         <p className="text-xs text-slate-400">

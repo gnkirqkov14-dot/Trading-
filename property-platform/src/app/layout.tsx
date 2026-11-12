@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AiAssistant } from "@/components/assistant/ai-assistant";
+import { BiskvitkiLenta } from "@/components/biskvitki-lenta";
 import { MetaPixel } from "@/components/meta-pixel";
 import { Broyach } from "@/components/broyach";
 import { RegistraciyaSledSkrol } from "@/components/registraciya-sled-skrol";
@@ -99,10 +100,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <RegistraciyaSledSkrol />
         {/* Meta (Facebook) Pixel — за рекламите във Facebook/Instagram.
             ⚠️ За разлика от Vercel Analytics отгоре, ТОЙ слага
-            бисквитка и праща данни на Meta, тоест изисква съгласие по
-            GDPR. Виж CLAUDE.md, раздел „Meta Pixel". Зарежда се само
+            бисквитка и праща данни на Meta, затова тръгва чак след
+            „Приемам“ в лентата отдолу. Виж CLAUDE.md, раздел „Meta Pixel". Зарежда се само
             ако `NEXT_PUBLIC_FB_PIXEL_ID` е зададен. */}
         <MetaPixel />
+        <BiskvitkiLenta />
       </body>
     </html>
   );

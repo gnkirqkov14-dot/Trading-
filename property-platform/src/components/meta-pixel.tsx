@@ -4,16 +4,16 @@ import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef } from "react";
 import { FB_PIXEL_ID, pixelPageView } from "@/lib/fpixel";
+import { useSaglasie } from "@/lib/saglasie";
 
 /**
  * Meta (Facebook) Pixel.
  *
  * ⚠️ **Този скрипт слага бисквитка (`_fbp`) и праща данни на Meta.**
- * За разлика от Vercel Analytics (виж `layout.tsx`), това изисква
- * съгласие от посетителя по GDPR и чл. 4б от ЗЕС. Виж бележката в
- * CLAUDE.md, раздел „Meta Pixel". Когато се добави лента за съгласие,
- * единственото, което трябва да се промени тук, е условието в
- * `enabled` по-долу.
+ * По GDPR и чл. 4б от ЗЕС това иска предварително съгласие. Затова
+ * нищо от Meta не се зарежда, докато посетителят не натисне „Приемам“
+ * в `BiskvitkiLenta` (изборът се пази от `lib/saglasie.ts`). Събитията
+ * преди съгласието не се пращат и не се наваксват.
  *
  * ⚠️ В App Router навигацията е от страна на браузъра — адресът се
  * сменя без ново зареждане на страницата. Базовият скрипт праща
@@ -41,9 +41,9 @@ function PixelTracker() {
 
 export function MetaPixel() {
   // Без зададен `NEXT_PUBLIC_FB_PIXEL_ID` не се зарежда нищо — в dev
-  // и в preview това е нормалното състояние.
-  const enabled = Boolean(FB_PIXEL_ID);
-  if (!enabled) return null;
+  // и в preview това е нормалното състояние. Без съгласие също.
+  const saglasie = useSaglasie();
+  if (!FB_PIXEL_ID || saglasie !== "da") return null;
 
   return (
     <>
@@ -56,19 +56,10 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
+fbq('consent', 'grant');
 fbq('init', '${FB_PIXEL_ID}');
 fbq('track', 'PageView');`}
       </Script>
-      <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          src={`https://www.facebook.com/tr?id=${FB_PIXEL_ID}&ev=PageView&noscript=1`}
-          alt=""
-        />
-      </noscript>
       {/* `useSearchParams` кара всичко над себе си да се рендира в
           браузъра, ако не е зад Suspense. Затова следенето живее в
           отделен компонент — иначе цялата страница губи сървърното
