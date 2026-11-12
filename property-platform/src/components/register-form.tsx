@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signUp, type AuthFormState } from "@/lib/actions/auth";
 import { OAuthButtons } from "@/components/oauth-buttons";
+import { Turnstile } from "@/components/turnstile";
+import { TURNSTILE_SITE_KEY } from "@/lib/turnstile";
 
 const POLE = "rounded-lg border px-3 py-2 outline-none";
 const POLE_OK = `${POLE} border-slate-300 focus:border-slate-900`;
@@ -20,6 +22,9 @@ function suobshtenie(pole: HTMLInputElement) {
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState(signUp, undefined);
+  // „Не съм робот“: без жетон бутонът чака (само ако проверката е включена).
+  const [zheton, setZheton] = useState("");
+  const chakaProverka = Boolean(TURNSTILE_SITE_KEY) && !zheton;
   // Грешките по полета: от проверката в браузъра и от сървъра.
   const [greshkiBrauzar, setGreshkiBrauzar] = useState<Record<string, string>>(
     {},
@@ -182,9 +187,11 @@ export function RegisterForm() {
           </p>
         )}
 
+        <Turnstile onToken={setZheton} resetKey={state} />
+
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || chakaProverka}
           className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-700 disabled:opacity-60"
         >
           {pending ? "Регистрация…" : "Регистрирай се"}

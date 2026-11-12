@@ -14,6 +14,8 @@ import { notifyAdminOfSignup } from "@/lib/notify-signup";
 import { ZadalzhitelnaRegistraciya } from "@/components/zadalzhitelna-registraciya";
 import { ReportAgencyButton } from "@/components/report-agency-button";
 import { PhoneLink } from "@/components/phone-link";
+import { TelefonSProverka } from "@/components/telefon-s-proverka";
+import { telefonNaObyava, telefonSProverka } from "@/lib/telefon";
 import { PixelEvent } from "@/components/pixel-event";
 import { ListingGallery } from "@/components/listing-gallery";
 import { ListingMap } from "@/components/listing-map";
@@ -160,6 +162,13 @@ export default async function ListingDetailPage({
   const detayli = imaKontakti(kontakti) ? kontakti : null;
   const description = cleanListingDescription(detayli?.description);
   const hasFullAccess = detayli !== null;
+  // Телефонът: на чужда обява стои зад „Покажи телефона“ + „не съм робот“
+  // (ако проверката е настроена). Иначе идва направо от сървъра.
+  const telefonZadProverka = Boolean(detayli) && !isOwner && telefonSProverka();
+  const telefon =
+    detayli && !telefonZadProverka
+      ? ((await telefonNaObyava(supabase, listing.id)) ?? detayli.phone ?? null)
+      : null;
   const prezLimit = kontakti !== null && !detayli;
   const { data: imeNaSobstvenika } = user
     ? await supabase.rpc("ime_na_profil", { p_id: listing.user_id })
@@ -382,11 +391,20 @@ export default async function ListingDetailPage({
                 Телефон
               </dt>
               <dd className="font-medium text-slate-900">
-                <PhoneLink
-                  phone={detayli.phone}
-                  listingId={listing.id}
-                  city={listing.cities?.name}
-                />
+                {telefonZadProverka ? (
+                  <TelefonSProverka
+                    listingId={listing.id}
+                    city={listing.cities?.name}
+                  />
+                ) : telefon ? (
+                  <PhoneLink
+                    phone={telefon}
+                    listingId={listing.id}
+                    city={listing.cities?.name}
+                  />
+                ) : (
+                  "—"
+                )}
               </dd>
             </div>
           </dl>

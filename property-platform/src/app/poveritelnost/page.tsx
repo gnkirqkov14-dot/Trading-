@@ -145,6 +145,11 @@ export default function PoveritelnostPage() {
             <strong>Resend</strong> — изпращането на имейли.
           </li>
           <li>
+            <strong>Cloudflare</strong> — проверката „не съм робот“ при вход,
+            регистрация и показване на телефон. Вижда IP адреса и данни за
+            браузъра ти.
+          </li>
+          <li>
             <strong>Google</strong> — само ако влизаш с Google профила си.
           </li>
           <li>
