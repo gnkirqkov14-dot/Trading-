@@ -6,9 +6,19 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { gradPoIp } from "@/lib/grad-po-ip";
 import { checkPhone, PHONE_TAKEN_MESSAGE, safeNext } from "@/lib/phone";
+import { TURNSTILE_GRESHKA, TURNSTILE_POLE } from "@/lib/turnstile";
 
 // `pole` е полето, което формата оцветява в червено и показва.
 export type AuthFormState = { error: string; pole?: string } | undefined;
+
+/**
+ * Жетонът от „не съм робот“. Проверява го Supabase (Attack Protection);
+ * докато проверката там не е включена, просто се подминава.
+ */
+function zheton(formData: FormData) {
+  const z = formData.get(TURNSTILE_POLE);
+  return typeof z === "string" && z ? z : undefined;
+}
 
 function getRedirectTarget(formData: FormData) {
   const redirectTo = formData.get("redirectTo");
@@ -64,9 +74,15 @@ export async function signUp(
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name, phone, grad_ip: await gradPoIp() } },
+    options: {
+      data: { name, phone, grad_ip: await gradPoIp() },
+      captchaToken: zheton(formData),
+    },
   });
 
+  if (error?.code === "captcha_failed") {
+    return { error: TURNSTILE_GRESHKA };
+  }
   if (error) {
     // Тригерът в базата е последната проверка: двама с един номер в
     // една и съща секунда стигат дотук и получават обща грешка на Supabase.
@@ -104,8 +120,12 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
+    options: { captchaToken: zheton(formData) },
   });
 
+  if (error?.code === "captcha_failed") {
+    return { error: TURNSTILE_GRESHKA };
+  }
   if (error) {
     return { error: "Грешен имейл или парола." };
   }

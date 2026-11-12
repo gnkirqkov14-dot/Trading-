@@ -1,13 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "@/lib/actions/auth";
 import { OAuthButtons } from "@/components/oauth-buttons";
+import { Turnstile } from "@/components/turnstile";
+import { TURNSTILE_SITE_KEY } from "@/lib/turnstile";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(signIn, undefined);
+  // „Не съм робот“: без жетон бутонът чака (само ако проверката е включена).
+  const [zheton, setZheton] = useState("");
+  const chakaProverka = Boolean(TURNSTILE_SITE_KEY) && !zheton;
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
   const oauthFailed = searchParams.get("error") === "oauth_failed";
@@ -70,9 +75,11 @@ export function LoginForm() {
           </p>
         )}
 
+        <Turnstile onToken={setZheton} resetKey={state} />
+
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || chakaProverka}
           className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-700 disabled:opacity-60"
         >
           {pending ? "Влизане…" : "Вход"}

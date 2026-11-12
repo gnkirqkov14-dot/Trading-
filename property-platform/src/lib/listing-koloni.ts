@@ -8,7 +8,8 @@ export const KOLONI_BEZ_KONTAKTI =
 export type KontaktiNaObyava = {
   description: string | null;
   address: string;
-  phone: string;
+  /** Само за собственика; за другите идва през `obyava_telefon`. */
+  phone: string | null;
   lat: number | null;
   lng: number | null;
 };

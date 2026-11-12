@@ -481,6 +481,10 @@ export interface Database {
         Args: { p_id: string };
         Returns: unknown;
       };
+      obyava_telefon: {
+        Args: { p_id: string; p_secret: string };
+        Returns: string | null;
+      };
       admin_eksport_obyavi: {
         Args: Record<PropertyKey, never>;
         Returns: {
