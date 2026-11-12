@@ -12,9 +12,7 @@ export type AuthFormState = { error: string; pole?: string } | undefined;
 
 function getRedirectTarget(formData: FormData) {
   const redirectTo = formData.get("redirectTo");
-  return typeof redirectTo === "string" && redirectTo.startsWith("/")
-    ? redirectTo
-    : "/dashboard";
+  return safeNext(typeof redirectTo === "string" ? redirectTo : null);
 }
 
 async function getSiteOrigin() {
@@ -129,7 +127,7 @@ export async function signInWithOAuth(
 ) {
   const supabase = await createClient();
   const origin = await getSiteOrigin();
-  const safeRedirect = redirectTo.startsWith("/") ? redirectTo : "/dashboard";
+  const safeRedirect = safeNext(redirectTo);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
