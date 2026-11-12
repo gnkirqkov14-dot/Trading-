@@ -17,6 +17,7 @@ import sharp from "sharp";
 import { revalidatePath } from "next/cache";
 import type { createClient } from "@/lib/supabase/server";
 import { kontaktiVTekst } from "@/lib/listing-description";
+import { eNashaSnimka } from "@/lib/snimka-url";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type Kutiya = { x0: number; y0: number; x1: number; y1: number };
@@ -157,6 +158,8 @@ export async function mahniKontaktiOtSnimki(
   let promeneni = 0;
   for (const url of urls) {
     try {
+      // Теглим само от нашето хранилище, никога от подаден чужд адрес.
+      if (!eNashaSnimka(url)) continue;
       const pat = url.split("/listing-photos/")[1];
       if (!pat) continue;
       const res = await fetch(url);
