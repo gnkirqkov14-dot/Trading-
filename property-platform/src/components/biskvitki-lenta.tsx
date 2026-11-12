@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FB_PIXEL_ID } from "@/lib/fpixel";
 import { useSaglasie, zapishiSaglasie } from "@/lib/saglasie";
 
@@ -26,7 +27,10 @@ export function BiskvitkiLenta() {
         <p className="flex-1 text-sm text-slate-700">
           Искаме да ползваме бисквитки на Meta (Facebook), за да мерим
           рекламите си. Те пращат на Meta кои страници гледаш. Сайтът работи
-          изцяло и без тях.
+          изцяло и без тях.{" "}
+          <Link href="/poveritelnost" className="underline underline-offset-2">
+            Повече
+          </Link>
         </p>
         <div className="flex shrink-0 gap-2">
           <button
