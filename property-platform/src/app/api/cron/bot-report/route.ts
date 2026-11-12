@@ -1,3 +1,4 @@
+import { otkazZaCron } from "@/lib/cron-auth";
 import { createClient } from "@/lib/supabase/server";
 import { sendBotReportEmail } from "@/lib/email";
 
@@ -5,13 +6,8 @@ import { sendBotReportEmail } from "@/lib/email";
 // спрял копирачи, собственикът получава имейл кои и колко. Без опити
 // писмо не се праща.
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const otkaz = otkazZaCron(request);
+  if (otkaz) return otkaz;
 
   const secret = process.env.REMINDERS_DB_SECRET;
   if (!secret) {
