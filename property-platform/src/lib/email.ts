@@ -155,3 +155,48 @@ export async function sendBotReportEmail(report: BotReport) {
     throw new Error(`Resend error ${res.status}: ${await res.text()}`);
   }
 }
+
+// Същият адрес като другите писма, но с името на сайта пред него.
+const OT_IMOT_POINT = FROM_EMAIL.replace(/^.*</, "IMOT POINT <");
+
+export type PismoZaDostap = { email: string; name: string | null };
+
+/**
+ * „Профилът ти е активен“ за хората, чийто имейл потвърдихме на ръка,
+ * защото писмото за потвърждение не е стигнало до тях. Всички отиват с
+ * една заявка (Resend приема до 100 наведнъж), за да не опрем в лимита
+ * от 2 заявки в секунда.
+ */
+export async function sendPismaZaDostap(hora: PismoZaDostap[]) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("Липсва RESEND_API_KEY.");
+  }
+  if (!hora.length) return;
+
+  const res = await fetch("https://api.resend.com/emails/batch", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      hora.map((h) => {
+        const ime = h.name?.trim();
+        return {
+          from: OT_IMOT_POINT,
+          to: h.email,
+          subject: "Профилът ти в IMOT POINT е активен",
+          html: `<p>${ime ? `Здравей, ${escapeHtml(ime)}` : "Здравей"},</p>
+<p>Регистрацията ти в imotpoint.com е потвърдена. Писмото за потвърждение се е забавило по наша вина, затова активирахме профила ти вместо теб.</p>
+<p>Можеш да влезеш с имейла и паролата, които избра при регистрацията:</p>
+<p><a href="${SITE_URL}/login">Вход в IMOT POINT</a></p>
+<p>Извиняваме се за неудобството.<br>Екипът на IMOT POINT</p>`,
+        };
+      }),
+    ),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+  }
+}

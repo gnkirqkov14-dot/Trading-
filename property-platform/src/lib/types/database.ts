@@ -431,6 +431,15 @@ export interface Database {
         Args: Record<string, never>;
         Returns: import("@/lib/types/statistika").Statistika;
       };
+      /** Потвърдените на ръка, които още чакат писмо, че имат достъп. */
+      admin_pisma_za_dostap_chakashti: {
+        Args: { p_limit?: number };
+        Returns: { user_id: string; email: string; name: string | null }[];
+      };
+      admin_pisma_za_dostap_otbelezhi: {
+        Args: { p_ids: string[] };
+        Returns: undefined;
+      };
       admin_user_states: {
         Args: Record<string, never>;
         /** От auth.users — докъде е стигнал всеки при регистрацията. */
