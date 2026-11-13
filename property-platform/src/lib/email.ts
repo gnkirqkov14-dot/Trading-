@@ -78,6 +78,11 @@ const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL ?? "imotpoint@gmail.com";
 
 export async function sendNewSignupEmail(row: NewSignupRow) {
   if (!process.env.RESEND_API_KEY) return;
+  // Спряно: при ~100 регистрации на ден тези писма изяждат безплатната
+  // квота на Resend (100/ден) и не остава за писмата до самите хора.
+  // Новите регистрации се виждат в /admin/users. Пуска се обратно с
+  // PISMA_NOVA_REGISTRACIYA=1 във Vercel.
+  if (process.env.PISMA_NOVA_REGISTRACIYA !== "1") return;
 
   const name = row.profile_name?.trim() || "(без име)";
   const when = new Date(row.registered_at).toLocaleString("bg-BG", {
