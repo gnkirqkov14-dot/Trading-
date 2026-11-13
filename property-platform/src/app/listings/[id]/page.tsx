@@ -465,6 +465,29 @@ export default async function ListingDetailPage({
         )}
       </div>
 
+      {!isOwner && (
+        <Link
+          href={`/proverka-na-imot?vid=${listing.type === "rent" ? "naem" : "pokupka"}${
+            listing.cities?.name
+              ? `&grad=${encodeURIComponent(listing.cities.name)}`
+              : ""
+          }`}
+          className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 hover:border-accent-400"
+        >
+          <span>
+            <span className="block font-semibold text-slate-900">
+              Провери имота, преди да платиш
+            </span>
+            <span className="block text-sm text-slate-600">
+              Кои документи да поискаш и как да намериш юрист наблизо.
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-xl text-accent-700">
+            →
+          </span>
+        </Link>
+      )}
+
       {user && !isOwner && (
         <div className="mt-4 text-center">
           <ReportAgencyButton listingId={listing.id} />

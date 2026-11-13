@@ -38,6 +38,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/listings`, changeFrequency: "hourly", priority: 0.9 },
     { url: `${siteUrl}/about`, changeFrequency: "monthly", priority: 0.5 },
     {
+      url: `${siteUrl}/proverka-na-imot`,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
       url: `${siteUrl}/poveritelnost`,
       changeFrequency: "yearly",
       priority: 0.2,
