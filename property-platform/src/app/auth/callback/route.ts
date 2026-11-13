@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { safeNext } from "@/lib/phone";
+import { NOVA_PAROLA_PAT, safeNext } from "@/lib/phone";
 import { gradPoIp } from "@/lib/grad-po-ip";
 
 // Google/Facebook redirect the browser here (via Supabase) with a ?code=
@@ -11,10 +11,15 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next");
   const target = safeNext(next);
+  // Линкът от писмото „Забравена парола“ минава оттук със същия ?code=.
+  const zaParola = target === NOVA_PAROLA_PAT;
 
   if (code) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && zaParola) {
+      return NextResponse.redirect(`${origin}${NOVA_PAROLA_PAT}`);
+    }
     if (!error) {
       // Нов профил от Google няма град; съществуващ не се пипа.
       await supabase.rpc("zapishi_grad_ip", { p_grad: await gradPoIp() });
@@ -32,5 +37,9 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+  return NextResponse.redirect(
+    zaParola
+      ? `${origin}/zabravena-parola?greshka=1`
+      : `${origin}/login?error=oauth_failed`,
+  );
 }

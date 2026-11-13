@@ -30,6 +30,9 @@ export async function checkPhone(
  * наклонена черта, а браузърът ги чете като друг сайт. Затова адресът се
  * сглобява спрямо измислен домейн и се приема само ако остане в него.
  */
+/** Страницата за нова парола, към която води линкът от писмото. */
+export const NOVA_PAROLA_PAT = "/nova-parola";
+
 export function safeNext(next: string | null | undefined) {
   if (!next || !next.startsWith("/") || /[\\\u0000-\u001f]/.test(next)) {
     return "/dashboard";
