@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { gradPoIp } from "@/lib/grad-po-ip";
-import { checkPhone, PHONE_TAKEN_MESSAGE, safeNext } from "@/lib/phone";
+import {
+  checkPhone,
+  NOVA_PAROLA_PAT,
+  PHONE_TAKEN_MESSAGE,
+  safeNext,
+} from "@/lib/phone";
 import { TURNSTILE_GRESHKA, TURNSTILE_POLE } from "@/lib/turnstile";
 
 // `pole` е полето, което формата оцветява в червено и показва.
@@ -132,6 +137,85 @@ export async function signIn(
 
   revalidatePath("/", "layout");
   redirect(getRedirectTarget(formData));
+}
+
+export type ZabravenaParolaState =
+  | { error?: string; prateno?: boolean }
+  | undefined;
+
+/**
+ * „Забравена парола“: праща писмо с линк за нова парола. Отговорът е един
+ * и същ, има ли такъв профил или не, за да не издава кой е регистриран.
+ */
+export async function zabravenaParola(
+  _prevState: ZabravenaParolaState,
+  formData: FormData,
+): Promise<ZabravenaParolaState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email || !email.includes("@")) {
+    return { error: "Въведи имейла, с който си се регистрирал." };
+  }
+
+  const supabase = await createClient();
+  const origin = await getSiteOrigin();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(NOVA_PAROLA_PAT)}`,
+    captchaToken: zheton(formData),
+  });
+
+  if (error?.code === "captcha_failed") {
+    return { error: TURNSTILE_GRESHKA };
+  }
+  if (
+    error?.code === "over_email_send_rate_limit" ||
+    error?.status === 429
+  ) {
+    return {
+      error: "Току-що пратихме писмо. Изчакай минута и опитай отново.",
+    };
+  }
+  if (error) {
+    console.error("zabravenaParola", error.code, error.message);
+  }
+  return { prateno: true };
+}
+
+/** Записва новата парола; стига се дотук само през линка от писмото. */
+export async function novaParola(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const password = String(formData.get("password") ?? "");
+  const povtori = String(formData.get("povtori") ?? "");
+
+  if (password.length < 8) {
+    return { error: "Паролата трябва да е поне 8 символа.", pole: "password" };
+  }
+  if (password !== povtori) {
+    return { error: "Двете пароли не съвпадат.", pole: "povtori" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/zabravena-parola?greshka=1");
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error?.code === "same_password") {
+    return {
+      error: "Това е старата ти парола. Избери различна.",
+      pole: "password",
+    };
+  }
+  if (error) {
+    return { error: "Паролата не се запази. Опитай отново." };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }
 
 export async function signOut() {

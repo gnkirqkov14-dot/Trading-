@@ -67,6 +67,12 @@ export function LoginForm() {
             required
             className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
           />
+          <Link
+            href="/zabravena-parola"
+            className="self-end text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900"
+          >
+            Забравена парола?
+          </Link>
         </div>
 
         {state?.error && (
