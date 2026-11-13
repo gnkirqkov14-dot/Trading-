@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
+import { PismaZaDostapButon } from "@/components/pisma-za-dostap-buton";
 
 export const metadata: Metadata = { title: "Админ панел — потребители" };
 
@@ -36,6 +37,7 @@ export default async function AdminUsersPage() {
     { data: statsRows },
     { data: stateRows },
     { data: gradRows },
+    { data: chakashtiPisma },
   ] =
     await Promise.all([
       supabase
@@ -58,6 +60,8 @@ export default async function AdminUsersPage() {
       supabase.rpc("admin_user_states"),
       // Приблизителен град по IP при регистрация (само за новите).
       supabase.rpc("admin_gradove_potrebiteli"),
+      // Потвърдените на ръка, които още не са получили писмо за това.
+      supabase.rpc("admin_pisma_za_dostap_chakashti", {}),
     ]);
 
   const bezImeyl = (profiles ?? []) as Omit<ProfileRow, "email">[];
@@ -149,6 +153,10 @@ export default async function AdminUsersPage() {
           </div>
         ))}
       </div>
+
+      {!!chakashtiPisma?.length && (
+        <PismaZaDostapButon chakashti={chakashtiPisma.length} />
+      )}
 
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
         <p className="mb-2 text-sm font-semibold text-slate-900">

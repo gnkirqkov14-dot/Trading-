@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
 import type { ListingStatus } from "@/lib/types/database";
+import { sendPismaZaDostap } from "@/lib/email";
 
 export async function adminSetListingStatus(
   listingId: string,
@@ -88,4 +89,45 @@ export async function adminDeleteListing(listingId: string) {
 
   revalidatePath("/admin");
   revalidatePath("/listings");
+}
+
+// Колко писма на едно натискане. Безплатният план на Resend е 100 на ден
+// общо за сайта, затова не ги пращаме всичките наведнъж.
+const PISMA_NA_NATISKANE = 40;
+
+export type PismaZaDostapState = { poruka: string; greshka?: boolean } | undefined;
+
+/** Праща „профилът ти е активен“ на потвърдените на ръка. */
+export async function adminPratiPismaZaDostap(): Promise<PismaZaDostapState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: hora, error } = await supabase.rpc(
+    "admin_pisma_za_dostap_chakashti",
+    { p_limit: PISMA_NA_NATISKANE },
+  );
+  if (error) return { poruka: `Грешка: ${error.message}`, greshka: true };
+  if (!hora?.length) return { poruka: "Няма чакащи писма." };
+
+  try {
+    await sendPismaZaDostap(hora);
+  } catch (err) {
+    return {
+      poruka: `Не се изпратиха: ${err instanceof Error ? err.message : err}`,
+      greshka: true,
+    };
+  }
+
+  const { error: otbelezhi } = await supabase.rpc(
+    "admin_pisma_za_dostap_otbelezhi",
+    { p_ids: hora.map((h) => h.user_id) },
+  );
+  revalidatePath("/admin/users");
+  if (otbelezhi) {
+    return {
+      poruka: `Изпратени са ${hora.length}, но не се отбелязаха: ${otbelezhi.message}. Не натискай пак.`,
+      greshka: true,
+    };
+  }
+  return { poruka: `Изпратени са ${hora.length} писма.` };
 }
