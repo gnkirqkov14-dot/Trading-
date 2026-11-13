@@ -14,6 +14,9 @@ export function SiteFooter() {
           <Link href="/listings" className="hover:text-slate-900">
             Обяви
           </Link>
+          <Link href="/proverka-na-imot" className="hover:text-slate-900">
+            Проверка на имот
+          </Link>
           <Link href="/about" className="hover:text-slate-900">
             За нас
           </Link>
