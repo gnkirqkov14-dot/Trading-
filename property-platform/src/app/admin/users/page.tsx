@@ -111,7 +111,7 @@ export default async function AdminUsersPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Админ панел — потребители</h1>
         <div className="flex gap-4 text-sm">
@@ -136,7 +136,7 @@ export default async function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {stats.map((stat) => (
           <div
             key={stat.label}
@@ -186,7 +186,7 @@ export default async function AdminUsersPage() {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[980px] text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Име</th>
@@ -201,7 +201,7 @@ export default async function AdminUsersPage() {
             <tbody className="divide-y divide-slate-100">
               {rows.map((row) => (
                 <tr key={row.id} className="align-top">
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3">
                     <Link
                       href={`/admin/users/${row.id}`}
                       className="font-medium text-slate-900 underline underline-offset-2"
@@ -226,10 +226,10 @@ export default async function AdminUsersPage() {
                       <span className="text-slate-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3">
                     {row.phone || <span className="text-slate-400">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-slate-600">
                     {gradNa.get(row.id) ?? (
                       <span className="text-slate-400">—</span>
                     )}
