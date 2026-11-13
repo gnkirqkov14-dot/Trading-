@@ -16,6 +16,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
   const oauthFailed = searchParams.get("error") === "oauth_failed";
+  const potvardi = searchParams.has("potvardi");
   const kam = searchParams.has("redirectTo")
     ? `?redirectTo=${encodeURIComponent(redirectTo)}`
     : "";
@@ -30,9 +31,19 @@ export function LoginForm() {
         <div className="h-px flex-1 bg-slate-200" />
       </div>
 
+      {potvardi && !state?.error && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
+          <strong>Остава една стъпка.</strong> Пратихме ти писмо от
+          imotpoint.com. Отвори го и натисни линка в него, за да потвърдиш
+          имейла си. Ако не го виждаш, провери папка „Спам“.
+        </p>
+      )}
+
       {oauthFailed && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          Възникна грешка при вход с външен акаунт. Опитай отново.
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Не успяхме да те впишем автоматично. Ако идваш от писмото за
+          потвърждение, имейлът ти вече е потвърден: влез с имейла и
+          паролата си.
         </p>
       )}
 

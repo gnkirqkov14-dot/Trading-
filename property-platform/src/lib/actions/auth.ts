@@ -76,12 +76,16 @@ export async function signUp(
     return { error: "Този имейл е блокиран за регистрация.", pole: "email" };
   }
 
-  const { error } = await supabase.auth.signUp({
+  // Накъде отива човекът след регистрацията; `?registered=1` е за Pixel.
+  const sled = `${safeNext(String(formData.get("redirectTo") ?? ""))}?registered=1`;
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { name, phone, grad_ip: await gradPoIp() },
       captchaToken: zheton(formData),
+      // Линкът от писмото за потвърждение вписва човека направо.
+      emailRedirectTo: `${await getSiteOrigin()}/auth/callback?next=${encodeURIComponent(sled)}`,
     },
   });
 
@@ -105,9 +109,14 @@ export async function signUp(
   // ⚠️ Регистрацията през Google минава по друг път
   // (`auth/callback`) и оттам не се различава нов потребител от
   // връщащ се — тези регистрации не се броят. Виж CLAUDE.md.
-  redirect(
-    `${safeNext(String(formData.get("redirectTo") ?? ""))}?registered=1`,
-  );
+  if (!data.session) {
+    // Имейлът още не е потвърден: без това съобщение човекът вижда само
+    // страницата за вход и не разбира, че трябва да отвори пощата си.
+    redirect(
+      `/login?potvardi=1&redirectTo=${encodeURIComponent(safeNext(String(formData.get("redirectTo") ?? "")))}`,
+    );
+  }
+  redirect(sled);
 }
 
 export async function signIn(
@@ -130,6 +139,21 @@ export async function signIn(
 
   if (error?.code === "captcha_failed") {
     return { error: TURNSTILE_GRESHKA };
+  }
+  if (error?.code === "email_not_confirmed") {
+    // Пращаме писмото пак: първото често е изгубено или в „Спам“.
+    const { error: greshkaPismo } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${await getSiteOrigin()}/auth/callback?next=${encodeURIComponent(getRedirectTarget(formData))}`,
+      },
+    });
+    return {
+      error: greshkaPismo
+        ? "Имейлът ти още не е потвърден. Отвори писмото от imotpoint.com и натисни линка в него (виж и папка „Спам“)."
+        : "Имейлът ти още не е потвърден. Току-що ти пратихме ново писмо — натисни линка в него (виж и папка „Спам“).",
+    };
   }
   if (error) {
     return { error: "Грешен имейл или парола." };
