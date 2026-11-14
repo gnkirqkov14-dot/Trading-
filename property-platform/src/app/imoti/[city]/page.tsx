@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ListingCard } from "@/components/listing-card";
+import { jsonLdZaScript } from "@/lib/json-ld";
 import { formatPrice } from "@/lib/listing-labels";
 import {
   NA_STRANICA_GRAD,
@@ -113,8 +114,46 @@ export default async function CityPage({
     n > 1 ? `/imoti/${city.slug}?page=${n}` : `/imoti/${city.slug}`;
   const otherCities = SEO_CITIES.filter((other) => other.slug !== city.slug);
 
+  // „Пътечка“ за търсачките: в резултатите Google показва
+  // „imotpoint.com › Обяви › Имоти в София“ вместо голия адрес.
+  const sayt = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
+  const patechka = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Начало", item: sayt },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Обяви",
+        item: `${sayt}/listings`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: `Имоти в ${city.name}`,
+        item: `${sayt}/imoti/${city.slug}`,
+      },
+    ],
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdZaScript(patechka) }}
+      />
+      <nav aria-label="Пътечка" className="mb-3 text-sm text-slate-500">
+        <Link href="/" className="hover:underline">
+          Начало
+        </Link>
+        {" › "}
+        <Link href="/listings" className="hover:underline">
+          Обяви
+        </Link>
+        {" › "}
+        <span className="text-slate-700">Имоти в {city.name}</span>
+      </nav>
       <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
         Имоти в {city.name} без посредници
       </h1>
