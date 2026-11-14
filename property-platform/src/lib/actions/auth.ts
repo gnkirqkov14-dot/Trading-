@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { gradPoIp } from "@/lib/grad-po-ip";
 import {
+  blokiranKontakt,
   checkPhone,
   NOVA_PAROLA_PAT,
   PHONE_TAKEN_MESSAGE,
@@ -68,10 +69,7 @@ export async function signUp(
     return { error: phoneError, pole: "phone" };
   }
 
-  const { data: isBanned } = await supabase.rpc("is_contact_banned", {
-    p_phone: null,
-    p_email: email,
-  });
+  const { blokiran: isBanned } = await blokiranKontakt(supabase, null, email);
   if (isBanned) {
     return { error: "Този имейл е блокиран за регистрация.", pole: "email" };
   }

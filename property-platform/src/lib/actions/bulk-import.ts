@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
+import { blokiranKontakt } from "@/lib/phone";
 import { cleanListingDescription } from "@/lib/listing-description";
 import { bulkIdentity, normalizePlace, sourceIdFromUrl, validateBulkDraft, type BulkDraft, type BulkPreview } from "@/lib/bulk-import";
 
@@ -62,7 +63,7 @@ export async function prepareBulkListing(draft: BulkDraft) {
   const admin = await requireAdmin();
   const { cityId, neighborhoodId } = await resolveDraft(draft);
   const db = await createClient();
-  const { data: banned, error: banError } = await db.rpc("is_contact_banned", { p_phone: draft.phone, p_email: null });
+  const { blokiran: banned, error: banError } = await blokiranKontakt(db, draft.phone, null);
   if (banError) throw new Error("Проверката на телефона не успя.");
   if (banned) throw new Error("Телефонът е блокиран за публикуване.");
   const existing = await findExisting(draft, admin.id);
