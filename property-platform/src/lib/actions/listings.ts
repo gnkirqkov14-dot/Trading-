@@ -182,6 +182,13 @@ export async function createListing(input: CreateListingInput) {
   );
 
   if (photosError) {
+    // Без снимки обявата не бива да остане видима: трием я, за да може
+    // човекът да натисне „Публикувай“ пак със същите снимки.
+    await supabase
+      .from("listings")
+      .delete()
+      .eq("id", input.id)
+      .eq("user_id", user.id);
     throw new Error(`Грешка при запис на снимките: ${photosError.message}`);
   }
   // Телефон върху снимка: махаме го, след като отговорът е тръгнал.
@@ -204,6 +211,12 @@ export async function createListing(input: CreateListingInput) {
         dobaveno_ot: user.id,
       });
     if (saglasieError) {
+      // Без записано съгласие обявата от името на собственик не остава.
+      await supabase
+        .from("listings")
+        .delete()
+        .eq("id", input.id)
+        .eq("user_id", user.id);
       throw new Error(`Грешка при запис на съгласието: ${saglasieError.message}`);
     }
     revalidatePath("/admin");
