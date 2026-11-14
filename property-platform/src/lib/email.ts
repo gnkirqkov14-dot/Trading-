@@ -17,6 +17,12 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://imotpoint.com";
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? "Имоти без посредници <onboarding@resend.dev>";
 
+// Заглавия и имена ги пишат хората. В писмо влизат само като текст,
+// за да не може някой да вкара свой линк или бутон от наше име.
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+}
+
 function subjectFor(row: ListingReminderRow) {
   if (row.stage === 1) return `Все още ли е активна обявата "${row.listing_title}"?`;
   if (row.stage === 2) return `Последно напомняне за обявата "${row.listing_title}"`;
@@ -25,18 +31,21 @@ function subjectFor(row: ListingReminderRow) {
 
 function bodyFor(row: ListingReminderRow) {
   const dashboardUrl = `${SITE_URL}/dashboard`;
-  const greeting = row.owner_name ? `Здравей, ${row.owner_name}` : "Здравей";
+  const greeting = row.owner_name
+    ? `Здравей, ${escapeHtml(row.owner_name)}`
+    : "Здравей";
+  const zaglavie = escapeHtml(row.listing_title);
 
   if (row.stage === 1) {
     return `<p>${greeting},</p>
-<p>Обявата "<strong>${row.listing_title}</strong>" е публикувана преди седмица без потвърждение. Ако вече си продал/дал под наем имота, свали обявата от <a href="${dashboardUrl}">твоя профил</a>. Ако е все още активна, просто натисни „Обявата е още активна“ оттам.</p>`;
+<p>Обявата "<strong>${zaglavie}</strong>" е публикувана преди седмица без потвърждение. Ако вече си продал/дал под наем имота, свали обявата от <a href="${dashboardUrl}">твоя профил</a>. Ако е все още активна, просто натисни „Обявата е още активна“ оттам.</p>`;
   }
   if (row.stage === 2) {
     return `<p>${greeting},</p>
-<p>Все още не си потвърдил/а обявата "<strong>${row.listing_title}</strong>" — вече е отбелязана като неактуална в резултатите от търсене. Ако не потвърдиш до 7 дни, тя ще бъде архивирана автоматично. Провери от <a href="${dashboardUrl}">твоя профил</a>.</p>`;
+<p>Все още не си потвърдил/а обявата "<strong>${zaglavie}</strong>" — вече е отбелязана като неактуална в резултатите от търсене. Ако не потвърдиш до 7 дни, тя ще бъде архивирана автоматично. Провери от <a href="${dashboardUrl}">твоя профил</a>.</p>`;
   }
   return `<p>${greeting},</p>
-<p>Обявата "<strong>${row.listing_title}</strong>" беше архивирана автоматично, защото не беше потвърдена в продължение на 3 седмици. Тя вече не се вижда публично. Можеш да я активираш отново по всяко време от <a href="${dashboardUrl}">твоя профил</a>.</p>`;
+<p>Обявата "<strong>${zaglavie}</strong>" беше архивирана автоматично, защото не беше потвърдена в продължение на 3 седмици. Тя вече не се вижда публично. Можеш да я активираш отново по всяко време от <a href="${dashboardUrl}">твоя профил</a>.</p>`;
 }
 
 export async function sendListingReminderEmail(row: ListingReminderRow) {
@@ -101,9 +110,9 @@ export async function sendNewSignupEmail(row: NewSignupRow) {
       subject: `Нова регистрация: ${name}`,
       html: `<p>Нов потребител в imotpoint.com.</p>
 <table cellpadding="4">
-<tr><td><strong>Име</strong></td><td>${name}</td></tr>
-<tr><td><strong>Имейл</strong></td><td>${row.profile_email ?? "(няма)"}</td></tr>
-<tr><td><strong>Телефон</strong></td><td>${row.profile_phone ?? "(няма)"}</td></tr>
+<tr><td><strong>Име</strong></td><td>${escapeHtml(name)}</td></tr>
+<tr><td><strong>Имейл</strong></td><td>${escapeHtml(row.profile_email ?? "(няма)")}</td></tr>
+<tr><td><strong>Телефон</strong></td><td>${escapeHtml(row.profile_phone ?? "(няма)")}</td></tr>
 <tr><td><strong>Регистриран</strong></td><td>${when}</td></tr>
 </table>
 <p><a href="${SITE_URL}/admin/users">Виж всички регистрации</a></p>`,
@@ -121,10 +130,6 @@ export type BotReport = {
   programi: { agent: string; broi: number }[];
   stranici: { pat: string; broi: number }[];
 };
-
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-}
 
 // Сутрешният отчет за спрените копирачи (app/api/cron/bot-report).
 // Праща се само когато е имало поне един опит.
