@@ -10,6 +10,10 @@ import { updateSession } from "@/lib/supabase/middleware";
 const KOPIRACHI =
   /python-requests|python-urllib|aiohttp|httpx|scrapy|curl\/|wget|go-http-client|okhttp|java\/|apache-httpclient|libwww-perl|node-fetch|axios|undici|got \(|php\/|guzzle|headlesschrome|phantomjs|puppeteer|playwright|selenium|colly|httrack|webcopier|sitesucker|offline explorer|teleport|webzip|grabber|scraper|crawler4j/i;
 
+// LinkedIn взима снимката и заглавието за прегледа на споделен линк с
+// "LinkedInBot/1.0 (… Apache-HttpClient …)" и така попада в списъка горе.
+const PREGLED_NA_LINK = /linkedinbot/i;
+
 // Записва спрения опит, за да стигне до сутрешния отчет
 // (app/api/cron/bot-report). IP-то не се пази — само хеш.
 async function zapishi(request: NextRequest, ua: string) {
@@ -50,7 +54,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // /api е отворен: там идват уебхукове, cron и AI агентите (x402).
   if (!request.nextUrl.pathname.startsWith("/api/")) {
     const ua = request.headers.get("user-agent") ?? "";
-    if (!ua.trim() || KOPIRACHI.test(ua)) {
+    if (!ua.trim() || (KOPIRACHI.test(ua) && !PREGLED_NA_LINK.test(ua))) {
       event.waitUntil(zapishi(request, ua));
       return new NextResponse("Достъпът е отказан.", { status: 403 });
     }
