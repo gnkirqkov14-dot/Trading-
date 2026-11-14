@@ -9,6 +9,19 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Сайтът не ползва камера, микрофон и местоположение, затова ги
+          // забраняваме и за вградени чужди скриптове.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+          },
+          // Тясна политика, която не пипа скриптовете (Pixel, карти,
+          // „не съм робот“ продължават да работят): никой не може да ни
+          // вгради в рамка, да подмени базовия адрес или да пусне плъгин.
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+          },
         ],
       },
     ];

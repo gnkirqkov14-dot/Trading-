@@ -9,15 +9,6 @@ import type {
   PropertyType,
 } from "@/lib/types/database";
 
-export const metadata: Metadata = {
-  title: "Обяви",
-  description:
-    "Разгледай обяви за апартаменти, къщи и парцели директно от собственици в цяла България — без агентски комисионни.",
-  // Всички филтрирани варианти (?city=, ?type=...) сочат към една и
-  // съща канонична страница, за да не се разпръсква SEO тежестта.
-  alternates: { canonical: "/listings" },
-};
-
 type SearchParams = {
   type?: string;
   propertyType?: string;
@@ -39,6 +30,35 @@ type SearchParams = {
   sort?: string;
   page?: string;
 };
+
+const OPISANIE =
+  "Разгледай обяви за апартаменти, къщи и парцели директно от собственици в цяла България — без агентски комисионни.";
+
+/**
+ * Филтрираните варианти (?city=, ?type=...) сочат към една канонична
+ * страница, за да не се разпръсква SEO тежестта. Страниците 2, 3... без
+ * филтри обаче са отделно съдържание и сочат към себе си: иначе Google
+ * ги брои за копие на първата и не стига през тях до по-старите обяви.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const stranica = Math.max(1, Math.floor(Number(params.page)) || 1);
+  const imaFiltri = Object.entries(params).some(
+    ([kluch, stoynost]) => kluch !== "page" && Boolean(stoynost),
+  );
+  const samoStranica = !imaFiltri && stranica > 1;
+  return {
+    title: samoStranica ? `Обяви — страница ${stranica}` : "Обяви",
+    description: OPISANIE,
+    alternates: {
+      canonical: samoStranica ? `/listings?page=${stranica}` : "/listings",
+    },
+  };
+}
 
 // По 24 на страница — дели се и на две, и на три колони без празни места.
 const NA_STRANICA = 24;
