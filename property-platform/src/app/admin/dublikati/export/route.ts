@@ -44,8 +44,15 @@ export async function GET() {
   ];
 
   // Точка и запетая: българският Excel чете запетаята като десетична.
-  const kletka = (v: unknown) =>
-    v === null || v === undefined ? "" : `"${String(v).replace(/"/g, '""')}"`;
+  // Текст, който започва с = + - @, Excel го изпълнява като формула.
+  // Апострофът отпред го кара да го чете като обикновен текст. Числата
+  // (цена, площ) не се пипат.
+  const kletka = (v: unknown) => {
+    if (v === null || v === undefined) return "";
+    let s = String(v);
+    if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
   const redove = [
     koloni.map(([ime]) => kletka(ime)).join(";"),
     ...obyavi.map((o) => koloni.map(([, f]) => kletka(f(o))).join(";")),
