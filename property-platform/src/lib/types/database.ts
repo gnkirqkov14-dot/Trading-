@@ -378,14 +378,6 @@ export interface Database {
         Returns: void;
       };
       /** Виж 20261101090000_telefon_edinstven.sql. */
-      proveri_telefon: {
-        Args: { p_phone: string };
-        Returns: "ok" | "nevaliden" | "zaet" | "blokiran";
-      };
-      is_contact_banned: {
-        Args: { p_phone: string | null; p_email: string | null };
-        Returns: boolean;
-      };
       proveri_telefon_srv: {
         Args: { p_secret: string; p_phone: string };
         Returns: "ok" | "nevaliden" | "zaet" | "blokiran";
