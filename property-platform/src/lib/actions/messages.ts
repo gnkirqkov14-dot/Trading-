@@ -18,6 +18,9 @@ export async function sendMessage(input: {
   if (!content) {
     throw new Error("Съобщението не може да е празно.");
   }
+  if (content.length > 2000) {
+    throw new Error("Съобщението е твърде дълго. Най-много 2000 знака.");
+  }
   if (input.toUserId === user.id) {
     throw new Error("Не можеш да пишеш сам на себе си.");
   }
@@ -32,7 +35,13 @@ export async function sendMessage(input: {
   });
 
   if (error) {
-    throw new Error(`Грешка при изпращане: ${error.message}`);
+    // Правилата (получател, дължина, брой) се пазят от тригер в базата;
+    // неговите съобщения са на български и се показват направо.
+    throw new Error(
+      /[а-я]/i.test(error.message)
+        ? error.message
+        : "Съобщението не беше изпратено. Опитай пак.",
+    );
   }
 
   revalidatePath(`/dashboard/messages/${input.listingId}/${input.toUserId}`);

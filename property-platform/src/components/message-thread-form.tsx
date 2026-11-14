@@ -57,6 +57,7 @@ export function MessageThreadForm({
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={3}
+        maxLength={2000}
         placeholder="Напиши съобщение…"
         className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
         required
