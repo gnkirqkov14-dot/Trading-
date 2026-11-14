@@ -1,6 +1,7 @@
 import { jsonLdZaScript } from "@/lib/json-ld";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -60,7 +61,9 @@ type ListingDetail = {
   listing_videos: { url: string }[];
 };
 
-async function getListing(id: string) {
+// `cache`: заглавието на страницата и самата страница искат една и съща
+// обява; така тя се чете от базата веднъж на отваряне, не два пъти.
+const getListing = cache(async (id: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("listings")
@@ -71,7 +74,7 @@ async function getListing(id: string) {
     .maybeSingle();
 
   return data as unknown as ListingDetail | null;
-}
+});
 
 export async function generateMetadata({
   params,
@@ -130,16 +133,18 @@ export default async function ListingDetailPage({
 }) {
   const { id } = await params;
   const { published, registered } = await searchParams;
-  const listing = await getListing(id);
+  const supabase = await createClient();
+  // Обявата и влезлият потребител не зависят един от друг: питаме заедно.
+  const [
+    listing,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([getListing(id), supabase.auth.getUser()]);
 
   if (!listing) {
     notFound();
   }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   if (user) after(() => notifyAdminOfSignup(supabase));
 
@@ -151,9 +156,12 @@ export default async function ListingDetailPage({
     // него (локално и в preview) прегледът не се брои.
     const taen = process.env.REMINDERS_DB_SECRET;
     if (taen) {
-      await supabase.rpc("pregled_na_obyava_srv", {
-        p_secret: taen,
-        p_listing_id: listing.id,
+      // След като страницата е пратена: посетителят не чака брояча.
+      after(async () => {
+        await supabase.rpc("pregled_na_obyava_srv", {
+          p_secret: taen,
+          p_listing_id: listing.id,
+        });
       });
     }
   }
@@ -161,9 +169,15 @@ export default async function ListingDetailPage({
   // Пълни детайли (снимки, описание, точен квартал, контакти) — нужна е
   // само регистрация с телефон, не абонамент. Виж "Регистрация вместо
   // планове" в CLAUDE.md.
-  const { data: viewer } = user
-    ? await supabase.from("profiles").select("phone").eq("id", user.id).single()
-    : { data: null };
+  // Профилът на посетителя и името на собственика се питат заедно.
+  const [{ data: viewer }, { data: imeNaSobstvenika }] = await Promise.all([
+    user
+      ? supabase.from("profiles").select("phone").eq("id", user.id).single()
+      : { data: null },
+    user
+      ? supabase.rpc("ime_na_profil", { p_id: listing.user_id })
+      : { data: null },
+  ]);
   const needsPhone = Boolean(user) && !isOwner && !viewer?.phone;
   const { data: otgovor } =
     user && !needsPhone
@@ -181,9 +195,6 @@ export default async function ListingDetailPage({
       ? ((await telefonNaObyava(supabase, listing.id)) ?? detayli.phone ?? null)
       : null;
   const prezLimit = kontakti !== null && !detayli;
-  const { data: imeNaSobstvenika } = user
-    ? await supabase.rpc("ime_na_profil", { p_id: listing.user_id })
-    : { data: null };
 
   const photos = [...listing.listing_photos].sort(
     (a, b) => a.position - b.position,
