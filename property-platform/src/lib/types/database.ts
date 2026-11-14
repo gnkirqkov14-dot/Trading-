@@ -386,6 +386,14 @@ export interface Database {
         Args: { p_phone: string | null; p_email: string | null };
         Returns: boolean;
       };
+      proveri_telefon_srv: {
+        Args: { p_secret: string; p_phone: string };
+        Returns: "ok" | "nevaliden" | "zaet" | "blokiran";
+      };
+      blokiran_kontakt_srv: {
+        Args: { p_secret: string; p_phone: string | null; p_email: string | null };
+        Returns: boolean;
+      };
       admin_ban_agency: {
         Args: { p_listing_id: string };
         Returns: void;

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { blokiranKontakt } from "@/lib/phone";
 import { getAuthedUser } from "@/lib/supabase/dal";
 import { cleanListingDescription } from "@/lib/listing-description";
 import { mahniKontaktiOtSnimki } from "@/lib/mahni-tel-ot-snimki";
@@ -110,10 +111,11 @@ export async function createListing(input: CreateListingInput) {
   const phone = sobstvenik ? sobstvenik.telefon.trim() : profileInfo!.phone;
   const listingLimit = profileInfo?.listingLimit ?? DEFAULT_LISTING_LIMIT;
 
-  const { data: isBanned } = await supabase.rpc("is_contact_banned", {
-    p_phone: phone,
-    p_email: user.email ?? null,
-  });
+  const { blokiran: isBanned } = await blokiranKontakt(
+    supabase,
+    phone,
+    user.email ?? null,
+  );
   if (isBanned) {
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
@@ -279,10 +281,11 @@ export async function updateListing(input: UpdateListingInput) {
   const supabase = await createClient();
   const { phone } = await getProfileContactInfo(supabase, user.id);
 
-  const { data: isBanned } = await supabase.rpc("is_contact_banned", {
-    p_phone: phone,
-    p_email: user.email ?? null,
-  });
+  const { blokiran: isBanned } = await blokiranKontakt(
+    supabase,
+    phone,
+    user.email ?? null,
+  );
   if (isBanned) {
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
