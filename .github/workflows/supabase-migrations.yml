@@ -14,6 +14,16 @@ on:
       - ".github/workflows/supabase-migrations.yml"
   workflow_dispatch: {}
 
+# Работата само чете кода; не може да пише в хранилището.
+permissions:
+  contents: read
+
+# Една миграция наведнъж: две пускания едно след друго се изчакват,
+# вместо да пишат в базата едновременно.
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
 jobs:
   migrate:
     runs-on: ubuntu-latest
