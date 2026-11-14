@@ -70,12 +70,12 @@ function razchet(zapis: string): Record<string, boolean> {
 
 const TON: Record<Grupa["ton"], { etiket: string; ramka: string }> = {
   zadalzhitelno: {
-    etiket: "bg-red-100 text-red-800",
-    ramka: "border-red-200",
+    etiket: "bg-accent-100 text-accent-800",
+    ramka: "border-accent-200",
   },
   vazhno: {
-    etiket: "bg-amber-100 text-amber-800",
-    ramka: "border-amber-200",
+    etiket: "bg-slate-100 text-slate-700",
+    ramka: "border-slate-200",
   },
   dobre: {
     etiket: "bg-slate-100 text-slate-700",
@@ -155,10 +155,11 @@ export function ProverkaNaImot({
 
       {/* Стъпка 1: документи */}
       <section className="mt-10">
-        <Zaglavie nomer={1} tekst="Събери документите" />
+        <Zaglavie nomer={1} tekst="Поискай основните документи" />
         <p className="mt-2 text-slate-600">
-          Наредени са по важност. Отмятай каквото вече имаш — запомня се на
-          това устройство, за да продължиш по-късно.
+          Не са много и повечето ги дава{" "}
+          {vid === "pokupka" ? "продавачът" : "наемодателят"}. Отмятай каквото
+          вече имаш. Запомня се на това устройство.
         </p>
 
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 print:hidden">
@@ -170,12 +171,12 @@ export function ProverkaNaImot({
               className={
                 lipsvashti === 0
                   ? "font-medium text-accent-700"
-                  : "font-medium text-red-700"
+                  : "text-slate-600"
               }
             >
               {lipsvashti === 0
-                ? "✓ Всички задължителни са налице"
-                : `Липсват ${lipsvashti} задължителни`}
+                ? "✓ Основните са налице"
+                : `Остават ${lipsvashti} основни`}
             </p>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -264,11 +265,11 @@ export function ProverkaNaImot({
 
       {/* Стъпка 2: сам в регистрите */}
       <section className="mt-12">
-        <Zaglavie nomer={2} tekst="Провери сам в официалните регистри" />
+        <Zaglavie nomer={2} tekst="Провери сам онлайн" />
         <p className="mt-2 text-slate-600">
-          Това са държавните сайтове. Справката там показва дали казаното от
-          {vid === "pokupka" ? " продавача" : " наемодателя"} отговаря на
-          истината.
+          Това са държавните сайтове. Става за няколко минути от телефона
+          или компютъра. Ако нещо не ти е ясно, юристът прави същата справка
+          вместо теб.
         </p>
         <ul className="mt-4 grid gap-3 sm:grid-cols-3">
           {KADE_DA_PROVERISH.map((r) => (
@@ -293,7 +294,7 @@ export function ProverkaNaImot({
 
       {/* Стъпка 3: оглед */}
       <section className="mt-12">
-        <Zaglavie nomer={3} tekst="Какво да гледаш на огледа" />
+        <Zaglavie nomer={3} tekst="Огледай спокойно" />
         <ul className="mt-4 grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {OGLED[vid].map((t) => (
             <li key={t} className="flex gap-2 text-slate-700">
@@ -305,14 +306,14 @@ export function ProverkaNaImot({
           ))}
         </ul>
 
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5">
-          <h3 className="font-semibold text-red-900">
-            Спри, ако видиш някое от тези
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+          <h3 className="font-semibold text-amber-900">
+            Не бързай, ако забележиш нещо от тези
           </h3>
-          <ul className="mt-2 flex flex-col gap-1.5 text-sm text-red-900">
+          <ul className="mt-2 flex flex-col gap-1.5 text-sm text-amber-900">
             {IZMAMI[vid].map((t) => (
               <li key={t} className="flex gap-2">
-                <span aria-hidden="true">⚠</span>
+                <span aria-hidden="true">•</span>
                 <span>{t}</span>
               </li>
             ))}
@@ -322,13 +323,13 @@ export function ProverkaNaImot({
 
       {/* Стъпка 4: юрист */}
       <section className="mt-12 print:hidden">
-        <Zaglavie nomer={4} tekst="Дай документите на юрист близо до теб" />
+        <Zaglavie nomer={4} tekst="Покажи документите на юрист близо до теб" />
         <p className="mt-2 text-slate-600">
           {vid === "pokupka"
-            ? "При покупка проверката от адвокат струва малко спрямо цената на имота и пази от най-скъпите грешки."
-            : "При наем обикновено стига адвокат да прегледа договора, преди да го подпишеш."}{" "}
-          Ние не препоръчваме конкретни кантори и не взимаме комисиона —
-          избираш сам по оценките и отзивите.
+            ? "Това е истинската проверка и я прави юрист: адвокат или нотариус. Пращаш му документите и той ти казва дали всичко е наред."
+            : "При наем обикновено стига адвокат да хвърли поглед на договора, преди да го подпишеш."}{" "}
+          Избери си сам юрист по оценките и отзивите. Ние не препоръчваме
+          конкретни кантори и не взимаме комисиона.
         </p>
 
         <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
