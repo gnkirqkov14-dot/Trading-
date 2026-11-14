@@ -15,12 +15,16 @@ async function activeListings() {
   const supabase = await createClient();
   const rows: SitemapListing[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("listings")
       .select("id, city_id, updated_at")
       .eq("status", "active")
       .order("id")
       .range(from, from + PAGE_SIZE - 1);
+    // При грешка в базата по-добре грешка, отколкото празен sitemap:
+    // празният казва на Google, че обявите ги няма, а при грешка той
+    // просто пази последния добър и опитва пак.
+    if (error) throw new Error(`sitemap: ${error.message}`);
     rows.push(...(data ?? []));
     if (!data || data.length < PAGE_SIZE) break;
   }

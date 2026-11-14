@@ -102,6 +102,11 @@ export async function generateMetadata({
     title: seoTitle,
     description,
     alternates: { canonical: `/listings/${id}` },
+    // Изтекла или спряна обява остава отворена за хората с линка, но не
+    // бива да стои в Google като актуална оферта.
+    ...(listing.status !== "active"
+      ? { robots: { index: false, follow: true } }
+      : {}),
     openGraph: {
       title: seoTitle,
       description,
