@@ -271,21 +271,37 @@ export function ProverkaNaImot({
           или компютъра. Ако нещо не ти е ясно, юристът прави същата справка
           вместо теб.
         </p>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+        <ul className="mt-4 grid gap-3 lg:grid-cols-3">
           {KADE_DA_PROVERISH.map((r) => (
-            <li key={r.url}>
+            <li
+              key={r.url}
+              className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4"
+            >
+              <h3 className="font-semibold text-slate-900">{r.ime}</h3>
+              <p className="mt-1 text-sm text-slate-600">{r.opisanie}</p>
+              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Как се ползва
+              </p>
+              <ol className="mt-2 flex flex-col gap-2 text-sm text-slate-700">
+                {r.stapki.map((s, i) => (
+                  <li key={s} className="flex gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-100 text-xs font-semibold text-accent-800"
+                    >
+                      {i + 1}
+                    </span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
               <a
                 href={r.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 hover:border-brand-400 hover:shadow-sm"
+                className="mt-4 inline-flex items-center justify-center rounded-lg border border-brand-300 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 lg:mt-auto"
               >
-                <span className="font-semibold text-brand-700">
-                  {r.ime} ↗
-                </span>
-                <span className="mt-1 text-sm text-slate-600">
-                  {r.opisanie}
-                </span>
+                Отвори сайта ↗
               </a>
             </li>
           ))}
