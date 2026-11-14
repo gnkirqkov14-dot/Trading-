@@ -369,8 +369,8 @@ export interface Database {
         Args: { profile_ids: string[] };
         Returns: { id: string; email: string | null }[];
       };
-      increment_listing_view: {
-        Args: { p_listing_id: string };
+      pregled_na_obyava_srv: {
+        Args: { p_secret: string; p_listing_id: string };
         Returns: void;
       };
       admin_set_listing_limit: {
@@ -414,8 +414,8 @@ export interface Database {
           p_iztochnik: string;
           p_ustroistvo: string;
         };
-        /** id на записа — с него браузърът праща пулса. */
-        Returns: string;
+        /** id на записа — с него браузърът праща пулса; null, ако е отказан. */
+        Returns: string | null;
       };
       poseshtenie_pulse: {
         Args: { p_id: string; p_sekundi: number };

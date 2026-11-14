@@ -141,10 +141,16 @@ export default async function ListingDetailPage({
   const isOwner = user?.id === listing.user_id;
 
   if (!isOwner) {
-    // Не броим собствените прегледи на обявата от собственика ѝ.
-    await supabase.rpc("increment_listing_view", {
-      p_listing_id: listing.id,
-    });
+    // Не броим собствените прегледи на обявата от собственика ѝ. Броячът
+    // иска тайния низ на сървъра, за да не може да се надува отвън; без
+    // него (локално и в preview) прегледът не се брои.
+    const taen = process.env.REMINDERS_DB_SECRET;
+    if (taen) {
+      await supabase.rpc("pregled_na_obyava_srv", {
+        p_secret: taen,
+        p_listing_id: listing.id,
+      });
+    }
   }
 
   // Пълни детайли (снимки, описание, точен квартал, контакти) — нужна е
