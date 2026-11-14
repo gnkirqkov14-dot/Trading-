@@ -69,7 +69,14 @@ export async function signUp(
     return { error: phoneError, pole: "phone" };
   }
 
-  const { blokiran: isBanned } = await blokiranKontakt(supabase, null, email);
+  const { blokiran: isBanned, error: banError } = await blokiranKontakt(
+    supabase,
+    null,
+    email,
+  );
+  if (banError) {
+    return { error: "Проверката не успя. Опитай пак след малко." };
+  }
   if (isBanned) {
     return { error: "Този имейл е блокиран за регистрация.", pole: "email" };
   }

@@ -111,21 +111,29 @@ export async function createListing(input: CreateListingInput) {
   const phone = sobstvenik ? sobstvenik.telefon.trim() : profileInfo!.phone;
   const listingLimit = profileInfo?.listingLimit ?? DEFAULT_LISTING_LIMIT;
 
-  const { blokiran: isBanned } = await blokiranKontakt(
+  const { blokiran: isBanned, error: banError } = await blokiranKontakt(
     supabase,
     phone,
     user.email ?? null,
   );
+  // Ако проверката не мине, спираме: по-добре „опитай пак“, отколкото
+  // блокиран човек да публикува заради временна грешка в базата.
+  if (banError) {
+    throw new Error("Проверката не успя. Опитай пак след малко.");
+  }
   if (isBanned) {
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
     );
   }
 
-  const { count: listingCount } = await supabase
+  const { count: listingCount, error: countError } = await supabase
     .from("listings")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
+  if (countError) {
+    throw new Error("Проверката не успя. Опитай пак след малко.");
+  }
 
   if (!sobstvenik && (listingCount ?? 0) >= listingLimit) {
     throw new Error(
@@ -281,11 +289,16 @@ export async function updateListing(input: UpdateListingInput) {
   const supabase = await createClient();
   const { phone } = await getProfileContactInfo(supabase, user.id);
 
-  const { blokiran: isBanned } = await blokiranKontakt(
+  const { blokiran: isBanned, error: banError } = await blokiranKontakt(
     supabase,
     phone,
     user.email ?? null,
   );
+  // Ако проверката не мине, спираме: по-добре „опитай пак“, отколкото
+  // блокиран човек да публикува заради временна грешка в базата.
+  if (banError) {
+    throw new Error("Проверката не успя. Опитай пак след малко.");
+  }
   if (isBanned) {
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
