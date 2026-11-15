@@ -74,21 +74,7 @@ export type CreateListingInput = {
 export async function createListing(input: CreateListingInput) {
   const user = await getAuthedUser();
 
-  if (!cleanListingDescription(input.title)) {
-    throw new Error("Заглавието е задължително.");
-  }
-  if (!input.address.trim()) {
-    throw new Error("Адресът е задължителен.");
-  }
-  if (!Number.isFinite(input.price) || input.price <= 0) {
-    throw new Error("Въведете валидна цена.");
-  }
-  if (!Number.isFinite(input.areaSqm) || input.areaSqm <= 0) {
-    throw new Error("Въведете валидна квадратура.");
-  }
-  if (input.photoUrls.length > MAX_LISTING_PHOTOS) {
-    throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
-  }
+  proveriOsnovnite(input, input.photoUrls.length);
 
   proveriAdresi(user.id, input.photoUrls, input.videoUrl);
 
@@ -257,6 +243,28 @@ export type UpdateListingInput = {
   newPhotoUrls: string[];
 };
 
+/** Проверките, еднакви при създаване и при редакция на обява. */
+function proveriOsnovnite(
+  input: { title: string; address: string; price: number; areaSqm: number },
+  broySnimki: number,
+) {
+  if (!cleanListingDescription(input.title)) {
+    throw new Error("Заглавието е задължително.");
+  }
+  if (!input.address.trim()) {
+    throw new Error("Адресът е задължителен.");
+  }
+  if (!Number.isFinite(input.price) || input.price <= 0) {
+    throw new Error("Въведете валидна цена.");
+  }
+  if (!Number.isFinite(input.areaSqm) || input.areaSqm <= 0) {
+    throw new Error("Въведете валидна квадратура.");
+  }
+  if (broySnimki > MAX_LISTING_PHOTOS) {
+    throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
+  }
+}
+
 /** Спира адреси, които не са от нашето хранилище и папката на потребителя. */
 function proveriAdresi(
   userId: string,
@@ -280,22 +288,10 @@ function storagePathFromUrl(url: string) {
 export async function updateListing(input: UpdateListingInput) {
   const user = await getAuthedUser();
 
-  if (!cleanListingDescription(input.title)) {
-    throw new Error("Заглавието е задължително.");
-  }
-  if (!input.address.trim()) {
-    throw new Error("Адресът е задължителен.");
-  }
-  if (!Number.isFinite(input.price) || input.price <= 0) {
-    throw new Error("Въведете валидна цена.");
-  }
-  if (!Number.isFinite(input.areaSqm) || input.areaSqm <= 0) {
-    throw new Error("Въведете валидна квадратура.");
-  }
-  const totalPhotos = input.keepPhotoUrls.length + input.newPhotoUrls.length;
-  if (totalPhotos > MAX_LISTING_PHOTOS) {
-    throw new Error(`Обявата може да съдържа най-много ${MAX_LISTING_PHOTOS} снимки.`);
-  }
+  proveriOsnovnite(
+    input,
+    input.keepPhotoUrls.length + input.newPhotoUrls.length,
+  );
 
   proveriAdresi(user.id, input.newPhotoUrls, input.videoUrl);
 
