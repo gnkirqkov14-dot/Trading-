@@ -189,6 +189,13 @@ export function RegisterForm() {
 
         <Turnstile onToken={setZheton} resetKey={state} />
 
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+          Сайтът е само за собственици. Ако установим или имаме основание да
+          смятаме, че профилът е на агенция или брокер, го блокираме без
+          предупреждение, сваляме обявите му и той няма право да се
+          регистрира отново. С регистрацията приемаш това правило.
+        </p>
+
         <button
           type="submit"
           disabled={pending || chakaProverka}

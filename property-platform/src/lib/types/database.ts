@@ -390,6 +390,19 @@ export interface Database {
         Args: { p_listing_id: string };
         Returns: void;
       };
+      /** Виж 20261115100000_blokiran_bez_vhod_i_ip.sql. */
+      zapishi_ip_srv: {
+        Args: { p_secret: string; p_user: string; p_ip: string };
+        Returns: void;
+      };
+      blokiray_ip_srv: {
+        Args: { p_secret: string; p_ip: string };
+        Returns: void;
+      };
+      blokirani_ip_srv: {
+        Args: { p_secret: string };
+        Returns: string[];
+      };
       import_contacts: {
         Args: {
           rows_in: { phone: string; name: string | null }[];

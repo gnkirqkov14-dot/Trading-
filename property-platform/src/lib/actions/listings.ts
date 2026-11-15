@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { blokiranKontakt } from "@/lib/phone";
+import { blokirayIp, zapomniIp } from "@/lib/ip";
 import { getAuthedUser } from "@/lib/supabase/dal";
 import { cleanListingDescription } from "@/lib/listing-description";
 import { mahniKontaktiOtSnimki } from "@/lib/mahni-tel-ot-snimki";
@@ -108,6 +109,7 @@ export async function createListing(input: CreateListingInput) {
     throw new Error("Проверката не успя. Опитай пак след малко.");
   }
   if (isBanned) {
+    await blokirayIp(supabase);
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
     );
@@ -158,6 +160,7 @@ export async function createListing(input: CreateListingInput) {
   if (listingError) {
     throw new Error(`Грешка при запис на обявата: ${listingError.message}`);
   }
+  await zapomniIp(supabase, user.id);
 
   const { error: photosError } = await supabase.from("listing_photos").insert(
     input.photoUrls.map((url, position) => ({
@@ -309,6 +312,7 @@ export async function updateListing(input: UpdateListingInput) {
     throw new Error("Проверката не успя. Опитай пак след малко.");
   }
   if (isBanned) {
+    await blokirayIp(supabase);
     throw new Error(
       "Този телефон или имейл е блокиран за публикуване на обяви.",
     );

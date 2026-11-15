@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { gradPoIp } from "@/lib/grad-po-ip";
+import { blokirayIp, zapomniIp } from "@/lib/ip";
 import {
   blokiranKontakt,
   checkPhone,
@@ -66,6 +67,7 @@ export async function signUp(
 
   const phoneError = await checkPhone(supabase, phone);
   if (phoneError) {
+    if (phoneError.includes("блокиран")) await blokirayIp(supabase);
     return { error: phoneError, pole: "phone" };
   }
 
@@ -78,6 +80,7 @@ export async function signUp(
     return { error: "Проверката не успя. Опитай пак след малко." };
   }
   if (isBanned) {
+    await blokirayIp(supabase);
     return { error: "Този имейл е блокиран за регистрация.", pole: "email" };
   }
 
@@ -107,6 +110,8 @@ export async function signUp(
       pole: error.message.includes("Database error") ? "phone" : undefined,
     };
   }
+
+  if (data.user?.identities?.length) await zapomniIp(supabase, data.user.id);
 
   revalidatePath("/", "layout");
   // `?registered=1` казва на таблото (или на обявата, ако човекът идва от
@@ -145,11 +150,16 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
     options: { captchaToken: zheton(formData) },
   });
+
+  if (error?.code === "user_banned") {
+    await blokirayIp(supabase);
+    return { error: "Този профил е блокиран." };
+  }
 
   if (error?.code === "captcha_failed") {
     return { error: TURNSTILE_GRESHKA };
@@ -172,6 +182,7 @@ export async function signIn(
   if (error) {
     return { error: "Грешен имейл или парола." };
   }
+  if (data.user) await zapomniIp(supabase, data.user.id);
 
   revalidatePath("/", "layout");
   redirect(getRedirectTarget(formData));

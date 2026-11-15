@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 /**
  * Приблизителният град на посетителя по IP, както го дава Vercel
  * (`x-vercel-ip-city`). Пример: „Sofia, BG“. Локално и без Vercel няма
- * заглавки и връща празно. Самият IP адрес не се пази никъде.
+ * заглавки и връща празно. Самият IP адрес тук не се пази; за него виж `lib/ip.ts`.
  */
 export async function gradPoIp(): Promise<string> {
   const h = await headers();
