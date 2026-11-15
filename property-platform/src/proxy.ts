@@ -48,9 +48,50 @@ async function zapishi(request: NextRequest, ua: string) {
   }).catch(() => {});
 }
 
+// Адресите на блокираните агенции (виж
+// 20261115100000_blokiran_bez_vhod_i_ip.sql). Списъкът се опреснява най-много
+// веднъж в минута; ако базата не отговори, сайтът работи със стария списък.
+let spreni = new Set<string>();
+let spreniDo = 0;
+
+async function ipESpryan(request: NextRequest) {
+  const secret = process.env.REMINDERS_DB_SECRET;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (!secret || !url || !key || !ip) return false;
+
+  if (Date.now() > spreniDo) {
+    spreniDo = Date.now() + 60_000;
+    try {
+      const res = await fetch(`${url}/rest/v1/rpc/blokirani_ip_srv`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_secret: secret }),
+        signal: AbortSignal.timeout(1500),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const spisak: unknown = await res.json();
+        if (Array.isArray(spisak)) spreni = new Set(spisak as string[]);
+      }
+    } catch {
+      // Оставаме със стария списък.
+    }
+  }
+  return spreni.has(ip);
+}
+
 // Next.js 16 renamed Middleware to Proxy (same runtime, same conventions).
 // See node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
+  if (await ipESpryan(request)) {
+    return new NextResponse("Достъпът е отказан.", { status: 403 });
+  }
   // /api е отворен: там идват уебхукове, cron и AI агентите (x402).
   if (!request.nextUrl.pathname.startsWith("/api/")) {
     const ua = request.headers.get("user-agent") ?? "";

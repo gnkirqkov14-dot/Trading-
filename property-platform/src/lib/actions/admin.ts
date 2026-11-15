@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
 import type { ListingStatus } from "@/lib/types/database";
 import { sendPismaZaDostap } from "@/lib/email";
+import { zapomniIp } from "@/lib/ip";
 
 export async function adminSetListingStatus(
   listingId: string,
@@ -27,8 +28,10 @@ export async function adminSetListingStatus(
 }
 
 export async function adminBanAgencyListing(listingId: string) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const supabase = await createClient();
+  // Адресът на админа се записва, за да не бъде спрян заедно с агенцията.
+  await zapomniIp(supabase, admin.id);
 
   const { error } = await supabase.rpc("admin_ban_agency", {
     p_listing_id: listingId,
