@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
+import { AdminPishiForma } from "@/components/admin-pishi-forma";
 
 export const metadata: Metadata = { title: "Админ панел — профил" };
 
@@ -45,6 +46,7 @@ export default async function AdminUserPage({
     { data: stateRows },
     { data: listings },
     { count: vneseni },
+    { data: pisani },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -67,6 +69,11 @@ export default async function AdminUserPage({
       .select("id", { count: "exact", head: true })
       .eq("user_id", id)
       .not("source_url", "is", null),
+    supabase
+      .from("admin_saobshteniya")
+      .select("id, content, created_at, procheteno_na")
+      .eq("user_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (!profile) notFound();
@@ -144,6 +151,34 @@ export default async function AdminUserPage({
           </div>
         ))}
       </dl>
+
+      {!profile.is_admin && (
+        <section className="mt-10 rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="text-lg font-semibold">Пиши като администратор</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Човекът го вижда в профила си като съобщение от IMOT POINT и го
+            получава на имейла си. Твоят личен имейл не се показва.
+          </p>
+          <AdminPishiForma userId={profile.id} />
+          {(pisani ?? []).length > 0 && (
+            <ul className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4">
+              {(pisani ?? []).map((m) => (
+                <li key={m.id} className="text-sm">
+                  <p className="whitespace-pre-wrap text-slate-800">
+                    {m.content}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {formatDateTime(m.created_at)} ·{" "}
+                    {m.procheteno_na
+                      ? `видяно в сайта на ${formatDateTime(m.procheteno_na)}`
+                      : "още не е видяно в сайта"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <h2 className="mt-10 text-lg font-semibold">
         Пуснати обяви ({obqvi.length})

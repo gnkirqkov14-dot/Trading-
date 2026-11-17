@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/dal";
 import type { ListingStatus } from "@/lib/types/database";
-import { sendPismaZaDostap } from "@/lib/email";
+import { sendPismaZaDostap, sendSaobshtenieOtAdmina } from "@/lib/email";
 import { zapomniIp } from "@/lib/ip";
 
 export async function adminSetListingStatus(
@@ -133,4 +133,56 @@ export async function adminPratiPismaZaDostap(): Promise<PismaZaDostapState> {
     };
   }
   return { poruka: `Изпратени са ${hora.length} писма.` };
+}
+
+export type PishiState = { poruka: string; greshka?: boolean } | null;
+
+/**
+ * Админът пише на един потребител. Съобщението се записва в профила му
+ * и му се праща имейл от името на сайта. Ако имейлът не тръгне,
+ * съобщението в сайта остава.
+ */
+export async function adminPishiNaPotrebitel(
+  userId: string,
+  _prev: PishiState,
+  formData: FormData,
+): Promise<PishiState> {
+  const admin = await requireAdmin();
+  const content = String(formData.get("content") ?? "").trim();
+  if (!content) return { poruka: "Напиши съобщение.", greshka: true };
+  if (content.length > 2000) {
+    return { poruka: "Най-много 2000 знака.", greshka: true };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("admin_saobshteniya")
+    .insert({ user_id: userId, content, ot: admin.id });
+  if (error) return { poruka: `Грешка: ${error.message}`, greshka: true };
+  revalidatePath(`/admin/users/${userId}`);
+
+  const [{ data: emails }, { data: profil }] = await Promise.all([
+    supabase.rpc("admin_get_profile_emails", { profile_ids: [userId] }),
+    supabase.from("profiles").select("name").eq("id", userId).maybeSingle(),
+  ]);
+  const email = emails?.[0]?.email;
+  if (!email) {
+    return {
+      poruka: "Записано е в профила му, но няма имейл, на който да го пратим.",
+      greshka: true,
+    };
+  }
+  try {
+    await sendSaobshtenieOtAdmina({
+      email,
+      name: profil?.name ?? null,
+      content,
+    });
+  } catch (err) {
+    return {
+      poruka: `Записано е в профила му, но имейлът не тръгна: ${err instanceof Error ? err.message : err}`,
+      greshka: true,
+    };
+  }
+  return { poruka: "Изпратено: в профила му и на имейла." };
 }

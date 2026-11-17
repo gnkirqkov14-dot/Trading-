@@ -300,6 +300,18 @@ export interface Database {
           created_at?: string;
         }
       >;
+      /** Виж 20261117100000_saobshteniya_ot_admina.sql. */
+      admin_saobshteniya: Table<
+        {
+          id: string;
+          user_id: string;
+          content: string;
+          ot: string | null;
+          created_at: string;
+          procheteno_na: string | null;
+        },
+        { user_id: string; content: string; ot: string }
+      >;
       subscriptions: Table<
         {
           id: string;
@@ -391,6 +403,10 @@ export interface Database {
         Returns: void;
       };
       /** Виж 20261115100000_blokiran_bez_vhod_i_ip.sql. */
+      admin_saobshteniya_procheteni: {
+        Args: Record<string, never>;
+        Returns: void;
+      };
       zapishi_ip_srv: {
         Args: { p_secret: string; p_user: string; p_ip: string };
         Returns: void;
