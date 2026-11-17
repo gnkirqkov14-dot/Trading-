@@ -5,6 +5,7 @@ import { getAuthedUser, getProfile } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { MyListings, type MyListing } from "@/components/my-listings";
 import { PixelEvent } from "@/components/pixel-event";
+import { SaobshteniyaOtAdmina } from "@/components/saobshteniya-ot-admina";
 import { notifyAdminOfSignup } from "@/lib/notify-signup";
 
 export const metadata: Metadata = { title: "Моят профил" };
@@ -42,6 +43,7 @@ export default async function DashboardPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       {registered === "1" && <PixelEvent name="CompleteRegistration" />}
+      <SaobshteniyaOtAdmina userId={user.id} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">

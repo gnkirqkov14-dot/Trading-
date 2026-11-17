@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAuthedUser } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
+import { SaobshteniyaOtAdmina } from "@/components/saobshteniya-ot-admina";
 
 type RawMessage = {
   from_user_id: string;
@@ -58,6 +59,7 @@ export default async function MessagesPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="mb-6 text-2xl font-semibold">Съобщения</h1>
+      <SaobshteniyaOtAdmina userId={user.id} />
 
       {conversations.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">

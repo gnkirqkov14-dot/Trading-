@@ -4,6 +4,8 @@
 // components/my-listings.tsx) — това позволява cron job-а да работи
 // безпроблемно преди собственикът на проекта да си направи Resend акаунт.
 
+import { SUPPORT_EMAIL } from "@/lib/listing-labels";
+
 export type ListingReminderRow = {
   listing_id: string;
   owner_email: string | null;
@@ -207,6 +209,41 @@ export async function sendPismaZaDostap(hora: PismoZaDostap[]) {
     ),
   });
 
+  if (!res.ok) {
+    throw new Error(`Resend error ${res.status}: ${await res.text()}`);
+  }
+}
+
+/**
+ * Съобщение от админа до един потребител (виж `adminPishiNaPotrebitel`).
+ * Отговорът на писмото отива в пощата на сайта, не в празното.
+ */
+export async function sendSaobshtenieOtAdmina(p: {
+  email: string;
+  name: string | null;
+  content: string;
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("Липсва RESEND_API_KEY.");
+  }
+  const ime = p.name?.trim();
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: OT_IMOT_POINT,
+      to: p.email,
+      reply_to: SUPPORT_EMAIL,
+      subject: "Съобщение от IMOT POINT",
+      html: `<p>${ime ? `Здравей, ${escapeHtml(ime)}` : "Здравей"},</p>
+<p>${escapeHtml(p.content).replace(/\n/g, "<br>")}</p>
+<p>Съобщението стои и в профила ти: <a href="${SITE_URL}/dashboard">Моят профил</a>. Ако искаш да отговориш, просто отговори на това писмо.</p>
+<p>Екипът на IMOT POINT</p>`,
+    }),
+  });
   if (!res.ok) {
     throw new Error(`Resend error ${res.status}: ${await res.text()}`);
   }
