@@ -170,13 +170,17 @@ export default async function ListingDetailPage({
   // само регистрация с телефон, не абонамент. Виж "Регистрация вместо
   // планове" в CLAUDE.md.
   // Профилът на посетителя и името на собственика се питат заедно.
-  const [{ data: viewer }, { data: imeNaSobstvenika }] = await Promise.all([
+  // Обява на админа е внесена или пусната от името на собственик: там
+  // няма кой да отговори на съобщение, затова се звъни на телефона.
+  const [{ data: viewer }, { data: imeNaSobstvenika }, { data: naAdmin }] =
+    await Promise.all([
     user
       ? supabase.from("profiles").select("phone").eq("id", user.id).single()
       : { data: null },
     user
       ? supabase.rpc("ime_na_profil", { p_id: listing.user_id })
       : { data: null },
+    supabase.rpc("obyava_e_na_admin", { p_listing: listing.id }),
   ]);
   const needsPhone = Boolean(user) && !isOwner && !viewer?.phone;
   const { data: otgovor } =
@@ -475,7 +479,12 @@ export default async function ListingDetailPage({
             <Link href="/register" className="font-medium text-slate-900 underline">
               Регистрирай се
             </Link>{" "}
-            безплатно, за да пишеш на собственика.
+            безплатно, за да{" "}
+            {naAdmin ? "видиш телефона на собственика" : "пишеш на собственика"}.
+          </p>
+        ) : naAdmin ? (
+          <p className="text-slate-500">
+            За тази обява се обади на собственика на телефона по-горе.
           </p>
         ) : (
           <Link
