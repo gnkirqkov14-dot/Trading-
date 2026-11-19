@@ -403,6 +403,10 @@ export interface Database {
         Returns: void;
       };
       /** Виж 20261115100000_blokiran_bez_vhod_i_ip.sql. */
+      obyava_e_na_admin: {
+        Args: { p_listing: string };
+        Returns: boolean;
+      };
       admin_saobshteniya_procheteni: {
         Args: Record<string, never>;
         Returns: void;
