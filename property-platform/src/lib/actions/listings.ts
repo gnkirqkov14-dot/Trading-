@@ -29,7 +29,7 @@ async function getProfileContactInfo(
 ) {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("phone, listing_limit")
+    .select("phone, listing_limit, is_admin")
     .eq("id", userId)
     .single();
 
@@ -41,7 +41,10 @@ async function getProfileContactInfo(
   }
   return {
     phone,
-    listingLimit: profile?.listing_limit ?? DEFAULT_LISTING_LIMIT,
+    // Внесените обяви се водят на админа, затова за него лимит няма.
+    listingLimit: profile?.is_admin
+      ? Infinity
+      : (profile?.listing_limit ?? DEFAULT_LISTING_LIMIT),
   };
 }
 
